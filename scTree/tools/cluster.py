@@ -1,0 +1,53 @@
+import numpy as np
+import pandas as pd
+from anndata import AnnData
+
+from .. import logging as logg
+from .. import settings
+
+import phenograph
+from sklearn.preprocessing import StandardScaler
+
+
+def cluster(
+    adata: AnnData,
+    knn: int = 10,
+    copy: bool = False):
+
+    adata = data.copy() if copy else adata
+    
+    if "fit_summary" not in adata.uns["tree"]:
+        raise ValueError(
+            "You need to run `tl.fit` first to fit the features before clustering them."
+        )
+    
+    clusters = cluster_trends(adata.uns["tree"]["fit_summary"].T,k=knn)
+    
+    adata.uns["tree"]["fit_clusters"] = clusters.to_dict()
+    
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added\n" + "    'tree/fit_clusters', cluster assignments for features (adata.uns)"
+    )
+    
+    return adata if copy else None
+    
+def cluster_trends(trends, k=10, n_jobs=-1):
+    """Function to cluster gene trends, thank you palantir devs :)
+    :param trends: Matrix of gene expression trends
+    :param k: K for nearest neighbor construction
+    :param n_jobs: Number of jobs for parallel processing
+    :return: Clustering of gene trends
+    """
+
+    # Standardize the trends
+    trends = pd.DataFrame(
+        StandardScaler().fit_transform(trends.T).T,
+        index=trends.index,
+        columns=trends.columns,
+    )
+
+    # Cluster
+    clusters, _, _ = phenograph.cluster(trends, k=k, n_jobs=n_jobs)
+    clusters = pd.Series(clusters, index=trends.index)
+    return clusters

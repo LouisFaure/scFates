@@ -1,0 +1,174 @@
+import os
+os.environ['R_HOME'] = '/usr/lib/R'
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
+import numpy as np
+import pandas as pd
+from functools import partial
+from anndata import AnnData
+import shutil
+import sys
+import copy
+import igraph
+import warnings
+from functools import reduce
+
+from joblib import delayed, Parallel
+from tqdm import tqdm
+from scipy import sparse
+
+from .. import logging as logg
+from .. import settings
+
+
+try:
+    from rpy2.robjects import pandas2ri, Formula
+    from rpy2.robjects.packages import importr
+    import rpy2.rinterface
+    from rpy2.robjects import r
+    pandas2ri.activate()
+    
+except ImportError:
+    raise RuntimeError(
+        'Cannot compute gene expression trends without installing rpy2. \
+        \nPlease use "pip3 install rpy2" to install rpy2'
+    )
+
+        
+if not shutil.which("R"):
+    raise RuntimeError(
+        "R installation is necessary for computing gene expression trends. \
+        \nPlease install R and try again"
+    )
+
+try:
+    rmgcv = importr("mgcv")
+except embedded.RRuntimeError:
+    raise RuntimeError(
+        'R package "mgcv" is necessary for computing gene expression trends. \
+        \nPlease install gam from https://cran.r-project.org/web/packages/gam/ and try again'
+    )
+rmgcv = importr("mgcv")
+rstats = importr("stats")
+
+
+
+
+
+def fit(
+    adata: AnnData,
+    n_map: int = 1,
+    n_jobs: int = 1,
+    spline_df: int = 5,
+    fdr_cut: float = 1e-4,
+    A_cut: int = 1,
+    st_cut: float = 0.8,
+    copy: bool = False):
+    
+    adata = data.copy() if copy else adata
+    
+    if "signi" not in adata.var.columns:
+        raise ValueError(
+            "You need to run `tl.test_association` before fitting features."
+        )
+    
+    genes = adata.var_names[adata.var.signi]
+    
+    r = adata.uns["tree"]
+    tips = r["tips"]
+    root = r["root"]
+    tips = tips[~np.isin(tips,root)] 
+    root2=None
+    if "root2" in r:
+        root2 = r["root2"]
+        tips = tips[~np.isin(tips,r["root2"])] 
+    
+    
+    logg.info("fit features associated with the tree", time=False, end="\n")
+       
+    stat_assoc=list()
+    
+    for m in range(n_map):
+        df=pd.DataFrame(r["df_list"][str(m)],index=r["cells_fitted"])
+        edges=r["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        img = igraph.Graph()
+        img.add_vertices(np.unique(r["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_edges(edges)
+        
+        temp = pd.concat(list(map(lambda x: getpath(img,root,tips,x,r,df), tips)),axis=0)
+        if root2 is not None:
+            temp = pd.concat([temp,pd.concat(list(map(lambda x: getpath(img,root2,tips,x,r,df), tips)),axis=0)])
+        temp.drop(['_edge','_seg'],axis=1,inplace=True)
+        temp.columns=['t', 'branch']
+        
+        if sparse.issparse(adata.X):
+            Xgenes = adata[temp.index,genes].X.A.T.tolist()
+        else:
+            Xgenes = adata[temp.index,genes].X.T.tolist()
+        
+        data = list(zip([temp]*len(Xgenes),Xgenes))
+        
+        stat = Parallel(n_jobs=n_jobs)(
+            delayed(gt_fun)(
+                data[d]
+            )
+            for d in tqdm(range(len(data)),file=sys.stdout,desc="    mapping "+str(m))
+        )
+                        
+        stat_assoc = stat_assoc + [stat] 
+    
+    
+    for i in range(len(stat_assoc)):
+        stat_assoc[i]=pd.concat(stat_assoc[i],axis=1)
+        stat_assoc[i].columns=adata.var_names[adata.var.signi]
+    
+    names = np.arange(len(stat_assoc)).astype(str).tolist()
+    dictionary = dict(zip(names, stat_assoc))
+    adata.uns["tree"]["fit_list"]=dictionary
+    
+    if n_map==1:
+        adata.uns["tree"]["fit_summary"] = adata.uns["tree"]["fit_list"]["0"]
+    else:
+        dfs = list(adata.uns["tree"]["fit_list"].values)
+        adata.uns["tree"]["fit_summary"] = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
+    
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added\n" + "    'tree/fit_list', list of fitted features on the tree for all mappings (adata.uns)\n"
+        "    'tree/fit_summary', summary of all fitted features on the tree for all mappings (adata.uns)"
+    )
+    
+    return adata if copy else None
+
+def getpath(g,root,tips,tip,r,df):
+    warnings.filterwarnings("ignore")
+    try:
+        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
+        segs = list()
+        for i in range(len(path)-1):
+            segs= segs + [np.argwhere((r["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
+        segs=r["pp_seg"].index[segs]
+        pth=df.loc[df._seg.astype(int).isin(segs),:].copy(deep=True)
+        pth["branch"]=str(root)+"_"+str(tip)
+        warnings.filterwarnings("default")
+        return(pth)
+    except IndexError:
+        pass
+
+def gt_fun(data):     
+    sdf = data[0]
+    sdf["exp"] = data[1]
+    
+    global rmgcv
+    global rstats
+    
+    def gamfit(b):
+        m = rmgcv.gam(Formula("exp~s(t,bs='ts')"),data=sdf.loc[sdf["branch"]==b,:],gamma=5)
+        return pd.Series(rmgcv.predict_gam(m),index=sdf.loc[sdf["branch"]==b,:].index)
+
+    mdl=list(map(gamfit,sdf.branch.unique()))
+          
+    return pd.concat(mdl,axis=1,sort=False).apply(np.nanmean,axis=1)
