@@ -55,16 +55,18 @@ def pseudotime(
         adata.obs = pd.concat([adata.obs,df_summary],axis=1)
     
     
-    todict=list(map(lambda x: dict(zip(["_"+s for s in x.columns.tolist()],
-                                       x.to_numpy().T.tolist())),df_l))
+    #list(map(lambda x: x.column))
+    
+    #todict=list(map(lambda x: dict(zip(["cells"]+["_"+s for s in x.columns.tolist()],
+    #                                   [x.index.tolist()]+x.to_numpy().T.tolist())),df_l))
     names = np.arange(len(df_l)).astype(str).tolist()
-    vals = todict
-    dictionary = dict(zip(names, vals))
-    adata.uns["tree"]["df_list"]=dictionary
+    #vals = todict
+    dictionary = dict(zip(names, df_l))
+    adata.uns["tree"]["pseudotime_list"]=dictionary
     
     if n_map > 1:
         adata.obs["t_sd"]=pd.concat(list(map(lambda x: pd.Series(x["_t"]),
-                           list(adata.uns["tree"]["df_list"].values()))),axis=1).apply(np.std,axis=1).values
+                           list(adata.uns["tree"]["pseudotime_list"].values()))),axis=1).apply(np.std,axis=1).values
 
    
     
@@ -73,8 +75,7 @@ def pseudotime(
         "added\n" + "    'edge', assigned edge (adata.obs)\n"
         "    't', pseudotime value (adata.obs)\n"
         "    'seg', segment of the tree where the cell is assigned to (adata.obs)\n"
-        "    'tree/df_list', list of cell projection from all mappings (adata.uns)\n"
-        "    'tree/img_list', list of cell/pp graph from all mappings (adata.uns)"
+        "    'tree/pseudotime_list', list of cell projection from all mappings (adata.uns)"
     )
     
     return adata if copy else None

@@ -13,7 +13,8 @@ def cluster(
     adata: AnnData,
     clu: int,
     figsize: tuple = (20,12),
-    basis: str = "umap"):
+    basis: str = "umap",
+    colormap: str = "magma"):
     
     
     
@@ -53,13 +54,13 @@ def cluster(
     fitted=fitted.loc[clusters.index[clusters==clu],:]
 
 
-    hm=sns.clustermap(fitted,figsize=figsize,dendrogram_ratio=0, colors_ratio=0.03,robust=True,
+    hm=sns.clustermap(fitted,figsize=figsize,dendrogram_ratio=0, colors_ratio=0.03,robust=True,cmap=colormap,
                 row_cluster=False,col_cluster=False,col_colors=col_colors,cbar_pos=None,xticklabels=False)
     hm.gs.update(left=0.526)
     gs2 = GridSpec(1,1, left=0.05,right=0.50)
     ax2 = hm.fig.add_subplot(gs2[0])
     ax2.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],
-                c=fitted.mean(axis=0)[adata.obs_names],cmap="magma")
+                c=fitted.mean(axis=0)[adata.obs_names],cmap=colormap)
     ax2.grid(False)
     x0,x1 = ax2.get_xlim()
     y0,y1 = ax2.get_ylim()

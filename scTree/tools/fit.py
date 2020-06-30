@@ -1,5 +1,4 @@
 import os
-os.environ['R_HOME'] = '/usr/lib/R'
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -27,7 +26,6 @@ try:
     from rpy2.robjects import pandas2ri, Formula
     from rpy2.robjects.packages import importr
     import rpy2.rinterface
-    from rpy2.robjects import r
     pandas2ri.activate()
     
 except ImportError:
@@ -91,7 +89,7 @@ def fit(
     stat_assoc=list()
     
     for m in range(n_map):
-        df=pd.DataFrame(r["df_list"][str(m)],index=r["cells_fitted"])
+        df=r["pseudotime_list"][str(m)]
         edges=r["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(r["pp_seg"][["from","to"]].values.flatten().astype(str)))
@@ -100,7 +98,7 @@ def fit(
         temp = pd.concat(list(map(lambda x: getpath(img,root,tips,x,r,df), tips)),axis=0)
         if root2 is not None:
             temp = pd.concat([temp,pd.concat(list(map(lambda x: getpath(img,root2,tips,x,r,df), tips)),axis=0)])
-        temp.drop(['_edge','_seg'],axis=1,inplace=True)
+        temp.drop(['edge','seg'],axis=1,inplace=True)
         temp.columns=['t', 'branch']
         
         if sparse.issparse(adata.X):
@@ -151,7 +149,7 @@ def getpath(g,root,tips,tip,r,df):
             segs= segs + [np.argwhere((r["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
                                                                                     all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
         segs=r["pp_seg"].index[segs]
-        pth=df.loc[df._seg.astype(int).isin(segs),:].copy(deep=True)
+        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
         pth["branch"]=str(root)+"_"+str(tip)
         warnings.filterwarnings("default")
         return(pth)

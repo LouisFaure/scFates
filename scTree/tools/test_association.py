@@ -1,5 +1,4 @@
 import os
-os.environ['R_HOME'] = '/usr/lib/R'
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -26,7 +25,6 @@ try:
     from rpy2.robjects import pandas2ri, Formula
     from rpy2.robjects.packages import importr
     import rpy2.rinterface
-    from rpy2.robjects import r
     pandas2ri.activate()
     
 except ImportError:
@@ -70,7 +68,7 @@ def test_association(
     
     adata = data.copy() if copy else adata
     
-    if "df_list" not in adata.uns["tree"]:
+    if "pseudotime_list" not in adata.uns["tree"]:
         raise ValueError(
             "You need to run `tl.pseudotime` before testing for association."
         )
@@ -79,7 +77,7 @@ def test_association(
     
     if reapply_filters & ("stat_assoc_list" in adata.uns["tree"]):
         stat_assoc_l = list(adata.uns["tree"]["stat_assoc_list"].values())
-        stat_assoc_l = list(map(lambda x: pd.DataFrame(x,index=adata.var_names),stat_assoc_l))
+        #stat_assoc_l = list(map(lambda x: pd.DataFrame(x,index=x["features"]),stat_assoc_l))
         adata = apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut)
         
         logg.info("reapplied filters, "+str(sum(adata.var["signi"]))+ " significant features")
@@ -102,10 +100,7 @@ def test_association(
     stat_assoc_l=list()
     
     for m in range(n_map):
-        temp = pd.DataFrame({"seg": r["df_list"][str(m)]["_seg"],
-                             "t":r["df_list"][str(m)]["_t"]},
-                           index=cells)
-        data = list(zip([temp]*len(Xgenes),Xgenes))
+        data = list(zip([r["pseudotime_list"][str(m)]]*len(Xgenes),Xgenes))
         
         stat = Parallel(n_jobs=n_jobs)(
             delayed(gt_fun)(
@@ -125,7 +120,8 @@ def test_association(
         "added\n" + "    'p_val' values from statistical test (adata.var)\n"
         "    'fdr' corrected values from multiple testing (adata.var)\n"
         "    'st' proportion of mapping in which feature is significant (adata.var)\n"
-        "    'A' amplitue of change of tested feature (adata.var)"
+        "    'A' amplitue of change of tested feature (adata.var)\n"
+        "    'tree/stat_assoc_list', list of fitted features on the tree for all mappings (adata.uns)"
     )
     
     if plot:
@@ -187,8 +183,13 @@ def apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut):
     
     # save all tests for each mapping
     names = np.arange(len(stat_assoc_l)).astype(str).tolist()
-    todict=list(map(lambda x: x.to_dict(),stat_assoc_l))
-    dictionary = dict(zip(names, todict))
+    #todict=list(map(lambda x: x.to_dict(),stat_assoc_l))
+    
+    #todict=list(map(lambda x: dict(zip(["features"]+x.columns.tolist(),
+    #                                   [x.index.tolist()]+x.to_numpy().T.tolist())),
+    #                stat_assoc_l))
+    
+    dictionary = dict(zip(names, stat_assoc_l))
     adata.uns["tree"]["stat_assoc_list"]=dictionary
     
     return adata
