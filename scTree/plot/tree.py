@@ -12,7 +12,9 @@ def tree(
     adata: AnnData,
     basis: str = "umap",
     cex_tree: float = None,
-    col_tree: bool = False):
+    col_tree: bool = False,
+    tips: bool = True,
+    forks: bool = True):
     
     if "tree" not in adata.uns:
         raise ValueError(
@@ -65,13 +67,15 @@ def tree(
             ax.scatter(subproj[:,0],subproj[:,1],zorder=2)
             
     bbox = dict(facecolor='white', alpha=0.6, edgecolor="white", pad=0.1)
-    for tip in r["tips"]:
-        ax.annotate(tip, (proj[tip,0], proj[tip,1]), ha="center", va="center",
-                   xytext=(-8, 8), textcoords='offset points',bbox=bbox)
-        
-    for fork in r["forks"]:
-        ax.annotate(fork, (proj[fork,0], proj[fork,1]), ha="center", va="center",
-                   xytext=(-8, 8), textcoords='offset points',bbox=bbox)      
+    
+    if tips:
+        for tip in r["tips"]:
+            ax.annotate(tip, (proj[tip,0], proj[tip,1]), ha="center", va="center",
+                       xytext=(-8, 8), textcoords='offset points',bbox=bbox)
+    if forks:    
+        for fork in r["forks"]:
+            ax.annotate(fork, (proj[fork,0], proj[fork,1]), ha="center", va="center",
+                       xytext=(-8, 8), textcoords='offset points',bbox=bbox)      
         
         
         
@@ -89,7 +93,7 @@ def tree_3d(
     cmap = None,
     palette = None):
     
-    r = adata.uns["ppt"]
+    r = adata.uns["tree"]
     
     emb = adata.obsm[f"X_{basis}"]
     if emb.shape[1]>3:
@@ -162,6 +166,16 @@ def tree_3d(
                     ))]
                 
     
+    else:
+        trace1 = [go.Scatter3d(
+                    x=emb_f[:,0],
+                    y=emb_f[:,1],
+                    z=emb_f[:,2],
+                    mode='markers',
+                    marker=dict(size=cell_cex,
+                                color="grey",
+                                opacity=0.9
+                    ))]
 
     trace2 = [go.Scatter3d(
         x=x_lines,

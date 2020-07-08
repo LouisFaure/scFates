@@ -24,12 +24,13 @@ def cleanup(
     R=r["R"]
     F=r["F"]
     init_num=B.shape[0]
-    
+    init_pp=np.arange(B.shape[0])
     if leaves is not None:
         g=igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
+        tips = np.argwhere(np.array(g.degree())==1).flatten()
         branches = np.argwhere(np.array(g.degree())>2).flatten()
-        idxmin=np.array(list(map(lambda t: np.argmin(list(map(len,g.get_all_shortest_paths(t,branches)))),leaves))).item()
-        torem_manual=list(map(lambda t: g.get_all_shortest_paths(t,branches),leaves))[0][idxmin]
+        idxmin=list(map(lambda l: np.argmin(list(map(len,g.get_all_shortest_paths(l,branches)))),leaves))
+        torem_manual=np.concatenate(list(map(lambda i: np.array(g.get_shortest_paths(leaves[i],branches[idxmin[i]])[0][:-1]),range(len(leaves)))))
         B=np.delete(B,torem_manual,axis=0)
         B=np.delete(B,torem_manual,axis=1)
         R=np.delete(R,torem_manual,axis=1)
