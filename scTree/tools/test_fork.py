@@ -61,7 +61,7 @@ def test_fork(
     n_jobs: int = 1,
     n_map: int = 1,
     n_map_up: int = 1,
-    copy: bool = False,
+    copy: bool = False
     ):
     
     adata = adata.copy() if copy else adata
@@ -70,14 +70,14 @@ def test_fork(
 
     genes=adata.var_names[adata.var.signi]
     
-    r = adata.uns["tree"]
-    g = igraph.Graph.Adjacency((r["B"]>0).tolist(),mode="undirected")
+    tree = adata.uns["tree"]
+    g = igraph.Graph.Adjacency((tree["B"]>0).tolist(),mode="undirected")
     # Add edge weights and node labels.
-    g.es['weight'] = r["B"][r["B"].nonzero()]
+    g.es['weight'] = tree["B"][tree["B"].nonzero()]
 
     vpath = g.get_shortest_paths(root,leaves)
     interPP = list(set(vpath[0]) & set(vpath[1])) 
-    vpath = g.get_shortest_paths(r["pp_info"].loc[interPP,:].time.idxmax(),leaves)
+    vpath = g.get_shortest_paths(tree["pp_info"].loc[interPP,:].time.idxmax(),leaves)
 
     fork_stat=list()
     upreg_stat=list()
@@ -86,10 +86,10 @@ def test_fork(
         logg.info("    mapping: "+str(m))
         ## Diff expr between forks
         
-        df = r["pseudotime_list"][str(m)]
+        df = tree["pseudotime_list"][str(m)]
         def get_branches(i):
             x = vpath[i]
-            segs=r["pp_info"].loc[x,:].seg.unique()
+            segs=tree["pp_info"].loc[x,:].seg.unique()
             df_sub=df.loc[df.seg.isin(segs),:].copy(deep=True)
             df_sub.loc[:,"i"]=i
             return(df_sub)
@@ -99,7 +99,7 @@ def test_fork(
         if matw is None:
             brcells["w"]=1
         else:
-            brcells["w"] = matw[gene,:][:,r["cells_fitted"]]
+            brcells["w"] = matw[gene,:][:,tree["cells_fitted"]]
 
         brcells.drop(["seg","edge"],axis=1,inplace=True)
 
@@ -263,6 +263,8 @@ def branch_specific(
     stats.loc[idx_a,"branch"] = leaves[0]
     stats.loc[idx_b,"branch"] = leaves[1]
     
+    stats = stats.loc[stats.branch>0,:]
+    
     adata.uns["tree"][str(root)+"to"+str(leaves[0])+"vs"+str(leaves[1])] = stats
     
     
@@ -272,3 +274,76 @@ def branch_specific(
         "    'tree/"+name+"', DataFrame with additionnal 'branch' column (adata.uns)")
 
     return adata if copy else None
+
+
+def activation(adata: AnnData,
+    root,
+    leaves,
+    n_map: int =1,
+    copy: bool = False):
+    
+    name=str(root)+"to"+str(leaves[0])+"vs"+str(leaves[1])
+    
+    tree = adata.uns["tree"]
+    
+    for m in range(n_map):
+        logg.info("    mapping: "+str(m))
+        df=tree["pseudotime_list"][str(m)]
+        edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        img = igraph.Graph()
+        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_edges(edges)
+
+        def get_activation(feature):
+            subtree=getpath(img,tree["root"],tree["tips"],leave,tree,df).sort_values("t")
+            del subtree["branch"]
+            subtree["exp"]=np.array(adata[subtree.index,feature].X)
+            def gamfit(sdf):
+                m = rmgcv.gam(Formula("exp ~ s(t)"),data=sdf,gamma=1)
+                return rmgcv.predict_gam(m)
+
+            subtree["fitted"]=gamfit(subtree)
+            deriv_d = subtree.fitted.max()-subtree.fitted.min()
+            deriv = subtree.fitted.diff()[1:].values/deriv_d
+            return np.min([subtree.iloc[np.argwhere(deriv>.015)[0][0],:].t,subtree.t.max()])
+
+        genes1=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==leaves[0]]
+        leave=leaves[0]
+        acts1=list(map(get_activation,genes1))
+
+        genes2=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==leaves[1]]
+        leave=leaves[1]
+        acts2=list(map(get_activation,genes2))
+
+    adata.uns["tree"][name]["activation"]=0
+    adata.uns["tree"][name].loc[genes1,"activation"]=acts1
+    adata.uns["tree"][name].loc[genes2,"activation"]=acts2
+    
+    fork=list(set(img.get_shortest_paths(str(adata.uns["tree"]["root"]),str(762))[0]).intersection(img.get_shortest_paths(str(adata.uns["tree"]["root"]),str(762))[0]))[-1]
+    fork_t=adata.uns["tree"]["pp_seg"].loc[fork,:].d
+    
+    adata.uns["tree"][name]["module"] = "early"
+    adata.uns["tree"][name].loc[adata.uns["tree"][name]["activation"]>fork_t,"module"]="late"
+    
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "updated \n"
+        "    'tree/"+name+"', DataFrame with additionnal 'activation' and 'module' columns (adata.uns)")
+    
+    return adata if copy else None
+
+def getpath(g,root,tips,tip,tree,df):
+    warnings.filterwarnings("ignore")
+    try:
+        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
+        segs = list()
+        for i in range(len(path)-1):
+            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
+        segs=tree["pp_seg"].index[segs]
+        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
+        pth["branch"]=str(root)+"_"+str(tip)
+        warnings.filterwarnings("default")
+        return(pth)
+    except IndexError:
+        pass
