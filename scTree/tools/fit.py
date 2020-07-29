@@ -52,11 +52,10 @@ rmgcv = importr("mgcv")
 rstats = importr("stats")
 
 
-
-
-
 def fit(
     adata: AnnData,
+    root,
+    leaves,
     n_map: int = 1,
     n_jobs: int = 1,
     spline_df: int = 5,
@@ -65,7 +64,7 @@ def fit(
     st_cut: float = 0.8,
     copy: bool = False):
     
-    adata = data.copy() if copy else adata
+    adata = adata.copy() if copy else adata
     
     if "signi" not in adata.var.columns:
         raise ValueError(
@@ -74,33 +73,36 @@ def fit(
     
     genes = adata.var_names[adata.var.signi]
     
-    r = adata.uns["tree"]
-    tips = r["tips"]
-    root = r["root"]
-    tips = tips[~np.isin(tips,root)] 
+    tree = adata.uns["tree"]
+    tips = tree["tips"]
+    if root is None:
+        root = tree["root"]
+        tips = tips[~np.isin(tips,root)] 
     root2=None
-    if "root2" in r:
-        root2 = r["root2"]
-        tips = tips[~np.isin(tips,r["root2"])] 
+    if "root2" in tree:
+        root2 = tree["root2"]
+        tips = tips[~np.isin(tips,tree["root2"])] 
     
+    if leaves is not None:
+        tips=leaves
     
     logg.info("fit features associated with the tree", time=False, end="\n")
        
     stat_assoc=list()
     
     for m in range(n_map):
-        df=r["pseudotime_list"][str(m)]
-        edges=r["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        df=tree["pseudotime_list"][str(m)]
+        edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(r["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
         
-        temp = pd.concat(list(map(lambda x: getpath(img,root,tips,x,r,df), tips)),axis=0)
+        temp = pd.concat(list(map(lambda tip: getpath(img,root,tips,tip,tree,df), tips)),axis=0)
         if root2 is not None:
-            temp = pd.concat([temp,pd.concat(list(map(lambda x: getpath(img,root2,tips,x,r,df), tips)),axis=0)])
+            temp = pd.concat([temp,pd.concat(list(map(lambda tip: getpath(img,root2,tips,tip,tree,df), tips)),axis=0)])
         temp.drop(['edge','seg'],axis=1,inplace=True)
         temp.columns=['t', 'branch']
-        
+        temp = temp[~temp.index.duplicated(keep='first')]
         if sparse.issparse(adata.X):
             Xgenes = adata[temp.index,genes].X.A.T.tolist()
         else:
@@ -121,22 +123,32 @@ def fit(
     for i in range(len(stat_assoc)):
         stat_assoc[i]=pd.concat(stat_assoc[i],axis=1)
         stat_assoc[i].columns=adata.var_names[adata.var.signi]
+        
+    
+
     
     names = np.arange(len(stat_assoc)).astype(str).tolist()
     dictionary = dict(zip(names, stat_assoc))
     adata.uns["tree"]["fit_list"]=dictionary
     
-    if n_map==1:
-        adata.uns["tree"]["fit_summary"] = adata.uns["tree"]["fit_list"]["0"]
-    else:
-        dfs = list(adata.uns["tree"]["fit_list"].values)
-        adata.uns["tree"]["fit_summary"] = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
+    adata._inplace_subset_obs(np.unique(adata.uns["tree"]["fit_list"]["0"].index))
+    adata._inplace_subset_var(genes)
     
-    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    if n_map==1:
+        #adata.uns["tree"]["fit_summary"] = adata.uns["tree"]["fit_list"]["0"]
+        adata.layers["fitted"] = adata.uns["tree"]["fit_list"]["0"]
+    else:
+        #dfs = list(adata.uns["tree"]["fit_list"].values)
+        #adata.uns["tree"]["fit_summary"] = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
+        adata.layers["fitted"] = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
+    
+
+    
+    logg.info("    finished (adata subsetted to keep only fitted features!)", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'tree/fit_list', list of fitted features on the tree for all mappings (adata.uns)\n"
-        "    'tree/fit_summary', summary of all fitted features on the tree for all mappings (adata.uns)"
+        "added\n" + "    'fitted', fitted features on the tree for all mappings (adata.layers)"
     )
+    
     
     return adata if copy else None
 

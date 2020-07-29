@@ -20,7 +20,7 @@ def cluster(
     
     clusters = pd.Series(adata.uns["tree"]["fit_clusters"])
     
-    fitted = adata.uns["tree"]["fit_summary"].T.copy(deep=True)
+    fitted = pd.DataFrame(adata.layers["fitted"]).T.copy(deep=True)
     g = adata.obs.groupby('seg')
     seg_order=g.apply(lambda x: np.mean(x.t)).sort_values().index.tolist()
     cell_order=np.concatenate(list(map(lambda x: adata.obs.t[adata.obs.seg==x].sort_values().index,seg_order)))

@@ -16,9 +16,10 @@ from functools import reduce
 from statsmodels.stats.multitest import multipletests
 import statsmodels.formula.api as sm
 
+from scipy import sparse
+
 from joblib import delayed, Parallel
 from tqdm import tqdm
-from scipy import sparse
 
 from .. import logging as logg
 from .. import settings
@@ -279,6 +280,7 @@ def branch_specific(
 def activation(adata: AnnData,
     root,
     leaves,
+    deriv_cut: float = 0.015,
     n_map: int =1,
     copy: bool = False):
     
@@ -292,12 +294,18 @@ def activation(adata: AnnData,
         edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
-        img.add_edges(edges)
-
+        img.add_edges(edges)  
+        
         def get_activation(feature):
-            subtree=getpath(img,tree["root"],tree["tips"],leave,tree,df).sort_values("t")
+            
+            subtree=getpath(img,root,tree["tips"],leave,tree,df).sort_values("t")
             del subtree["branch"]
-            subtree["exp"]=np.array(adata[subtree.index,feature].X)
+            warnings.filterwarnings("ignore")
+            if sparse.issparse(adata.X):
+                subtree["exp"]=np.array(adata[subtree.index,feature].X.A)
+            else:
+                subtree["exp"]=np.array(adata[subtree.index,feature].X)
+            warnings.filterwarnings("default")
             def gamfit(sdf):
                 m = rmgcv.gam(Formula("exp ~ s(t)"),data=sdf,gamma=1)
                 return rmgcv.predict_gam(m)
@@ -305,7 +313,11 @@ def activation(adata: AnnData,
             subtree["fitted"]=gamfit(subtree)
             deriv_d = subtree.fitted.max()-subtree.fitted.min()
             deriv = subtree.fitted.diff()[1:].values/deriv_d
-            return np.min([subtree.iloc[np.argwhere(deriv>.015)[0][0],:].t,subtree.t.max()])
+            if len(np.argwhere(deriv>deriv_cut))==0:
+                act=subtree.t.max()+1
+            else:
+                act=subtree.iloc[np.argwhere(deriv>.015)[0][0],:].t
+            return np.min([act,subtree.t.max()])
 
         genes1=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==leaves[0]]
         leave=leaves[0]

@@ -16,12 +16,12 @@ def cluster(
 
     adata = data.copy() if copy else adata
     
-    if "fit_summary" not in adata.uns["tree"]:
+    if "fitted" not in adata.layers:
         raise ValueError(
             "You need to run `tl.fit` first to fit the features before clustering them."
         )
     
-    clusters = cluster_trends(adata.uns["tree"]["fit_summary"].T,k=knn)
+    clusters = cluster_trends(pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names).T,k=knn)
     
     adata.uns["tree"]["fit_clusters"] = clusters.to_dict()
     

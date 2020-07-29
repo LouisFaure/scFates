@@ -11,6 +11,8 @@ import shutil
 import sys
 import copy
 from statsmodels.stats.multitest import multipletests
+import igraph
+import warnings
 
 from joblib import delayed, Parallel
 from tqdm import tqdm
@@ -64,6 +66,8 @@ def test_association(
     st_cut: float = 0.8,
     reapply_filters: bool = False,
     plot: bool = False,
+    root = None,
+    leaves = None,
     copy: bool = False):
     
     adata = data.copy() if copy else adata
@@ -73,7 +77,7 @@ def test_association(
             "You need to run `tl.pseudotime` before testing for association."
         )
     
-    r = adata.uns["tree"]
+    tree = adata.uns["tree"]
     
     if reapply_filters & ("stat_assoc_list" in adata.uns["tree"]):
         stat_assoc_l = list(adata.uns["tree"]["stat_assoc_list"].values())
@@ -87,8 +91,19 @@ def test_association(
             
         return adata if copy else None
     
+    
     genes = adata.var_names
-    cells = r["cells_fitted"]
+    if root is None:
+        cells = tree["cells_fitted"]
+    else:
+        df = adata.obs.copy(deep=True)
+        edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        img = igraph.Graph()
+        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_edges(edges)
+        
+        cells = np.unique(np.concatenate(list(map(lambda leave:
+                                          getpath(img,root,tree["tips"],leave,tree,df).index,leaves))))
     
     if sparse.issparse(adata.X):
         Xgenes = adata[cells,genes].X.A.T.tolist()
@@ -100,7 +115,7 @@ def test_association(
     stat_assoc_l=list()
     
     for m in range(n_map):
-        data = list(zip([r["pseudotime_list"][str(m)]]*len(Xgenes),Xgenes))
+        data = list(zip([tree["pseudotime_list"][str(m)].loc[cells,:]]*len(Xgenes),Xgenes))
         
         stat = Parallel(n_jobs=n_jobs)(
             delayed(gt_fun)(
@@ -193,3 +208,20 @@ def apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut):
     adata.uns["tree"]["stat_assoc_list"]=dictionary
     
     return adata
+
+
+def getpath(g,root,tips,tip,tree,df):
+    warnings.filterwarnings("ignore")
+    try:
+        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
+        segs = list()
+        for i in range(len(path)-1):
+            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
+        segs=tree["pp_seg"].index[segs]
+        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
+        pth["branch"]=str(root)+"_"+str(tip)
+        warnings.filterwarnings("default")
+        return(pth)
+    except IndexError:
+        pass
