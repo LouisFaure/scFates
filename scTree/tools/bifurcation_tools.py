@@ -15,6 +15,7 @@ import warnings
 from functools import reduce
 from statsmodels.stats.multitest import multipletests
 import statsmodels.formula.api as sm
+from copy import deepcopy
 
 from scipy import sparse
 
@@ -57,8 +58,8 @@ rstats = importr("stats")
 
 def test_fork(
     adata: AnnData,
-    root,
-    leaves,
+    root_milestone,
+    milestones,
     n_jobs: int = 1,
     n_map: int = 1,
     n_map_up: int = 1,
@@ -69,9 +70,20 @@ def test_fork(
     
     logg.info("testing fork")
 
-    genes=adata.var_names[adata.var.signi]
+    genes = adata.var_names[adata.var.signi]
     
     tree = adata.uns["tree"]
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc_temp = deepcopy(mlsc)
+    
+    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+                   
+    leaves=list(map(lambda leave: dct[leave],milestones))
+    root=dct[root_milestone]
+    
     g = igraph.Graph.Adjacency((tree["B"]>0).tolist(),mode="undirected")
     # Add edge weights and node labels.
     g.es['weight'] = tree["B"][tree["B"].nonzero()]
@@ -134,13 +146,13 @@ def test_fork(
 
             data = list(zip([totest]*len(Xgenes),Xgenes))
 
-            stat = Parallel(n_jobs=1)(
+            stat = Parallel(n_jobs=n_jobs)(
                     delayed(test_upreg)(
                         data[d]
                     )
-                    for d in tqdm(range(len(data)),file=sys.stdout,desc="    leave "+str(leave))
+                    for d in tqdm(range(len(data)),file=sys.stdout,desc="    leave "+str(keys[vals==leave][0]))
                 )
-            stat=pd.DataFrame(stat,index=genes,columns=[str(leave)+"_A",str(leave)+"_p"])
+            stat=pd.DataFrame(stat,index=genes,columns=[str(keys[vals==leave][0])+"_A",str(keys[vals==leave][0])+"_p"])
             leaves_stat=leaves_stat+[stat]
             
         upreg_stat=upreg_stat+[pd.concat(leaves_stat,axis=1)]
@@ -181,9 +193,10 @@ def test_fork(
     
     
     summary_stat=pd.concat([fork_stat,upreg_stat],axis=1)
+    adata.uns["milestones_colors"]=mlsc_temp
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    name=str(root)+"to"+str(leaves[0])+"vs"+str(leaves[1])
+    name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
     adata.uns["tree"][name] = summary_stat
     logg.hint(
         "added \n"
@@ -226,8 +239,8 @@ def test_upreg(data):
 
 def branch_specific(
     adata: AnnData,
-    root,
-    leaves,
+    root_milestone,
+    milestones,
     effect_b1: float = None,
     effect_b2: float = None,
     stf_cut: float = 0.7,
@@ -238,10 +251,22 @@ def branch_specific(
     
     adata = adata.copy() if copy else adata
     
-    name=str(root)+"to"+str(leaves[0])+"vs"+str(leaves[1])
-    stats = adata.uns["tree"][name]
+    tree=adata.uns["tree"]
     
-    stats["branch"] = 0 
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc_temp = deepcopy(mlsc)
+    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+                   
+    leaves=list(map(lambda leave: dct[leave],milestones))
+    root=dct[root_milestone]
+    
+    name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
+    stats = tree[name]
+    
+    stats["branch"] = "none" 
     
     idx_a=stats.apply(lambda x: (x.effect > effect_b1) &
                                         (x[5]>pd_a) & (x[6]<pd_p) & (x.signi_fdr >stf_cut),
@@ -249,7 +274,7 @@ def branch_specific(
     
     idx_a=idx_a[idx_a].index
     
-    logg.info("    "+str(len(idx_a))+" features found to be specific to leave "+str(leaves[0]))
+    logg.info("    "+str(len(idx_a))+" features found to be specific to leave "+str(keys[vals==leaves[0]][0]))
     
     
 
@@ -259,15 +284,16 @@ def branch_specific(
     
     idx_b=idx_b[idx_b].index
     
-    logg.info("    "+str(len(idx_b))+" features found to be specific to leave "+str(leaves[1]))
+    logg.info("    "+str(len(idx_b))+" features found to be specific to leave "+str(keys[vals==leaves[1]][0]))
 
-    stats.loc[idx_a,"branch"] = leaves[0]
-    stats.loc[idx_b,"branch"] = leaves[1]
+    stats.loc[idx_a,"branch"] = str(keys[vals==leaves[0]][0])
+    stats.loc[idx_b,"branch"] = str(keys[vals==leaves[1]][0])
     
-    stats = stats.loc[stats.branch>0,:]
+    stats = stats.loc[stats.branch!="none",:]
     
-    adata.uns["tree"][str(root)+"to"+str(leaves[0])+"vs"+str(leaves[1])] = stats
+    adata.uns["tree"][name] = stats
     
+    adata.uns["milestones_colors"]=mlsc_temp
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -278,26 +304,36 @@ def branch_specific(
 
 
 def activation(adata: AnnData,
-    root,
-    leaves,
+    root_milestone,
+    milestones,
     deriv_cut: float = 0.015,
+    pseudotime_offset: float = 0,
     n_map: int =1,
     copy: bool = False):
     
-    name=str(root)+"to"+str(leaves[0])+"vs"+str(leaves[1])
-    
     tree = adata.uns["tree"]
     
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc_temp = deepcopy(mlsc)
+    
+    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+                   
+    leaves=list(map(lambda leave: dct[leave],milestones))
+    root=dct[root_milestone]
+    
+    name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
+    
     for m in range(n_map):
-        logg.info("    mapping: "+str(m))
-        df=tree["pseudotime_list"][str(m)]
-        edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        df = tree["pseudotime_list"][str(m)]
+        edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)  
-        
+
         def get_activation(feature):
-            
             subtree=getpath(img,root,tree["tips"],leave,tree,df).sort_values("t")
             del subtree["branch"]
             warnings.filterwarnings("ignore")
@@ -319,23 +355,26 @@ def activation(adata: AnnData,
                 act=subtree.iloc[np.argwhere(deriv>.015)[0][0],:].t
             return np.min([act,subtree.t.max()])
 
-        genes1=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==leaves[0]]
+        genes1=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==str(keys[vals==leaves[0]][0])]
         leave=leaves[0]
         acts1=list(map(get_activation,genes1))
 
-        genes2=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==leaves[1]]
+        genes2=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==str(keys[vals==leaves[1]][0])]
         leave=leaves[1]
         acts2=list(map(get_activation,genes2))
 
-    adata.uns["tree"][name]["activation"]=0
-    adata.uns["tree"][name].loc[genes1,"activation"]=acts1
-    adata.uns["tree"][name].loc[genes2,"activation"]=acts2
-    
-    fork=list(set(img.get_shortest_paths(str(adata.uns["tree"]["root"]),str(762))[0]).intersection(img.get_shortest_paths(str(adata.uns["tree"]["root"]),str(762))[0]))[-1]
-    fork_t=adata.uns["tree"]["pp_seg"].loc[fork,:].d
+    adata.uns["tree"][name]["activation"] = 0
+    adata.uns["tree"][name].loc[genes1,"activation"] = acts1
+    adata.uns["tree"][name].loc[genes2,"activation"] = acts2
+
+    fork=list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
+    fork=np.array(img.vs["name"],dtype=int)[fork]
+    fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()-pseudotime_offset
     
     adata.uns["tree"][name]["module"] = "early"
     adata.uns["tree"][name].loc[adata.uns["tree"][name]["activation"]>fork_t,"module"]="late"
+    
+    adata.uns["milestones_colors"]=mlsc_temp
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(

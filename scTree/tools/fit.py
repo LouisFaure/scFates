@@ -54,8 +54,8 @@ rstats = importr("stats")
 
 def fit(
     adata: AnnData,
-    root,
-    leaves,
+    root = None,
+    leaves = None,
     n_map: int = 1,
     n_jobs: int = 1,
     spline_df: int = 5,
@@ -129,17 +129,14 @@ def fit(
     
     names = np.arange(len(stat_assoc)).astype(str).tolist()
     dictionary = dict(zip(names, stat_assoc))
-    adata.uns["tree"]["fit_list"]=dictionary
     
-    adata._inplace_subset_obs(np.unique(adata.uns["tree"]["fit_list"]["0"].index))
+    adata._inplace_subset_obs(np.unique(dictionary["0"].index))
     adata._inplace_subset_var(genes)
     
     if n_map==1:
-        #adata.uns["tree"]["fit_summary"] = adata.uns["tree"]["fit_list"]["0"]
-        adata.layers["fitted"] = adata.uns["tree"]["fit_list"]["0"]
+        adata.layers["fitted"] = dictionary["0"]
     else:
-        #dfs = list(adata.uns["tree"]["fit_list"].values)
-        #adata.uns["tree"]["fit_summary"] = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
+        dfs = list(dictionary.values)
         adata.layers["fitted"] = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
     
 
