@@ -14,6 +14,8 @@ from statsmodels.stats.multitest import multipletests
 import igraph
 import warnings
 
+from copy import deepcopy
+
 from joblib import delayed, Parallel
 from tqdm import tqdm
 from scipy import sparse
@@ -79,6 +81,20 @@ def test_association(
     
     tree = adata.uns["tree"]
     
+    
+    if leaves is not None:
+        mlsc = deepcopy(adata.uns["milestones_colors"])
+        mlsc_temp = deepcopy(mlsc)
+        dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                       np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+        keys = np.array(list(dct.keys()))
+        vals = np.array(list(dct.values()))
+
+        leaves=list(map(lambda leave: dct[leave],leaves))
+        root=dct[root]
+    else:
+        mlsc_temp=None
+    
     if reapply_filters & ("stat_assoc_list" in adata.uns["tree"]):
         stat_assoc_l = list(adata.uns["tree"]["stat_assoc_list"].values())
         #stat_assoc_l = list(map(lambda x: pd.DataFrame(x,index=x["features"]),stat_assoc_l))
@@ -97,7 +113,7 @@ def test_association(
         cells = tree["cells_fitted"]
     else:
         df = adata.obs.copy(deep=True)
-        edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
@@ -128,6 +144,9 @@ def test_association(
         stat_assoc_l = stat_assoc_l + [stat]
         
     adata = apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut)
+    
+    if mlsc_temp is not None:
+        adata.uns["milestones_colors"]=mlsc_temp
 
     logg.info("    found "+str(sum(adata.var["signi"]))+ " significant features",
               time=True, end=" " if settings.verbosity > 2 else "\n")

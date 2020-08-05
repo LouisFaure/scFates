@@ -21,6 +21,7 @@ from scipy import sparse
 from .. import logging as logg
 from .. import settings
 
+from copy import deepcopy
 
 try:
     from rpy2.robjects import pandas2ri, Formula
@@ -73,8 +74,23 @@ def fit(
     
     genes = adata.var_names[adata.var.signi]
     
+    
     tree = adata.uns["tree"]
     tips = tree["tips"]
+    
+    if leaves is not None:
+        mlsc = deepcopy(adata.uns["milestones_colors"])
+        mlsc_temp = deepcopy(mlsc)
+        dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                       np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+        keys = np.array(list(dct.keys()))
+        vals = np.array(list(dct.values()))
+
+        leaves=list(map(lambda leave: dct[leave],leaves))
+        root=dct[root]
+    else:
+        mlsc_temp=None
+        
     if root is None:
         root = tree["root"]
         tips = tips[~np.isin(tips,root)] 
@@ -125,21 +141,23 @@ def fit(
         stat_assoc[i].columns=adata.var_names[adata.var.signi]
         
     
-
     
     names = np.arange(len(stat_assoc)).astype(str).tolist()
     dictionary = dict(zip(names, stat_assoc))
     
+    if n_map==1:
+        fitted = dictionary["0"]
+    else:
+        dfs = list(dictionary.values)
+        fitted = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
+    
     adata._inplace_subset_obs(np.unique(dictionary["0"].index))
     adata._inplace_subset_var(genes)
     
-    if n_map==1:
-        adata.layers["fitted"] = dictionary["0"]
-    else:
-        dfs = list(dictionary.values)
-        adata.layers["fitted"] = reduce(lambda x, y: x.add(y, fill_value=0), dfs)/n_map
+    adata.layers["fitted"] = fitted.loc[adata.obs_names,:]
     
-
+    if mlsc_temp is not None:
+        adata.uns["milestones_colors"]=mlsc_temp
     
     logg.info("    finished (adata subsetted to keep only fitted features!)", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(

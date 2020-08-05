@@ -3,13 +3,20 @@ import pandas as pd
 import igraph
 from anndata import AnnData
 
+from copy import deepcopy
+from functools import partial
+from statsmodels.stats.weightstats import DescrStatsW
+
 from .. import logging as logg
 from .. import settings
 
+import sys
+sys.setrecursionlimit(10000)
+
 def slide_cells(
     adata: AnnData,
-    root,
-    leaves,
+    root_milestone,
+    milestones,
     win: int = 50,
     mapping: bool = True,
     copy: bool = False,
@@ -18,6 +25,16 @@ def slide_cells(
     adata = adata.copy() if copy else adata
     
     tree = adata.uns["tree"]
+    
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc_temp = deepcopy(mlsc)
+    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+
+    leaves=list(map(lambda leave: dct[leave],milestones))
+    root=dct[root_milestone]
     
     def getsegs(g,root,leave,tree):
         path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(leave)))][0]
@@ -41,13 +58,13 @@ def slide_cells(
     seg_branch1 = list(set.difference(set(paths[0]),set(seg_progenies)))
     seg_branch2 = list(set.difference(set(paths[1]),set(seg_progenies)))
     pp_probs = tree["R"].sum(axis=0)
-    pps = tree["pp_info"].PP[tree["pp_info"].seg.isin(np.array(paths).flatten().astype(str))].index
+    pps = tree["pp_info"].PP[tree["pp_info"].seg.isin(np.array(seg_progenies+seg_branch1+seg_branch2).astype(str))].index
 
     seg_branch1 = [str(seg) for seg in seg_branch1]
     seg_branch2 = [str(seg) for seg in seg_branch2]
     seg_progenies = [str(seg) for seg in seg_progenies]
 
-    
+    #@tail_call_optimized
     def region_extract(pt_cur,segs_cur):
         freq = list()
 
@@ -102,14 +119,68 @@ def slide_cells(
                 return freq+res1+res2
             
     pt_cur = tree["pp_info"].loc[pps,"time"].min()
-    segs_cur=np.unique(np.array(paths).flatten().astype(str))
+    segs_cur=np.unique(np.array(seg_progenies+seg_branch1+seg_branch2).flatten().astype(str))
     
     freq=region_extract(pt_cur,segs_cur)
-    name=str(root)+"to"+str(leaves[0])+"vs"+str(leaves[1])
-    adata.uns["tree"][name+"_cell_freq"]=freq
+    name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
+    adata.uns["tree"][name+"-cell_freq"]=freq
     
     logg.hint(
         "added \n"
-        "    'tree/"+name+"_cell_freq', probability assignment of cells on non intersecting windows (adata.uns)")
+        "    'tree/"+name+"-cell_freq', probability assignment of cells on non intersecting windows (adata.uns)")
+    
+    return adata if copy else None
+
+
+
+def slide_cors(
+    adata: AnnData,
+    root_milestone,
+    milestones,
+    copy: bool = False,
+    ):
+    
+    adata = adata.copy() if copy else adata
+       
+    tree = adata.uns["tree"]    
+    
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc_temp = deepcopy(mlsc)
+    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+
+    leaves=list(map(lambda leave: dct[leave],milestones))
+    root=dct[root_milestone]
+    
+    name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
+    
+    bif = adata.uns["tree"][name]
+    freq = adata.uns["tree"][name+"-cell_freq"]
+    nwin = len(adata.uns["tree"][name+"-cell_freq"])
+    
+    genesetA = bif.index[(bif["branch"]==milestones[0]).values & (bif["module"]=="early").values]
+    genesetB = bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
+    genesets = np.concatenate([genesetA,genesetB])
+    
+    def gather_cor(i,geneset):
+        freq=adata.uns["tree"][name+"-cell_freq"][i]
+        cormat = pd.DataFrame(DescrStatsW(np.array(adata[adata.uns["tree"]["cells_fitted"],genesets].X),weights=freq).corrcoef,
+                              index=genesets,columns=genesets)
+        return cormat.loc[:,geneset].mean(axis=1)
+
+    
+    gather = partial(gather_cor, geneset=genesetA)
+    corA=pd.concat(list(map(gather,range(nwin))),axis=1)
+
+    gather = partial(gather_cor, geneset=genesetB)
+    corB=pd.concat(list(map(gather,range(nwin))),axis=1)
+    
+    adata.uns["tree"][name+"-corAB"]=pd.concat([corA,corB], keys=milestones)
+    
+    logg.hint(
+        "added \n"
+        "    'tree/"+name+"-corAB', gene-gene correlation modules (adata.uns)")
     
     return adata if copy else None
