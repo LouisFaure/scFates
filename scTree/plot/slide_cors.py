@@ -56,7 +56,7 @@ def slide_cors(
     genesets=[genesetA,genesetB]
     for i in range(nwin):
         for j in range(2):
-            axs[1,i].scatter(corA.loc[genesets[j],i],corB.loc[genesets[j],i],
+            axs[1,i].scatter(corA.loc[genesets[j],str(i)],corB.loc[genesets[j],str(i)],
                              color=c_mil[j],alpha=.5)
         axs[1,i].grid(b=None)
         axs[1,i].axvline(0,linestyle="dashed",color="grey",zorder=0)

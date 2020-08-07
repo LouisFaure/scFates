@@ -79,6 +79,11 @@ def cluster(
 
         ix = fitted.T.corr(method="spearman").sort_values(early_gene, ascending=False).index
         fitted_sorted = fitted.loc[ix, :]
+        
+        df_f=pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names)
+        #df_f=df_f.apply(lambda x: (x-x.mean())/x.std(),axis=1)
+        fitted_sorted=df_f.iloc[adata.obs.t.argsort().values,adata.obs.t[df_f.idxmax(axis=0).values].argsort().values].T
+        fitted_sorted=fitted_sorted.apply(lambda x: (x-x.mean())/x.std(),axis=1)
         combi=False
     
     

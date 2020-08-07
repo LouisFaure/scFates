@@ -14,3 +14,4 @@ scanpy>=1.5.1
 cycler>=0.10.0
 python_igraph>=0.8.2
 scikit_learn>=0.23.1
+scikit-misc>=0.1.3

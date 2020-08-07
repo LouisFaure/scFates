@@ -67,27 +67,27 @@ def modules(
     for m in np.unique(miles):
         axs[0,0].scatter(X.loc[miles.index[miles==m],early_1].mean(axis=1),
                     X.loc[miles.index[miles==m],early_2].mean(axis=1),c=dct[m])
-    axs[0,0].axis('square')
+    axs[0,0].set_aspect(1.0/axs[0,0].get_data_ratio(), adjustable='box')
     axs[0,0].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
     axs[0,0].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
 
     for m in np.unique(miles):
         axs[0,1].scatter(X.loc[miles.index[miles==m],late_1].mean(axis=1),
                     X.loc[miles.index[miles==m],late_2].mean(axis=1),c=dct[m])
-    axs[0,1].axis('square')
+    axs[0,1].set_aspect(1.0/axs[0,1].get_data_ratio(), adjustable='box')
     axs[0,1].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
     axs[0,1].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
 
     axs[1,0].scatter(X.loc[:,early_1].mean(axis=1),
                 X.loc[:,early_2].mean(axis=1),c=adata.obs.t[X.index])
-    axs[1,0].axis('square')
+    axs[1,0].set_aspect(1.0/axs[1,0].get_data_ratio(), adjustable='box')
     axs[1,0].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
     axs[1,0].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
 
 
     axs[1,1].scatter(X.loc[:,late_1].mean(axis=1),
                 X.loc[:,late_2].mean(axis=1),c=adata.obs.t[X.index])
-    axs[1,1].axis('square')
+    axs[1,1].set_aspect(1.0/axs[1,1].get_data_ratio(), adjustable='box')
     axs[1,1].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
     axs[1,1].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
     plt.tight_layout()

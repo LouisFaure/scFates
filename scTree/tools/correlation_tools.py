@@ -7,6 +7,7 @@ from copy import deepcopy
 from functools import partial
 from statsmodels.stats.weightstats import DescrStatsW
 
+import warnings
 from .. import logging as logg
 from .. import settings
 
@@ -64,7 +65,6 @@ def slide_cells(
     seg_branch2 = [str(seg) for seg in seg_branch2]
     seg_progenies = [str(seg) for seg in seg_progenies]
 
-    #@tail_call_optimized
     def region_extract(pt_cur,segs_cur):
         freq = list()
 
@@ -168,6 +168,7 @@ def slide_cors(
         freq=adata.uns["tree"][name+"-cell_freq"][i]
         cormat = pd.DataFrame(DescrStatsW(np.array(adata[adata.uns["tree"]["cells_fitted"],genesets].X),weights=freq).corrcoef,
                               index=genesets,columns=genesets)
+        np.fill_diagonal(cormat.values, np.nan)
         return cormat.loc[:,geneset].mean(axis=1)
 
     
@@ -177,10 +178,136 @@ def slide_cors(
     gather = partial(gather_cor, geneset=genesetB)
     corB=pd.concat(list(map(gather,range(nwin))),axis=1)
     
-    adata.uns["tree"][name+"-corAB"]=pd.concat([corA,corB], keys=milestones)
+    corAB=pd.concat([corA,corB], keys=milestones) 
+    corAB.columns=[str(c) for c in corAB.columns]
+    
+    adata.uns["tree"][name+"-corAB"]=corAB
     
     logg.hint(
         "added \n"
         "    'tree/"+name+"-corAB', gene-gene correlation modules (adata.uns)")
     
     return adata if copy else None
+
+
+
+def synchro_path(
+    adata: AnnData,
+    root_milestone,
+    milestones,
+    n_map=1,
+    n_jobs=None,
+    perm=True,
+    w=200,
+    step=30,
+    winp=10,
+    copy: bool = False,
+    ):
+    
+    adata = adata.copy() if copy else adata
+       
+    tree = adata.uns["tree"]    
+    
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc_temp = deepcopy(mlsc)
+    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+
+    leaves=list(map(lambda leave: dct[leave],milestones))
+    root=dct[root_milestone]
+    
+    name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
+    
+    def synchro_map(m):
+        df = tree["pseudotime_list"][str(m)]
+        edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        img = igraph.Graph()
+        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_edges(edges)  
+
+        genesetA=adata.uns["tree"][name].index[(adata.uns["tree"][name].module=="early") & 
+                                               (adata.uns["tree"][name].branch==milestones[0])]
+        genesetB=adata.uns["tree"][name].index[(adata.uns["tree"][name].module=="early") & 
+                                               (adata.uns["tree"][name].branch==milestones[1])]
+
+        def synchro_milestone(leave):
+            cells=getpath(img,root,tree["tips"],leave,tree,df).index
+            mat=pd.DataFrame(adata[cells,adata.uns["tree"][name].index[adata.uns["tree"][name].module=="early"]].X,
+                        index=cells,columns=adata.uns["tree"][name].index[adata.uns["tree"][name].module=="early"])
+            mat=mat.iloc[adata.obs.t[mat.index].argsort().values,:]
+
+            if permut==True:
+                winperm=np.min([winp,mat.shape[0]])
+                for i in np.arange(0,mat.shape[0]-winperm,winperm):
+                    mat.iloc[i:(i+winp),:]=mat.iloc[i:(i+winp),np.random.permutation(mat.shape[1])].values
+
+            def slide_path(i):
+                cls=mat.index[i:(i+w)]
+                cor=mat.loc[cls,:].corr(method="spearman")
+                np.fill_diagonal(cor.values, np.nan)
+                corA=cor.loc[:,genesetA].mean(axis=1)
+                corB=cor.loc[:,genesetB].mean(axis=1)
+                corA[genesetA] = (corA[genesetA] - 1/len(genesetA))*len(genesetA)/(len(genesetA)-1)
+                corB[genesetB] = (corB[genesetB] - 1/len(genesetB))*len(genesetB)/(len(genesetB)-1)
+
+                return pd.Series({"t":adata.obs.t[cls].mean(),
+                             "dist":(corA[genesetA].mean()-corA[genesetB].mean())**2+(corB[genesetA].mean()-corB[genesetB].mean())**2,
+                             "corAA":corA[genesetA].mean(),"corBB":corB[genesetB].mean(),"corAB":corA[genesetB].mean(),
+                                 "n_map":m})
+
+
+            return pd.concat(list(map(slide_path,np.arange(0,mat.shape[0]-w,step))),axis=1).T
+
+        return pd.concat(list(map(synchro_milestone,leaves)),keys=milestones)
+    
+    
+    if n_map>1:
+        permut = False
+        stats = Parallel(n_jobs=n_jobs)(delayed(synchro_map)(i) for i in tqdm(range(n_map)))
+        allcor_r = pd.concat(stat)
+        if perm:
+            permut=True
+            stats = Parallel(n_jobs=n_jobs)(delayed(synchro_map)(i) for i in tqdm(range(n_map)))
+            allcor_p=pd.concat(stats)
+            allcor=pd.concat([allcor_r,allcor_p],keys=["real","permuted"])
+        else:
+            allcor=pd.concat([allcor_r], keys=['real'])
+    else:
+        permut=False
+        allcor_r=pd.concat(list(map(synchro_map,range(n_map))))
+
+        if perm:
+            permut=True
+            allcor_p=pd.concat(list(map(synchro_map,range(n_map))))
+            allcor=pd.concat([allcor_r,allcor_p],keys=["real","permuted"])
+        else:
+            allcor=pd.concat([allcor_r], keys=['real'])
+    
+    adata.uns["tree"][name+"-synchro"]=allcor
+    
+    adata.uns["milestones_colors"]=mlsc_temp
+    
+    logg.hint(
+        "added \n"
+        "    'tree/"+name+"-synchro', mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules (adata.uns)")
+    
+    return adata if copy else None
+
+
+def getpath(g,root,tips,tip,tree,df):
+    warnings.filterwarnings("ignore")
+    try:
+        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
+        segs = list()
+        for i in range(len(path)-1):
+            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
+        segs=tree["pp_seg"].index[segs]
+        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
+        pth["branch"]=str(root)+"_"+str(tip)
+        warnings.filterwarnings("default")
+        return(pth)
+    except IndexError:
+        pass
