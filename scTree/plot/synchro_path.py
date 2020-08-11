@@ -41,7 +41,7 @@ def synchro_path(
     fork=np.array(img.vs["name"],dtype=int)[fork]
     fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()
 
-    allcor=adata.uns["tree"][name+"-synchro"]
+    allcor=adata.uns[name]["synchro"]
     runs=pd.DataFrame(allcor.to_records())["level_0"].unique()
     
     fig, axs = plt.subplots(3,len(runs),figsize=(len(runs)*6, 6))

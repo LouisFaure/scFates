@@ -23,6 +23,8 @@ def modules(
     plt.rcParams["axes.grid"] = False
     tree=adata.uns["tree"]
     
+    uns_temp=deepcopy(adata.uns)
+    
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
@@ -34,9 +36,8 @@ def modules(
     name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
     
     
-    stats = adata.uns["tree"][name]
+    stats = adata.uns[name]["fork"]
     mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
     mls = adata.obs.milestones.cat.categories.tolist()
     dct = dict(zip(mls,mlsc))
     df = adata.obs.copy(deep=True)
@@ -95,7 +96,7 @@ def modules(
     fig.set_figheight(10)
     fig.set_figwidth(10)
     
-    adata.uns["milestones_colors"]=mlsc_temp
+    adata.uns=uns_temp
 
 
     

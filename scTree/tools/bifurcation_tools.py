@@ -73,8 +73,10 @@ def test_fork(
     genes = adata.var_names[adata.var.signi]
     
     tree = adata.uns["tree"]
+    
+    uns_temp = deepcopy(adata.uns) 
+    
     mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
     
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
@@ -193,14 +195,17 @@ def test_fork(
     
     
     summary_stat=pd.concat([fork_stat,upreg_stat],axis=1)
-    adata.uns["milestones_colors"]=mlsc_temp
+    adata.uns=uns_temp
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
-    adata.uns["tree"][name] = summary_stat
+    
+    #adata.uns[name]["fork"] = summary_stat
+    
+    adata.uns[name] = {"fork":summary_stat}
     logg.hint(
         "added \n"
-        "    'tree/"+name+"', DataFrame with fork test results (adata.uns)")
+        "    '"+name+"/fork', DataFrame with fork test results (adata.uns)")
 
     return adata if copy else None
 
@@ -253,8 +258,9 @@ def branch_specific(
     
     tree=adata.uns["tree"]
     
+    uns_temp = deepcopy(adata.uns)
+    
     mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
@@ -264,7 +270,7 @@ def branch_specific(
     root=dct[root_milestone]
     
     name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
-    stats = tree[name]
+    stats = adata.uns[name]["fork"]
     
     stats["branch"] = "none" 
     
@@ -291,14 +297,14 @@ def branch_specific(
     
     stats = stats.loc[stats.branch!="none",:]
     
-    adata.uns["tree"][name] = stats
+    adata.uns=uns_temp
     
-    adata.uns["milestones_colors"]=mlsc_temp
+    adata.uns[name]["fork"] = stats
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "updated \n"
-        "    'tree/"+name+"', DataFrame with additionnal 'branch' column (adata.uns)")
+        "    '"+name+"/fork', DataFrame updated with additionnal 'branch' column (adata.uns)")
 
     return adata if copy else None
 
@@ -313,9 +319,10 @@ def activation(adata: AnnData,
     
     tree = adata.uns["tree"]
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
+    uns_temp = deepcopy(adata.uns)
     
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+        
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
@@ -325,6 +332,8 @@ def activation(adata: AnnData,
     root=dct[root_milestone]
     
     name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
+    
+    stats = adata.uns[name]["fork"]
     
     for m in range(n_map):
         df = tree["pseudotime_list"][str(m)]
@@ -352,34 +361,36 @@ def activation(adata: AnnData,
             if len(np.argwhere(deriv>deriv_cut))==0:
                 act=subtree.t.max()+1
             else:
-                act=subtree.iloc[np.argwhere(deriv>.015)[0][0],:].t
+                act=subtree.iloc[np.argwhere(deriv>deriv_cut)[0][0],:].t
             return np.min([act,subtree.t.max()])
 
-        genes1=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==str(keys[vals==leaves[0]][0])]
+        genes1=stats.index[stats["branch"]==str(keys[vals==leaves[0]][0])]
         leave=leaves[0]
         acts1=list(map(get_activation,genes1))
 
-        genes2=adata.uns["tree"][name].index[adata.uns["tree"][name]["branch"]==str(keys[vals==leaves[1]][0])]
+        genes2=stats.index[stats["branch"]==str(keys[vals==leaves[1]][0])]
         leave=leaves[1]
         acts2=list(map(get_activation,genes2))
 
-    adata.uns["tree"][name]["activation"] = 0
-    adata.uns["tree"][name].loc[genes1,"activation"] = acts1
-    adata.uns["tree"][name].loc[genes2,"activation"] = acts2
+    stats["activation"] = 0
+    stats.loc[genes1,"activation"] = acts1
+    stats.loc[genes2,"activation"] = acts2
 
     fork=list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
     fork=np.array(img.vs["name"],dtype=int)[fork]
     fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()-pseudotime_offset
     
-    adata.uns["tree"][name]["module"] = "early"
-    adata.uns["tree"][name].loc[adata.uns["tree"][name]["activation"]>fork_t,"module"]="late"
+    stats["module"] = "early"
+    stats.loc[stats["activation"]>fork_t,"module"]="late"
     
-    adata.uns["milestones_colors"]=mlsc_temp
+    adata.uns=uns_temp
+    
+    adata.uns[name]["fork"] = stats
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "updated \n"
-        "    'tree/"+name+"', DataFrame with additionnal 'activation' and 'module' columns (adata.uns)")
+        "    '"+name+"/fork', DataFrame updated with additionnal 'activation' and 'module' columns (adata.uns)")
     
     return adata if copy else None
 

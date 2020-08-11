@@ -6,6 +6,7 @@ from anndata import AnnData
 from copy import deepcopy
 from functools import partial
 from statsmodels.stats.weightstats import DescrStatsW
+from skmisc.loess import loess
 
 import warnings
 from .. import logging as logg
@@ -27,13 +28,15 @@ def slide_cells(
     
     tree = adata.uns["tree"]
     
+    uns_temp = deepcopy(adata.uns)
+    
     mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
+        
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
-
+                   
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
@@ -123,11 +126,14 @@ def slide_cells(
     
     freq=region_extract(pt_cur,segs_cur)
     name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
-    adata.uns["tree"][name+"-cell_freq"]=freq
+    
+    adata.uns=uns_temp
+    
+    adata.uns[name]["cell_freq"]=freq
     
     logg.hint(
         "added \n"
-        "    'tree/"+name+"-cell_freq', probability assignment of cells on non intersecting windows (adata.uns)")
+        "    '"+name+"/cell_freq', probability assignment of cells on non intersecting windows (adata.uns)")
     
     return adata if copy else None
 
@@ -144,28 +150,30 @@ def slide_cors(
        
     tree = adata.uns["tree"]    
     
+    uns_temp = deepcopy(adata.uns)
+    
     mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
+        
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
-
+                   
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
     name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
     
-    bif = adata.uns["tree"][name]
-    freq = adata.uns["tree"][name+"-cell_freq"]
-    nwin = len(adata.uns["tree"][name+"-cell_freq"])
+    bif = adata.uns[name]["fork"]
+    freqs= adata.uns[name]["cell_freq"]
+    nwin = len(freqs)
     
     genesetA = bif.index[(bif["branch"]==milestones[0]).values & (bif["module"]=="early").values]
     genesetB = bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
     genesets = np.concatenate([genesetA,genesetB])
     
     def gather_cor(i,geneset):
-        freq=adata.uns["tree"][name+"-cell_freq"][i]
+        freq=freqs[i]
         cormat = pd.DataFrame(DescrStatsW(np.array(adata[adata.uns["tree"]["cells_fitted"],genesets].X),weights=freq).corrcoef,
                               index=genesets,columns=genesets)
         np.fill_diagonal(cormat.values, np.nan)
@@ -181,11 +189,12 @@ def slide_cors(
     corAB=pd.concat([corA,corB], keys=milestones) 
     corAB.columns=[str(c) for c in corAB.columns]
     
-    adata.uns["tree"][name+"-corAB"]=corAB
+    adata.uns=uns_temp
+    adata.uns[name]["corAB"]=corAB
     
     logg.hint(
         "added \n"
-        "    'tree/"+name+"-corAB', gene-gene correlation modules (adata.uns)")
+        "    '"+name+"/corAB', gene-gene correlation modules (adata.uns)")
     
     return adata if copy else None
 
@@ -208,17 +217,26 @@ def synchro_path(
        
     tree = adata.uns["tree"]    
     
+    edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    img = igraph.Graph()
+    img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    img.add_edges(edges)  
+    
+    uns_temp = deepcopy(adata.uns)
+    
     mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
+        
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
-
+                   
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
     name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
+    
+    bif = adata.uns[name]["fork"]
     
     def synchro_map(m):
         df = tree["pseudotime_list"][str(m)]
@@ -227,15 +245,13 @@ def synchro_path(
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)  
 
-        genesetA=adata.uns["tree"][name].index[(adata.uns["tree"][name].module=="early") & 
-                                               (adata.uns["tree"][name].branch==milestones[0])]
-        genesetB=adata.uns["tree"][name].index[(adata.uns["tree"][name].module=="early") & 
-                                               (adata.uns["tree"][name].branch==milestones[1])]
+        genesetA=bif.index[(bif.module=="early") & (bif.branch==milestones[0])]
+        genesetB=bif.index[(bif.module=="early") & (bif.branch==milestones[1])]
 
         def synchro_milestone(leave):
             cells=getpath(img,root,tree["tips"],leave,tree,df).index
-            mat=pd.DataFrame(adata[cells,adata.uns["tree"][name].index[adata.uns["tree"][name].module=="early"]].X,
-                        index=cells,columns=adata.uns["tree"][name].index[adata.uns["tree"][name].module=="early"])
+            mat=pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].X,
+                        index=cells,columns=bif.index[bif.module=="early"])
             mat=mat.iloc[adata.obs.t[mat.index].argsort().values,:]
 
             if permut==True:
@@ -285,13 +301,66 @@ def synchro_path(
         else:
             allcor=pd.concat([allcor_r], keys=['real'])
     
-    adata.uns["tree"][name+"-synchro"]=allcor
     
-    adata.uns["milestones_colors"]=mlsc_temp
     
+    
+    runs=pd.DataFrame(allcor.to_records())["level_0"].unique()
+    
+
+    dct_cormil=dict(zip(["corAA","corBB","corAB"],
+                        [milestones[0]+"\nintra-module",
+                         milestones[1]+"\nintra-module"]+[milestones[0]+" vs "+milestones[1]+"\ninter-module"]))
+
+    for cc in ["corAA","corBB","corAB"]:
+        allcor[cc+"_lowess"]=0
+        allcor[cc+"_ll"]=0
+        allcor[cc+"_ul"]=0
+        for r in range(len(runs)):
+            for mil in milestones:
+                res=allcor.loc[runs[r]].loc[mil]
+                l = loess(res.t, res[cc])
+                l.fit()
+                pred = l.predict(res.t, stderror=True)
+                conf = pred.confidence()
+
+                allcor.loc[(runs[r],mil),cc+"_lowess"] = pred.values
+                allcor.loc[(runs[r],mil),cc+"_ll"] = conf.lower
+                allcor.loc[(runs[r],mil),cc+"_ul"] = conf.upper
+       
+    
+    fork=list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
+    fork=np.array(img.vs["name"],dtype=int)[fork]
+    fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()
+    res=allcor.loc[allcor.t<fork_t,:]
+    res=res[~res.t.duplicated()]
+    l = loess(res.t, res["corAB"])
+    l.fit()
+    pred = l.predict(res.t, stderror=True)
+
+    tval=deepcopy(adata.obs.t)
+    tval[tval>fork_t]=np.nan
+
+    def inter_values(tv):
+        if ~np.isnan(tv):
+            return pred.values[np.argmin(np.abs(res.t.values-tv))]
+        else:
+            return tv
+    adata.obs["inter_cor "+name]=list(map(inter_values,tval))
+    
+    df = tree["pseudotime_list"][str(0)]
+    cells=np.concatenate([getpath(img,root,tree["tips"],leaves[0],tree,df).index,
+                          getpath(img,root,tree["tips"],leaves[1],tree,df).index])
+    
+    adata.obs["inter_cor "+name][~adata.obs_names.isin(cells)]=np.nan              
+    
+    adata.uns=uns_temp
+    
+    adata.uns[name]["synchro"]=allcor
+        
     logg.hint(
         "added \n"
-        "    'tree/"+name+"-synchro', mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules (adata.uns)")
+        "    '"+name+"/synchro', mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules (adata.uns)\n"
+        "    'inter_cor "+name+"', loess fit of itner-module mean local gene-gene correlations prior to bifurcation (adata.obs)")
     
     return adata if copy else None
 
