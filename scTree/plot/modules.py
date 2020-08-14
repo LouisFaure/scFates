@@ -10,7 +10,10 @@ from matplotlib.colors import to_hex
 from matplotlib.gridspec import GridSpec
 from copy import deepcopy
 from scipy import sparse 
+import warnings
 
+from typing import Union, Optional
+from scanpy.plotting._utils import savefig_or_show
 from . import palette_tools
 
 def modules(
@@ -18,14 +21,17 @@ def modules(
     root_milestone,
     milestones,
     color: str = "milestones",
-    basis: str = "umap"):
+    basis: str = "umap",
+    alpha: float = 1,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None):
     
     plt.rcParams["axes.grid"] = False
     tree=adata.uns["tree"]
     
     uns_temp=deepcopy(adata.uns)
     
-    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+    dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
@@ -45,17 +51,21 @@ def modules(
     img = igraph.Graph()
     img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
     img.add_edges(edges)
-    getpath(img,root,adata.uns["tree"]["tips"],leaves[0],tree,df).index
-    import warnings
+
+    
     cells=np.unique(np.concatenate([getpath(img,root,adata.uns["tree"]["tips"],leaves[0],tree,df).index,
                    getpath(img,root,adata.uns["tree"]["tips"],leaves[1],tree,df).index]))
 
-
+    
+    cols = deepcopy(adata.uns[color+"_colors"])
+    obscol = adata.obs[color].cat.categories.tolist()
+    dct_c = dict(zip(obscol,cols))
+    
     if sparse.issparse(adata.X):
         X=pd.DataFrame(np.array(adata[cells,stats.index].X.A),index=cells,columns=stats.index)
     else:
         X=pd.DataFrame(np.array(adata[cells,stats.index].X),index=cells,columns=stats.index)
-    miles=adata.obs.loc[X.index,"milestones"].astype(str)
+    miles=adata.obs.loc[X.index,color].astype(str)
 
     early_1=(stats.branch.values==str(keys[vals==leaves[0]][0])) & (stats.module.values=="early")
     late_1=(stats.branch.values==str(keys[vals==leaves[0]][0])) & (stats.module.values=="late")
@@ -65,29 +75,29 @@ def modules(
 
     fig, axs = plt.subplots(2,2)
 
-    for m in np.unique(miles):
+    for m in obscol:
         axs[0,0].scatter(X.loc[miles.index[miles==m],early_1].mean(axis=1),
-                    X.loc[miles.index[miles==m],early_2].mean(axis=1),c=dct[m])
+                    X.loc[miles.index[miles==m],early_2].mean(axis=1),c=dct_c[m],alpha=alpha)
     axs[0,0].set_aspect(1.0/axs[0,0].get_data_ratio(), adjustable='box')
     axs[0,0].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
     axs[0,0].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
 
-    for m in np.unique(miles):
-        axs[0,1].scatter(X.loc[miles.index[miles==m],late_1].mean(axis=1),
-                    X.loc[miles.index[miles==m],late_2].mean(axis=1),c=dct[m])
-    axs[0,1].set_aspect(1.0/axs[0,1].get_data_ratio(), adjustable='box')
-    axs[0,1].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
-    axs[0,1].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
-
-    axs[1,0].scatter(X.loc[:,early_1].mean(axis=1),
-                X.loc[:,early_2].mean(axis=1),c=adata.obs.t[X.index])
+    for m in obscol:
+        axs[1,0].scatter(X.loc[miles.index[miles==m],late_1].mean(axis=1),
+                    X.loc[miles.index[miles==m],late_2].mean(axis=1),c=dct_c[m],alpha=alpha)
     axs[1,0].set_aspect(1.0/axs[1,0].get_data_ratio(), adjustable='box')
-    axs[1,0].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
-    axs[1,0].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
+    axs[1,0].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
+    axs[1,0].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
+
+    axs[0,1].scatter(X.loc[:,early_1].mean(axis=1),
+                X.loc[:,early_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha)
+    axs[0,1].set_aspect(1.0/axs[0,1].get_data_ratio(), adjustable='box')
+    axs[0,1].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
+    axs[0,1].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
 
 
     axs[1,1].scatter(X.loc[:,late_1].mean(axis=1),
-                X.loc[:,late_2].mean(axis=1),c=adata.obs.t[X.index])
+                X.loc[:,late_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha)
     axs[1,1].set_aspect(1.0/axs[1,1].get_data_ratio(), adjustable='box')
     axs[1,1].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
     axs[1,1].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
@@ -97,6 +107,8 @@ def modules(
     fig.set_figwidth(10)
     
     adata.uns=uns_temp
+    
+    savefig_or_show('tree', show=show, save=save)
 
 
     

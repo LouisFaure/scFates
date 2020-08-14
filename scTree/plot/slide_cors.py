@@ -18,7 +18,7 @@ def slide_cors(
     
     uns_temp=deepcopy(adata.uns)
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = np.array(deepcopy(adata.uns["milestones_colors"]))
     if mlsc.dtype == "float":
         mlsc=list(map(rgb2hex,mlsc))
         

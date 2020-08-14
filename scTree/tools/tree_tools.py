@@ -5,10 +5,16 @@ import pandas as pd
 from pandas import DataFrame
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse.csgraph import shortest_path
 import igraph
 from tqdm import tqdm
 import sys
+import igraph
+import warnings
+import itertools
+from copy import deepcopy
 
+from ..tools.dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
 from ..plot.tree import tree as plot_tree
 from .. import logging as logg
 from .. import settings
@@ -331,3 +337,293 @@ def tree_epg(
     )
     
     return adata
+
+
+def cleanup(
+    adata: AnnData,
+    minbranchlength: int = 3,
+    leaves: Optional[int] = None,
+    copy: bool = False):
+    
+    adata = adata.copy() if copy else adata
+    
+    if "tree" not in adata.uns:
+        raise ValueError(
+            "You need to run `tl.ppt_tree` first to compute a princal tree before cleaning it"
+        )
+    r = adata.uns["tree"]
+    
+    B=r["B"]
+    R=r["R"]
+    F=r["F"]
+    init_num=B.shape[0]
+    init_pp=np.arange(B.shape[0])
+    if leaves is not None:
+        g=igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
+        tips = np.argwhere(np.array(g.degree())==1).flatten()
+        branches = np.argwhere(np.array(g.degree())>2).flatten()
+        idxmin=list(map(lambda l: np.argmin(list(map(len,g.get_all_shortest_paths(l,branches)))),leaves))
+        torem_manual=np.concatenate(list(map(lambda i: np.array(g.get_shortest_paths(leaves[i],branches[idxmin[i]])[0][:-1]),range(len(leaves)))))
+        B=np.delete(B,torem_manual,axis=0)
+        B=np.delete(B,torem_manual,axis=1)
+        R=np.delete(R,torem_manual,axis=1)
+        F=np.delete(F,torem_manual,axis=1)
+    
+    while True:
+        torem=[]
+        g=igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
+        tips = np.argwhere(np.array(g.degree())==1).flatten()
+        branches = np.argwhere(np.array(g.degree())>2).flatten()
+        
+        if len(branches)==0:
+            break
+        
+        dist=np.array(list(map(lambda t: np.min(list(map(len,g.get_all_shortest_paths(t,branches)))),tips)))
+
+        if np.argmin(dist)>minbranchlength:
+            break
+        
+        tip_torem=tips[np.argmin(dist)].T.flatten()
+        B=np.delete(B,tip_torem,axis=0)
+        B=np.delete(B,tip_torem,axis=1)
+        R=np.delete(R,tip_torem,axis=1)
+        F=np.delete(F,tip_torem,axis=1)
+    R = (R.T/R.sum(axis=1)).T
+    r["R"]=R
+    r["B"]=B
+    r["F"]=F
+    g = igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
+    r["tips"] = np.argwhere(np.array(g.degree())==1).flatten()
+    r["forks"] = np.argwhere(np.array(g.degree())>2).flatten()
+    
+    adata.uns["tree"] = r
+    
+    logg.info("    tree cleaned", time=False, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "removed "+str(init_num-B.shape[0])+" principal points"
+    )
+    
+    return adata if copy else None
+
+
+def root(
+    adata: AnnData,
+    root: int,
+    copy: bool = False):
+    
+    adata = adata.copy() if copy else adata
+    
+    if "tree" not in adata.uns:
+        raise ValueError(
+            "You need to run `tl.tree` first to compute a princal tree before choosing a root."
+        )
+        
+    r = adata.uns["tree"]
+    
+    if (r["metrics"]=="euclidean"):
+        d = 1e-6 + euclidean_mat_cpu(r["F"],r["F"])
+    
+    to_g = r["B"]*d
+    
+    csr = csr_matrix(to_g)
+    
+    g = igraph.Graph.Adjacency((to_g>0).tolist(),mode="undirected")
+    g.es['weight'] = to_g[to_g.nonzero()]
+    
+    root_dist_matrix = shortest_path(csr,directed=False, indices=root)
+    pp_info=pd.DataFrame({"PP":g.vs.indices,
+                          "time":root_dist_matrix,
+                          "seg":np.zeros(csr.shape[0])})
+    
+    nodes = np.argwhere(np.apply_along_axis(arr=(csr>0).todense(),axis=0,func1d=np.sum)!=2).flatten()
+    pp_seg = pd.DataFrame(columns = ["n","from","to","d"])
+    for node1,node2 in itertools.combinations(nodes,2):
+        paths12 = g.get_shortest_paths(node1,node2)
+        paths12 = np.array([val for sublist in paths12 for val in sublist])
+
+        if np.sum(np.isin(nodes,paths12))==2:
+            fromto = np.array([node1,node2])
+            path_root = root_dist_matrix[[node1,node2]]
+            fro = fromto[np.argmin(path_root)]
+            to = fromto[np.argmax(path_root)]
+            pp_info.loc[paths12,"seg"]=pp_seg.shape[0]+1
+            pp_seg=pp_seg.append(pd.DataFrame({"n":pp_seg.shape[0]+1,
+                              "from":fro,"to":to,
+                              "d":shortest_path(csr,directed=False, indices=fro)[to]},
+                             index=[pp_seg.shape[0]+1]))
+      
+    pp_seg["n"]=pp_seg["n"].astype(int).astype(str)
+    pp_seg["n"]=pp_seg["n"].astype(int).astype(str)
+    
+    pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
+    pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
+    
+    r["pp_info"]=pp_info
+    r["pp_seg"]=pp_seg
+    r["root"]=root
+    
+    adata.uns["tree"] = r
+    
+    logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added\n" + "    'tree/root', selected root (adata.uns)\n"
+        "    'tree/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
+        "    'tree/pp_seg', segments network information (adata.uns)"
+    )
+    
+    return adata if copy else None
+
+
+def roots(
+    adata: AnnData,
+    roots,
+    meeting,
+    copy: bool = False):
+    
+    adata = adata.copy() if copy else adata
+    
+    if "tree" not in adata.uns:
+        raise ValueError(
+            "You need to run `tl.tree` first to compute a princal tree before choosing two roots."
+        )
+        
+    r = adata.uns["tree"]
+    
+    if (r["metrics"]=="euclidean"):
+        d = 1e-6 + euclidean_mat_cpu(r["F"],r["F"])
+
+    to_g = r["B"]*d
+
+    csr = csr_matrix(to_g)
+
+    g = igraph.Graph.Adjacency((to_g>0).tolist(),mode="undirected")
+    g.es['weight'] = to_g[to_g.nonzero()]
+
+
+    root=roots[np.argmax(shortest_path(csr,directed=False, indices=roots)[:,meeting])]
+    root2=roots[np.argmin(shortest_path(csr,directed=False, indices=roots)[:,meeting])]
+
+    root_dist_matrix = shortest_path(csr,directed=False, indices=root)
+    pp_info=pd.DataFrame({"PP":g.vs.indices,
+                          "time":root_dist_matrix,
+                          "seg":np.zeros(csr.shape[0])})
+
+    nodes = np.argwhere(np.apply_along_axis(arr=(csr>0).todense(),axis=0,func1d=np.sum)!=2).flatten()
+    pp_seg = pd.DataFrame(columns = ["n","from","to","d"])
+    for node1,node2 in itertools.combinations(nodes,2):
+        paths12 = g.get_shortest_paths(node1,node2)
+        paths12 = np.array([val for sublist in paths12 for val in sublist])
+
+        if np.sum(np.isin(nodes,paths12))==2:
+            fromto = np.array([node1,node2])
+            path_root = root_dist_matrix[[node1,node2]]
+            fro = fromto[np.argmin(path_root)]
+            to = fromto[np.argmax(path_root)]
+            pp_info.loc[paths12,"seg"]=pp_seg.shape[0]+1
+            pp_seg=pp_seg.append(pd.DataFrame({"n":pp_seg.shape[0]+1,
+                              "from":fro,"to":to,
+                              "d":shortest_path(csr,directed=False, indices=fro)[to]},
+                             index=[pp_seg.shape[0]+1]))
+
+    pp_seg["n"]=pp_seg["n"].astype(int).astype(str)
+    pp_seg["n"]=pp_seg["n"].astype(int).astype(str)
+
+    pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
+    pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
+
+
+    tips=r["tips"]
+    tips=tips[~np.isin(tips,roots)]
+
+
+    edges=pp_seg[["from","to"]].astype(str).apply(tuple,axis=1).values
+    img = igraph.Graph()
+    img.add_vertices(np.unique(pp_seg[["from","to"]].values.flatten().astype(str)))
+    img.add_edges(edges)
+
+
+    root2paths=pd.Series(shortest_path(csr,directed=False, indices=root2)[tips.tolist()+[meeting]],
+              index=tips.tolist()+[meeting])
+
+    toinvert=root2paths.index[(root2paths<=root2paths[meeting])]
+
+    for toinv in toinvert:
+        pathtorev=(np.array(img.vs[:]["name"])[np.array(img.get_shortest_paths(str(root2),str(toinv)))][0])
+        for i in range((len(pathtorev)-1)):
+            segtorev=pp_seg.index[pp_seg[["from","to"]].astype(str).apply(lambda x: 
+                                                                          all(x.values == pathtorev[[i+1,i]]),axis=1)]
+        
+            pp_seg.loc[segtorev,["from","to"]]=pp_seg.loc[segtorev][["to","from"]].values
+            pp_seg["from"]=pp_seg["from"].astype(int).astype(str)
+            pp_seg["to"]=pp_seg["to"].astype(int).astype(str)
+
+    pptoinvert=np.unique(np.concatenate(g.get_shortest_paths(root2,toinvert)))
+    reverted_dist=shortest_path(csr,directed=False, indices=root2)+np.abs(np.diff(shortest_path(csr,directed=False, indices=roots)[:,meeting]))[0]
+    pp_info.loc[pptoinvert,"time"] = reverted_dist[pptoinvert]
+    
+    
+    
+    r["pp_info"]=pp_info
+    r["pp_seg"]=pp_seg
+    r["root"]=root
+    r["root2"]=root2
+    r["meeting"]=meeting
+    
+    adata.uns["tree"] = r
+    
+    logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added\n" + "    "+str(root)+" is the farthest root\n"
+        "    'tree/root', farthest root selected (adata.uns)\n"
+        "    'tree/root2', 2nd root selected (adata.uns)\n"
+        "    'tree/meeting', meeting point on the three (adata.uns)\n"
+        "    'tree/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
+        "    'tree/pp_seg', segments network information (adata.uns)"
+    )
+    
+    return adata if copy else None
+
+
+def getpath(adata,
+            root_milestone,
+            milestones):
+    
+    tree = adata.uns["tree"]    
+    
+    edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    g = igraph.Graph()
+    g.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    g.add_edges(edges)  
+    
+    uns_temp = deepcopy(adata.uns)
+    
+    mlsc = deepcopy(adata.uns["milestones_colors"])
+        
+    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
+                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+                   
+    leaves = list(map(lambda leave: dct[leave],milestones))
+    root = dct[root_milestone]
+    
+    df = adata.obs.copy()
+    
+    warnings.filterwarnings("ignore")
+    #for tip in leaves:
+    def gatherpath(tip):    
+        try:
+            path = np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
+            segs = list()
+            for i in range(len(path)-1):
+                segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+                                                                                        all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
+            segs=tree["pp_seg"].index[segs]
+            pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
+            pth["branch"]=str(root)+"_"+str(tip)
+            warnings.filterwarnings("default")
+            return(pth)
+        except IndexError:
+            pass
+    
+    return pd.concat(list(map(gatherpath,leaves)),axis=1)

@@ -4,23 +4,41 @@ import igraph
 from anndata import AnnData
 import matplotlib.pyplot as plt
 import matplotlib.collections
-
+from typing import Union, Optional
 import plotly.express as px
 import plotly.graph_objects as go
+
+from scanpy.plotting._utils import savefig_or_show
+import types
+from matplotlib.backend_bases import GraphicsContextBase, RendererBase
+
+class GC(GraphicsContextBase):
+    def __init__(self):
+        super().__init__()
+        self._capstyle = 'round'
+
+def custom_new_gc(self):
+    return GC()
 
 def tree(
     adata: AnnData,
     basis: str = "umap",
     cex_tree: float = None,
     col_tree: bool = False,
+    color: Union[str, None] = None,
+    alpha_cells: float = 1,
     tips: bool = True,
-    forks: bool = True):
+    forks: bool = True,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None):
     
     if "tree" not in adata.uns:
         raise ValueError(
             "You need to run `tl.tree` first to compute a princal tree before choosing a root."
         )
        
+    RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
+    
     r = adata.uns["tree"]
     
     emb = adata.obsm[f"X_{basis}"]
@@ -34,7 +52,15 @@ def tree(
     
     fig = plt.figure() 
     ax = plt.subplot()
-    ax.scatter(emb[:,0],emb[:,1],s=2,color="grey")
+    
+    if color is not None:
+        if adata.obs[color].dtype.name == "str":
+            adata.obs[color]=adata.obs[color].astype("category")
+        if adata.obs[color].dtype.name == "category":
+            if adata.uns[color+"_colors"] is not None:
+                palette = adata.uns[color+"_colors"]
+    
+    ax.scatter(emb[:,0],emb[:,1],s=2,color="grey",alpha=alpha_cells)
     
     ax.grid(False)
     x0,x1 = ax.get_xlim()
@@ -75,7 +101,9 @@ def tree(
     if forks:    
         for fork in r["forks"]:
             ax.annotate(fork, (proj[fork,0], proj[fork,1]), ha="center", va="center",
-                       xytext=(-8, 8), textcoords='offset points',bbox=bbox)      
+                       xytext=(-8, 8), textcoords='offset points',bbox=bbox)
+            
+    savefig_or_show('tree', show=show, save=save)
         
         
         

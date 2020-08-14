@@ -76,7 +76,7 @@ def test_fork(
     
     uns_temp = deepcopy(adata.uns) 
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    zmlsc = deepcopy(adata.uns["milestones_colors"])
     
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
