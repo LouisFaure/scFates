@@ -1,7 +1,7 @@
 Description
 ===========
 
-This package provides an Python tool that allow tree inference and pseudotime downstream analysis, compatible with anndata object format generated via scanpy or scvelo pipelines.
+This package provides an Python tool suite for fast tree inference and advanced pseudotime downstream analysis, with a focus on fate biasing. This package is compatible with anndata object format generated via scanpy or scvelo pipelines.
 
 Tree inference algorithms
 =========================
@@ -10,7 +10,7 @@ The user have the choice between two algorithm for tree inference:
 
 ## ElPiGraph
 
-For scTree, the [python](https://github.com/j-bac/elpigraph-python/) implementation of the ElPiGraph algorithm is used. A self-contained description of the algorithm is available [here](https://github.com/auranic/Elastic-principal-graphs/blob/master/ElPiGraph_Methods.pdf) or in the related [paper](https://www.mdpi.com/1099-4300/22/3/296)
+For scTree, the [python](https://github.com/j-bac/elpigraph-python/) implementation of the ElPiGraph algorithm is used, which include GPU accelerated principal tree inference. A self-contained description of the algorithm is available [here](https://github.com/auranic/Elastic-principal-graphs/blob/master/ElPiGraph_Methods.pdf) or in the related [paper](https://www.mdpi.com/1099-4300/22/3/296)
 
 A [R implementation](https://github.com/Albluca/ElPiGraph.R) of this algorithm is also available, coded by [Luca Albergante](https://github.com/Albluca)
 
@@ -21,7 +21,7 @@ Mirkes](https://github.com/Mirkes)) is also
 
 ## PPT
 
-A simple PPT inspired approach, intially coming from the [crestree R package](https://github.com/hms-dbmi/crestree)
+A [simple PPT](https://www.acsu.buffalo.edu/~yijunsun/lab/Paper/simplePPT.pdf) inspired approach, translated from the [crestree R package](https://github.com/hms-dbmi/crestree), code has been also adapted to run on GPU for accelerated tree inference.
 
 Citations
 =========
