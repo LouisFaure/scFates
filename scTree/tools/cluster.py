@@ -10,15 +10,17 @@ from .. import logging as logg
 from .. import settings
 
 import igraph
-from sklearn.preprocessing import StandardScaler
-from scanpy.neighbors import _get_sparse_matrix_from_indices_distances_umap, compute_neighbors_umap, _compute_connectivities_umap
-
+from scanpy.neighbors import compute_neighbors_umap, _compute_connectivities_umap
 
 try:
-    from louvain.VertexPartition import MutableVertexPartition
+    from leidenalg.VertexPartition import MutableVertexPartition
 except ImportError:
-    class MutableVertexPartition: pass
-    MutableVertexPartition.__module__ = 'louvain.VertexPartition'
+
+    class MutableVertexPartition:
+        pass
+
+    MutableVertexPartition.__module__ = 'leidenalg.VertexPartition'
+
 
 def cluster(
     adata: AnnData,
@@ -72,7 +74,7 @@ def cluster(
             weights = None
         g = cugraph.Graph()
         g.add_adj_list(offsets, indices, weights)
-        leiden_parts, _ = cugraph.leiden(g,resolution=resolution,max_iter=1000)
+        leiden_parts, _ = cugraph.leiden(g,resolution=resolution)
         groups = leiden_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
         
         
