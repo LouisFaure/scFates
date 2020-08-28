@@ -215,6 +215,8 @@ def synchro_path(
     
     adata = adata.copy() if copy else adata
        
+    logg.info("computing local correlations", reset=True)
+    
     tree = adata.uns["tree"]    
     
     edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
@@ -356,7 +358,8 @@ def synchro_path(
     adata.uns=uns_temp
     
     adata.uns[name]["synchro"]=allcor
-        
+    
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    '"+name+"/synchro', mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules (adata.uns)\n"

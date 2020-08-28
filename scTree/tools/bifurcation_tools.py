@@ -68,7 +68,7 @@ def test_fork(
     
     adata = adata.copy() if copy else adata
     
-    logg.info("testing fork")
+    logg.info("testing fork", reset=True)
 
     genes = adata.var_names[adata.var.signi]
     
@@ -301,7 +301,7 @@ def branch_specific(
     
     adata.uns[name]["fork"] = stats
     
-    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.info("    finished", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "updated \n"
         "    '"+name+"/fork', DataFrame updated with additionnal 'branch' column (adata.uns)")
@@ -318,6 +318,8 @@ def activation(adata: AnnData,
     copy: bool = False):
     
     tree = adata.uns["tree"]
+    
+    logg.info("testing activation", reset=True)
     
     uns_temp = deepcopy(adata.uns)
     

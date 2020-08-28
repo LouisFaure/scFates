@@ -41,7 +41,7 @@ def tree(
     copy: bool = False):
     
     
-    logg.info("inferring a principal tree", time=False, end=" " if settings.verbosity > 2 else "\n")
+    logg.info("inferring a principal tree", reset=True, end=" " if settings.verbosity > 2 else "\n")
     
     adata = adata.copy() if copy else adata
     

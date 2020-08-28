@@ -68,7 +68,7 @@ def cluster(
 
 
     if clu is not None:
-        clusters = pd.Series(adata.uns["fit_clusters"])
+        clusters = adata.var["fit_clusters"]
         fitted=fitted.loc[clusters.index[clusters==clu],:]
         fitted_sorted = fitted.loc[get_in_clus_order(clu), :]
     else:

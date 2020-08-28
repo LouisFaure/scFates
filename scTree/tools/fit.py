@@ -102,7 +102,7 @@ def fit(
     if leaves is not None:
         tips=leaves
     
-    logg.info("fit features associated with the tree", time=False, end="\n")
+    logg.info("fit features associated with the tree", reset=True, end="\n")
        
     stat_assoc=list()
     

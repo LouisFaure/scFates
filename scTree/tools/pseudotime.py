@@ -23,7 +23,7 @@ def pseudotime(
         
     tree = adata.uns["tree"]
 
-    logg.info("projecting cells onto the principal tree")
+    logg.info("projecting cells onto the principal tree", reset=True)
     
     
     if n_map == 1:

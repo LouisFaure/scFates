@@ -126,7 +126,7 @@ def test_association(
     else:
         Xgenes = adata[cells,genes].X.T.tolist()
      
-    logg.info("test features for association with the tree", time=False, end="\n")
+    logg.info("test features for association with the tree", reset=True, end="\n")
        
     stat_assoc_l=list()
     
