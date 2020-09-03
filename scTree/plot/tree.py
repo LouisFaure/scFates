@@ -23,6 +23,7 @@ def custom_new_gc(self):
 def tree(
     adata: AnnData,
     basis: str = "umap",
+    emb_back = None,
     cex_tree: float = None,
     col_tree: bool = False,
     color: Union[str, None] = None,
@@ -52,6 +53,9 @@ def tree(
     
     fig = plt.figure() 
     ax = plt.subplot()
+    
+    if emb_back is not None:
+        ax.scatter(emb_back[:,0],emb_back[:,1],s=2,color="lightgrey",alpha=alpha_cells)
     
     if color is not None:
         if adata.obs[color].dtype.name == "str":

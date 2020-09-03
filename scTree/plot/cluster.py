@@ -20,9 +20,11 @@ def cluster(
     root_milestone = None,
     milestones = None,
     cell_size=20,
+    thre_ord=.7,
     figsize: tuple = (20,12),
     basis: str = "umap",
-    colormap: str = "magma"):
+    colormap: str = "magma",
+    emb_back = None):
     
     
     #clusters = pd.Series(adata.uns["tree"]["fit_clusters"])
@@ -62,7 +64,7 @@ def cluster(
         start_cell=adata.obs_names[adata.obs.t==adata.obs.loc[test.idxmax(axis=1).values,"t"].sort_values().iloc[0]]
         early_gene=test.index[test.idxmax(axis=1).isin(start_cell)][0]
 
-        ix = test.T.corr(method="spearman").sort_values(early_gene, ascending=False).index
+        ix = test.T.corr(method="pearson").sort_values(early_gene, ascending=False).index
         return ix
         
 
@@ -74,10 +76,17 @@ def cluster(
     else:
         fitted=fitted.loc[genes,:]
         
-        start_cell=adata.obs_names[adata.obs.t==adata.obs.loc[fitted.idxmax(axis=1).values,"t"].sort_values().iloc[0]]
-        early_gene=fitted.index[fitted.idxmax(axis=1).isin(start_cell)][0]
+        #start_cell=adata.obs_names[adata.obs.t==adata.obs.loc[fitted.idxmax(axis=1).values,"t"].sort_values().iloc[0]]
+        #early_gene=fitted.index[fitted.idxmax(axis=1).isin(start_cell)][0]
         
-        ix = fitted.T.corr(method="spearman").sort_values(early_gene, ascending=False).index
+        fitted_norm=fitted.apply(lambda x: (x-np.min(x))/np.max(x-np.min(x)),axis=1)
+        early_gene=fitted_norm.index[fitted_norm.apply(lambda x: adata.obs.t[x>.5].mean(),axis=1).argmin()]
+        late_gene=fitted_norm.index[fitted_norm.apply(lambda x: adata.obs.t[x>.5].mean(),axis=1).argmax()]
+        
+        ix = fitted.T.corr(method="pearson").sort_values(early_gene, ascending=False).index
+        
+        ix = fitted_norm.apply(lambda x: adata.obs.t[x>thre_ord].mean(),axis=1).sort_values().index
+        
         fitted_sorted = fitted.loc[ix, :]
         
 #         df_f=pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names)
@@ -117,6 +126,9 @@ def cluster(
         hm.gs.update(left=0.526)
         gs2 = GridSpec(1,1, left=0.05,right=0.50)
         ax2 = hm.fig.add_subplot(gs2[0])
+        
+        if emb_back is not None:
+            ax2.scatter(emb_back[:,0],emb_back[:,1],s=cell_size,color="lightgrey")
         
         if cells is not None:
             ax2.scatter(adata.obsm["X_"+basis][~adata.obs_names.isin(cells),0],

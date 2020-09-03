@@ -3,6 +3,8 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+
 import numpy as np
 import pandas as pd
 from functools import partial
@@ -70,7 +72,8 @@ def test_association(
     plot: bool = False,
     root = None,
     leaves = None,
-    copy: bool = False):
+    copy: bool = False,
+    layer: Optional[str] = None):
     
     adata = data.copy() if copy else adata
     
@@ -121,10 +124,17 @@ def test_association(
         cells = np.unique(np.concatenate(list(map(lambda leave:
                                           getpath(img,root,tree["tips"],leave,tree,df).index,leaves))))
     
-    if sparse.issparse(adata.X):
-        Xgenes = adata[cells,genes].X.A.T.tolist()
+    if layer is None:
+        if sparse.issparse(adata.X):
+            Xgenes = adata[cells,genes].X.A.T.tolist()
+        else:
+            Xgenes = adata[cells,genes].X.T.tolist()
     else:
-        Xgenes = adata[cells,genes].X.T.tolist()
+        if sparse.issparse(adata.layers[layer]):
+            Xgenes = adata[cells,genes].layers[layer].A.T.tolist()
+        else:
+            Xgenes = adata[cells,genes].layers[layer].T.tolist()
+        
      
     logg.info("test features for association with the tree", reset=True, end="\n")
        

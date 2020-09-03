@@ -3,6 +3,8 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+
 import numpy as np
 import pandas as pd
 from functools import partial
@@ -63,7 +65,8 @@ def fit(
     fdr_cut: float = 1e-4,
     A_cut: int = 1,
     st_cut: float = 0.8,
-    copy: bool = False):
+    copy: bool = False,
+    layer: Optional[str] = None):
     
     adata = adata.copy() if copy else adata
     
@@ -119,10 +122,16 @@ def fit(
         temp.drop(['edge','seg'],axis=1,inplace=True)
         temp.columns=['t', 'branch']
         temp = temp[~temp.index.duplicated(keep='first')]
-        if sparse.issparse(adata.X):
-            Xgenes = adata[temp.index,genes].X.A.T.tolist()
+        if layer is None:
+            if sparse.issparse(adata.X):
+                Xgenes = adata[temp.index,genes].X.A.T.tolist()
+            else:
+                Xgenes = adata[temp.index,genes].X.T.tolist()
         else:
-            Xgenes = adata[temp.index,genes].X.T.tolist()
+            if sparse.issparse(adata.layers[layer]):
+                Xgenes = adata[temp.index,genes].layers[layer].A.T.tolist()
+            else:
+                Xgenes = adata[temp.index,genes].layers[layer].T.tolist()
         
         data = list(zip([temp]*len(Xgenes),Xgenes))
         
