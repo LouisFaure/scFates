@@ -1,7 +1,10 @@
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+
 import numpy as np
 import pandas as pd
 import igraph
 from anndata import AnnData
+from scipy import sparse
 
 from copy import deepcopy
 from functools import partial
@@ -144,10 +147,11 @@ def slide_cors(
     root_milestone,
     milestones,
     copy: bool = False,
+    layer: Optional[str] = None
     ):
     
     adata = adata.copy() if copy else adata
-       
+    
     tree = adata.uns["tree"]    
     
     uns_temp = deepcopy(adata.uns)
@@ -172,9 +176,22 @@ def slide_cors(
     genesetB = bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
     genesets = np.concatenate([genesetA,genesetB])
     
+    if layer is None:
+        if sparse.issparse(adata.X):
+            X = adata[:,genesets].X.A
+        else:
+            X = adata[:,genesets].X
+    else:
+        if sparse.issparse(adata.layers[layer]):
+            X = adata[:,genesets].layers[layer].A
+        else:
+            X = adata[:,genesets].layers[layer]
+    
+    X=pd.DataFrame(X,index=adata.obs_names,columns=genesets)
+    
     def gather_cor(i,geneset):
         freq=freqs[i]
-        cormat = pd.DataFrame(DescrStatsW(np.array(adata[adata.uns["tree"]["cells_fitted"],genesets].X),weights=freq).corrcoef,
+        cormat = pd.DataFrame(DescrStatsW(X.values,weights=freq).corrcoef,
                               index=genesets,columns=genesets)
         np.fill_diagonal(cormat.values, np.nan)
         return cormat.loc[:,geneset].mean(axis=1)
@@ -211,6 +228,7 @@ def synchro_path(
     step=30,
     winp=10,
     copy: bool = False,
+    layer: Optional[str] = None
     ):
     
     adata = adata.copy() if copy else adata
@@ -252,8 +270,22 @@ def synchro_path(
 
         def synchro_milestone(leave):
             cells=getpath(img,root,tree["tips"],leave,tree,df).index
-            mat=pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].X,
+            
+            if layer is None:
+                if sparse.issparse(adata.X):
+                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].X.A,
                         index=cells,columns=bif.index[bif.module=="early"])
+                else:
+                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].X,
+                        index=cells,columns=bif.index[bif.module=="early"])
+            else:
+                if sparse.issparse(adata.layers[layer]):
+                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].layers[layer].A,
+                        index=cells,columns=bif.index[bif.module=="early"])
+                else:
+                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].layers[layer],
+                        index=cells,columns=bif.index[bif.module=="early"])
+            
             mat=mat.iloc[adata.obs.t[mat.index].argsort().values,:]
 
             if permut==True:

@@ -28,7 +28,7 @@ def milestones(adata,
     
     dct=dict(zip(img.vs["name"],img.vs["label"]))
     if roots is None:
-        if adata.uns["tree"]["root2"] is None:
+        if "root2" not in adata.uns["tree"]:
             roots=[dct[str(adata.uns["tree"]["root"])]]
         else:
             roots=[dct[str(adata.uns["tree"]["root"])],

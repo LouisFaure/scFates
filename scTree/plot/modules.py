@@ -24,7 +24,8 @@ def modules(
     basis: str = "umap",
     alpha: float = 1,
     show: Optional[bool] = None,
-    save: Union[str, bool, None] = None):
+    save: Union[str, bool, None] = None,
+    layer: Optional[str] = None):
     
     plt.rcParams["axes.grid"] = False
     tree=adata.uns["tree"]
@@ -60,11 +61,19 @@ def modules(
     cols = deepcopy(adata.uns[color+"_colors"])
     obscol = adata.obs[color].cat.categories.tolist()
     dct_c = dict(zip(obscol,cols))
-    
-    if sparse.issparse(adata.X):
-        X=pd.DataFrame(np.array(adata[cells,stats.index].X.A),index=cells,columns=stats.index)
+           
+        
+    if layer is None:
+        if sparse.issparse(adata.X):
+            X=pd.DataFrame(np.array(adata[cells,stats.index].X.A),index=cells,columns=stats.index)
+        else:
+             X=pd.DataFrame(np.array(adata[cells,stats.index].layers[layer].A),index=cells,columns=stats.index)
     else:
-        X=pd.DataFrame(np.array(adata[cells,stats.index].X),index=cells,columns=stats.index)
+        if sparse.issparse(adata.layers[layer]):
+            Xgenes = adata[brcells.index,genes].layers[layer].A.T.tolist()
+        else:
+            X=pd.DataFrame(np.array(adata[cells,stats.index].layers[layer]),index=cells,columns=stats.index)    
+    
     miles=adata.obs.loc[X.index,color].astype(str)
 
     early_1=(stats.branch.values==str(keys[vals==leaves[0]][0])) & (stats.module.values=="early")

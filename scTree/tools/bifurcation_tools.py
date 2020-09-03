@@ -3,6 +3,8 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
+from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+
 import numpy as np
 import pandas as pd
 from functools import partial
@@ -63,8 +65,8 @@ def test_fork(
     n_jobs: int = 1,
     n_map: int = 1,
     n_map_up: int = 1,
-    copy: bool = False
-    ):
+    copy: bool = False,
+    layer: Optional[str] = None):
     
     adata = adata.copy() if copy else adata
     
@@ -103,7 +105,7 @@ def test_fork(
         
         df = tree["pseudotime_list"][str(m)]
         def get_branches(i):
-            x = vpath[i]
+            x = vpath[i][1:]
             segs=tree["pp_info"].loc[x,:].seg.unique()
             df_sub=df.loc[df.seg.isin(segs),:].copy(deep=True)
             df_sub.loc[:,"i"]=i
@@ -118,10 +120,16 @@ def test_fork(
 
         brcells.drop(["seg","edge"],axis=1,inplace=True)
 
-        if sparse.issparse(adata.X):
-            Xgenes = adata[brcells.index,genes].X.A.T.tolist()
+        if layer is None:
+            if sparse.issparse(adata.X):
+                Xgenes = adata[brcells.index,genes].X.A.T.tolist()
+            else:
+                Xgenes = adata[brcells.index,genes].X.T.tolist()
         else:
-            Xgenes = adata[brcells.index,genes].X.T.tolist()
+            if sparse.issparse(adata.layers[layer]):
+                Xgenes = adata[brcells.index,genes].layers[layer].A.T.tolist()
+            else:
+                Xgenes = adata[brcells.index,genes].layers[layer].T.tolist()
 
         data = list(zip([brcells]*len(Xgenes),Xgenes))
 
@@ -141,10 +149,16 @@ def test_fork(
             vpath = g.get_shortest_paths(root,leave)
             totest = get_branches(0)
 
-            if sparse.issparse(adata.X):
-                Xgenes = adata[totest.index,genes].X.A.T.tolist()
+            if layer is None:
+                if sparse.issparse(adata.X):
+                    Xgenes = adata[totest.index,genes].X.A.T.tolist()
+                else:
+                    Xgenes = adata[totest.index,genes].X.T.tolist()
             else:
-                Xgenes = adata[totest.index,genes].X.T.tolist()
+                if sparse.issparse(adata.layers[layer]):
+                    Xgenes = adata[totest.index,genes].layers[layer].A.T.tolist()
+                else:
+                    Xgenes = adata[totest.index,genes].layers[layer].T.tolist()
 
             data = list(zip([totest]*len(Xgenes),Xgenes))
 
@@ -315,7 +329,8 @@ def activation(adata: AnnData,
     deriv_cut: float = 0.015,
     pseudotime_offset: float = 0,
     n_map: int =1,
-    copy: bool = False):
+    copy: bool = False,
+    layer: Optional[str] = None):
     
     tree = adata.uns["tree"]
     
@@ -348,10 +363,17 @@ def activation(adata: AnnData,
             subtree=getpath(img,root,tree["tips"],leave,tree,df).sort_values("t")
             del subtree["branch"]
             warnings.filterwarnings("ignore")
-            if sparse.issparse(adata.X):
-                subtree["exp"]=np.array(adata[subtree.index,feature].X.A)
+            if layer is None:
+                if sparse.issparse(adata.X):
+                    subtree["exp"]=np.array(adata[subtree.index,feature].X.A)
+                else:
+                    subtree["exp"]=np.array(adata[subtree.index,feature].X)
             else:
-                subtree["exp"]=np.array(adata[subtree.index,feature].X)
+                if sparse.issparse(adata.layers[layer]):
+                    subtree["exp"]=np.array(adata[subtree.index,feature].layers[layer].A)
+                else:
+                    subtree["exp"]=np.array(adata[subtree.index,feature].layers[layer])
+
             warnings.filterwarnings("default")
             def gamfit(sdf):
                 m = rmgcv.gam(Formula("exp ~ s(t)"),data=sdf,gamma=1)
@@ -359,11 +381,12 @@ def activation(adata: AnnData,
 
             subtree["fitted"]=gamfit(subtree)
             deriv_d = subtree.fitted.max()-subtree.fitted.min()
-            deriv = subtree.fitted.diff()[1:].values/deriv_d
-            if len(np.argwhere(deriv>deriv_cut))==0:
+            deriv_n=subtree.fitted.diff()
+            deriv = deriv_n/deriv_d
+            if sum((deriv>deriv_cut).values)==0:
                 act=subtree.t.max()+1
             else:
-                act=subtree.iloc[np.argwhere(deriv>deriv_cut)[0][0],:].t
+                act=np.min(subtree.t[(deriv>deriv_cut).values])
             return np.min([act,subtree.t.max()])
 
         genes1=stats.index[stats["branch"]==str(keys[vals==leaves[0]][0])]

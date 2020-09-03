@@ -65,6 +65,7 @@ def fit(
     fdr_cut: float = 1e-4,
     A_cut: int = 1,
     st_cut: float = 0.8,
+    gamma: float = 1.5,
     copy: bool = False,
     layer: Optional[str] = None):
     
@@ -120,7 +121,8 @@ def fit(
         if root2 is not None:
             temp = pd.concat([temp,pd.concat(list(map(lambda tip: getpath(img,root2,tips,tip,tree,df), tips)),axis=0)])
         temp.drop(['edge','seg'],axis=1,inplace=True)
-        temp.columns=['t', 'branch']
+        temp.columns = ['t', 'branch']
+        temp["gamma"] = gamma
         temp = temp[~temp.index.duplicated(keep='first')]
         if layer is None:
             if sparse.issparse(adata.X):
@@ -195,12 +197,13 @@ def getpath(g,root,tips,tip,r,df):
 def gt_fun(data):     
     sdf = data[0]
     sdf["exp"] = data[1]
+    gamma=sdf["gamma"][0]
     
     global rmgcv
     global rstats
     
     def gamfit(b):
-        m = rmgcv.gam(Formula("exp~s(t,bs='ts')"),data=sdf.loc[sdf["branch"]==b,:],gamma=5)
+        m = rmgcv.gam(Formula("exp~s(t,bs='ts')"),data=sdf.loc[sdf["branch"]==b,:],gamma=gamma)
         return pd.Series(rmgcv.predict_gam(m),index=sdf.loc[sdf["branch"]==b,:].index)
 
     mdl=list(map(gamfit,sdf.branch.unique()))
