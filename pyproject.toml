@@ -6,14 +6,14 @@ build-backend = 'setuptools.build_meta'
 include = '\.pyi?$'
 exclude = '''
 /(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
+    \.eggs
+    | \.git
+    | \.mypy_cache
+    | \.pytest_cache
+    | \.venv
+    | __pycache__
+    | _build
+    | build
+    | dist
+  )/
 '''
