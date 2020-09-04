@@ -31,14 +31,14 @@ def cluster(
         clusters = grapheno.cluster(cudf.DataFrame(adata.layers["fitted"],
                                         index=adata.obs_names,
                                         columns=adata.var_names).T,
-                         metric=metric,n_neighbors=knn)[0]
+                         metric=metric,n_neighbors=knn)[0].get()
         
     elif device =="cpu":
         logg.info('    clustering using phenograph')
         clusters = phenograph.cluster(adata.layers["fitted"].T,
                          primary_metric=metric,k=knn,n_jobs=n_jobs)[0]
         
-    adata.var["fit_clusters"] = clusters.get()
+    adata.var["fit_clusters"] = clusters
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
