@@ -330,6 +330,7 @@ def activation(adata: AnnData,
     pseudotime_offset: float = 0,
     n_map: int =1,
     copy: bool = False,
+    n_jobs=-1,
     layer: Optional[str] = None):
     
     tree = adata.uns["tree"]
@@ -359,51 +360,54 @@ def activation(adata: AnnData,
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)  
 
-        def get_activation(feature):
+        def get_df(feature):
+            global rmgcv
             subtree=getpath(img,root,tree["tips"],leave,tree,df).sort_values("t")
             del subtree["branch"]
+            subtree["deriv_cut"]=deriv_cut
             warnings.filterwarnings("ignore")
             if layer is None:
                 if sparse.issparse(adata.X):
-                    subtree["exp"]=np.array(adata[subtree.index,feature].X.A)
+                    subtree["exp"] = np.array(adata[subtree.index,feature].X.A)
                 else:
-                    subtree["exp"]=np.array(adata[subtree.index,feature].X)
+                    subtree["exp"] = np.array(adata[subtree.index,feature].X)
             else:
                 if sparse.issparse(adata.layers[layer]):
-                    subtree["exp"]=np.array(adata[subtree.index,feature].layers[layer].A)
+                    subtree["exp"] = np.array(adata[subtree.index,feature].layers[layer].A)
                 else:
-                    subtree["exp"]=np.array(adata[subtree.index,feature].layers[layer])
+                    subtree["exp"] = np.array(adata[subtree.index,feature].layers[layer])
+            return subtree
+            
 
-            warnings.filterwarnings("default")
-            def gamfit(sdf):
-                m = rmgcv.gam(Formula("exp ~ s(t)"),data=sdf,gamma=1)
-                return rmgcv.predict_gam(m)
-
-            subtree["fitted"]=gamfit(subtree)
-            deriv_d = subtree.fitted.max()-subtree.fitted.min()
-            deriv_n=subtree.fitted.diff()
-            deriv = deriv_n/deriv_d
-            if sum((deriv>deriv_cut).values)==0:
-                act=subtree.t.max()+1
-            else:
-                act=np.min(subtree.t[(deriv>deriv_cut).values])
-            return np.min([act,subtree.t.max()])
-
-        genes1=stats.index[stats["branch"]==str(keys[vals==leaves[0]][0])]
-        leave=leaves[0]
-        acts1=list(map(get_activation,genes1))
+        genes1 = stats.index[stats["branch"]==str(keys[vals==leaves[0]][0])]
+        leave = leaves[0]
+        dfs=list(map(get_df,genes1))
+        
+        acts1 = Parallel(n_jobs=n_jobs)(
+            delayed(get_activation)(
+                dfs[d]
+            )
+            for d in tqdm(range(len(dfs)),file=sys.stdout,desc="    leave "+str(keys[vals==leave][0]))
+        )
 
         genes2=stats.index[stats["branch"]==str(keys[vals==leaves[1]][0])]
         leave=leaves[1]
-        acts2=list(map(get_activation,genes2))
+        dfs=list(map(get_df,genes2))
+        
+        acts2 = Parallel(n_jobs=n_jobs)(
+            delayed(get_activation)(
+                dfs[d]
+            )
+            for d in tqdm(range(len(dfs)),file=sys.stdout,desc="    leave "+str(keys[vals==leave][0]))
+        )
 
     stats["activation"] = 0
     stats.loc[genes1,"activation"] = acts1
     stats.loc[genes2,"activation"] = acts2
 
-    fork=list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
-    fork=np.array(img.vs["name"],dtype=int)[fork]
-    fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()-pseudotime_offset
+    fork = list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
+    fork = np.array(img.vs["name"],dtype=int)[fork]
+    fork_t = adata.uns["tree"]["pp_info"].loc[fork,"time"].max()-pseudotime_offset
     
     stats["module"] = "early"
     stats.loc[stats["activation"]>fork_t,"module"]="late"
@@ -412,12 +416,39 @@ def activation(adata: AnnData,
     
     adata.uns[name]["fork"] = stats
     
+    c_early = np.sum((stats.branch==str(keys[vals==leaves[0]][0])) & (stats.module=="early"))
+    c_late = np.sum((stats.branch==str(keys[vals==leaves[0]][0])) & (stats.module=="late"))
+    logg.info("    "+str(c_early)+" early and "+str(c_late)+" late features specific to leave "+str(keys[vals==leaves[0]][0]))
+   
+    c_early = np.sum((stats.branch==str(keys[vals==leaves[1]][0])) & (stats.module=="early"))
+    c_late = np.sum((stats.branch==str(keys[vals==leaves[1]][0])) & (stats.module=="late"))
+    logg.info("    "+str(c_early)+" early and "+str(c_late)+" late features specific to leave "+str(keys[vals==leaves[1]][0]))
+    
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "updated \n"
         "    '"+name+"/fork', DataFrame updated with additionnal 'activation' and 'module' columns (adata.uns)")
     
     return adata if copy else None
+
+
+def get_activation(subtree):
+    global rmgcv 
+    deriv_cut=subtree["deriv_cut"][0]
+    warnings.filterwarnings("default")
+    def gamfit(sdf):
+        m = rmgcv.gam(Formula("exp ~ s(t)"),data=sdf,gamma=1)
+        return rmgcv.predict_gam(m)
+
+    subtree["fitted"]=gamfit(subtree)
+    deriv_d = subtree.fitted.max()-subtree.fitted.min()
+    deriv_n=subtree.fitted.diff()
+    deriv = deriv_n/deriv_d
+    if sum((deriv>deriv_cut).values)==0:
+        act=subtree.t.max()+1
+    else:
+        act=np.min(subtree.t[(deriv>deriv_cut).values])
+    return np.min([act,subtree.t.max()])
 
 def getpath(g,root,tips,tip,tree,df):
     warnings.filterwarnings("ignore")

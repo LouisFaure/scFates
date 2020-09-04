@@ -67,10 +67,10 @@ def modules(
         if sparse.issparse(adata.X):
             X=pd.DataFrame(np.array(adata[cells,stats.index].X.A),index=cells,columns=stats.index)
         else:
-             X=pd.DataFrame(np.array(adata[cells,stats.index].layers[layer].A),index=cells,columns=stats.index)
+            X=pd.DataFrame(np.array(adata[cells,stats.index].X),index=cells,columns=stats.index)
     else:
         if sparse.issparse(adata.layers[layer]):
-            Xgenes = adata[brcells.index,genes].layers[layer].A.T.tolist()
+            X=pd.DataFrame(np.array(adata[cells,stats.index].layers[layer].A),index=cells,columns=stats.index)
         else:
             X=pd.DataFrame(np.array(adata[cells,stats.index].layers[layer]),index=cells,columns=stats.index)    
     
