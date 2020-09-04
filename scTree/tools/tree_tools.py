@@ -351,11 +351,11 @@ def cleanup(
         raise ValueError(
             "You need to run `tl.ppt_tree` first to compute a princal tree before cleaning it"
         )
-    r = adata.uns["tree"]
+    tree = adata.uns["tree"]
     
-    B=r["B"]
-    R=r["R"]
-    F=r["F"]
+    B=tree["B"]
+    R=tree["R"]
+    F=tree["F"]
     init_num=B.shape[0]
     init_pp=np.arange(B.shape[0])
     if leaves is not None:
@@ -380,7 +380,7 @@ def cleanup(
         
         dist=np.array(list(map(lambda t: np.min(list(map(len,g.get_all_shortest_paths(t,branches)))),tips)))
 
-        if np.argmin(dist)>minbranchlength:
+        if np.min(dist)>minbranchlength:
             break
         
         tip_torem=tips[np.argmin(dist)].T.flatten()
@@ -389,14 +389,14 @@ def cleanup(
         R=np.delete(R,tip_torem,axis=1)
         F=np.delete(F,tip_torem,axis=1)
     R = (R.T/R.sum(axis=1)).T
-    r["R"]=R
-    r["B"]=B
-    r["F"]=F
+    tree["R"]=R
+    tree["B"]=B
+    tree["F"]=F
     g = igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
-    r["tips"] = np.argwhere(np.array(g.degree())==1).flatten()
-    r["forks"] = np.argwhere(np.array(g.degree())>2).flatten()
+    tree["tips"] = np.argwhere(np.array(g.degree())==1).flatten()
+    tree["forks"] = np.argwhere(np.array(g.degree())>2).flatten()
     
-    adata.uns["tree"] = r
+    adata.uns["tree"] = tree
     
     logg.info("    tree cleaned", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -418,12 +418,12 @@ def root(
             "You need to run `tl.tree` first to compute a princal tree before choosing a root."
         )
         
-    r = adata.uns["tree"]
+    tree = adata.uns["tree"]
     
-    if (r["metrics"]=="euclidean"):
-        d = 1e-6 + euclidean_mat_cpu(r["F"],r["F"])
+    if (tree["metrics"]=="euclidean"):
+        d = 1e-6 + euclidean_mat_cpu(tree["F"],tree["F"])
     
-    to_g = r["B"]*d
+    to_g = tree["B"]*d
     
     csr = csr_matrix(to_g)
     
@@ -458,11 +458,11 @@ def root(
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
     
-    r["pp_info"]=pp_info
-    r["pp_seg"]=pp_seg
-    r["root"]=root
+    tree["pp_info"]=pp_info
+    tree["pp_seg"]=pp_seg
+    tree["root"]=root
     
-    adata.uns["tree"] = r
+    adata.uns["tree"] = tree
     
     logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -487,12 +487,12 @@ def roots(
             "You need to run `tl.tree` first to compute a princal tree before choosing two roots."
         )
         
-    r = adata.uns["tree"]
+    tree = adata.uns["tree"]
     
-    if (r["metrics"]=="euclidean"):
-        d = 1e-6 + euclidean_mat_cpu(r["F"],r["F"])
+    if (tree["metrics"]=="euclidean"):
+        d = 1e-6 + euclidean_mat_cpu(tree["F"],tree["F"])
 
-    to_g = r["B"]*d
+    to_g = tree["B"]*d
 
     csr = csr_matrix(to_g)
 
@@ -532,7 +532,7 @@ def roots(
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
 
 
-    tips=r["tips"]
+    tips=tree["tips"]
     tips=tips[~np.isin(tips,roots)]
 
 
@@ -563,13 +563,13 @@ def roots(
     
     
     
-    r["pp_info"]=pp_info
-    r["pp_seg"]=pp_seg
-    r["root"]=root
-    r["root2"]=root2
-    r["meeting"]=meeting
+    tree["pp_info"]=pp_info
+    tree["pp_seg"]=pp_seg
+    tree["root"]=root
+    tree["root2"]=root2
+    tree["meeting"]=meeting
     
-    adata.uns["tree"] = r
+    adata.uns["tree"] = tree
     
     logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
