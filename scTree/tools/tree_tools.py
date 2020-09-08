@@ -595,7 +595,7 @@ def getpath(adata,
     g.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
     g.add_edges(edges)  
     
-    uns_temp = deepcopy(adata.uns)
+    uns_temp = adata.uns.copy()
     
     mlsc = deepcopy(adata.uns["milestones_colors"])
         
