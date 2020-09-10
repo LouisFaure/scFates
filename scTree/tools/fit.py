@@ -117,9 +117,13 @@ def fit(
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
         
-        temp = pd.concat(list(map(lambda tip: getpath(img,root,tips,tip,tree,df), tips)),axis=0)
+        temp_l=list(map(lambda tip: getpath(img,root,tips,tip,tree,df), tips))
+
         if root2 is not None:
-            temp = pd.concat([temp,pd.concat(list(map(lambda tip: getpath(img,root2,tips,tip,tree,df), tips)),axis=0)])
+            temp_l=temp_l+list(map(lambda tip: getpath(img,root2,tips,tip,tree,df), tips))
+
+        temp = pd.concat(temp_l,keys=["df"+str(i) for i in range(len(temp_l))],axis=0).reset_index(level=[0])
+        
         temp.drop(['edge','seg'],axis=1,inplace=True)
         temp.columns = ['t', 'branch']
         temp["gamma"] = gamma
@@ -202,10 +206,10 @@ def gt_fun(data):
     global rmgcv
     global rstats
     
-    def gamfit(b):
-        m = rmgcv.gam(Formula("exp~s(t,bs='ts')"),data=sdf.loc[sdf["branch"]==b,:],gamma=gamma)
-        return pd.Series(rmgcv.predict_gam(m),index=sdf.loc[sdf["branch"]==b,:].index)
+    def gamfit(l):
+        m = rmgcv.gam(Formula("exp~s(t,bs='ts')"),data=sdf.loc[sdf["level_0"]==l,:],gamma=1.5)
+        return pd.Series(rmgcv.predict_gam(m),index=sdf.loc[sdf["level_0"]==l,:].index)
 
-    mdl=list(map(gamfit,sdf.branch.unique()))
+    mdl=list(map(gamfit,sdf.level_0.unique()))
           
     return pd.concat(mdl,axis=1,sort=False).apply(np.nanmean,axis=1)
