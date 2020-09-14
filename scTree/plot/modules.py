@@ -117,7 +117,7 @@ def modules(
     
     adata.uns=uns_temp
     
-    savefig_or_show('tree', show=show, save=save)
+    savefig_or_show('modules', show=show, save=save)
 
 
     

@@ -9,8 +9,9 @@ from matplotlib.colors import to_hex
 from matplotlib.gridspec import GridSpec
 
 import warnings
-import warnings
 from . import palette_tools
+from typing import Union, Optional
+from scanpy.plotting._utils import savefig_or_show
 
 def cluster(
     adata: AnnData,
@@ -24,7 +25,9 @@ def cluster(
     figsize: tuple = (20,12),
     basis: str = "umap",
     colormap: str = "magma",
-    emb_back = None):
+    emb_back = None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None):
     
     
     #clusters = pd.Series(adata.uns["tree"]["fit_clusters"])
@@ -163,6 +166,8 @@ def cluster(
         ax2.set_ylabel(basis+"2",fontsize=18)
         for axis in ['top','bottom','left','right']:
             ax2.spines[axis].set_linewidth(2)
+    
+    savefig_or_show('cluster', show=show, save=save)
             
             
 def getpath(g,root,tips,tip,tree,df):

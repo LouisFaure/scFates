@@ -7,12 +7,16 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import rgb2hex
 
 from copy import deepcopy
+from typing import Union, Optional
+from scanpy.plotting._utils import savefig_or_show
 
 def slide_cors(
     adata: AnnData,
     root_milestone,
     milestones,
-    basis: str = "umap"):
+    basis: str = "umap",
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None):
     
     tree = adata.uns["tree"]  
     
@@ -75,3 +79,6 @@ def slide_cors(
         axs[1,i].set_ylim([-maxlim,maxlim])
         axs[1,i].set_xticks([]) 
         axs[1,i].set_yticks([]) 
+        
+    
+    savefig_or_show('slide_cors', show=show, save=save)

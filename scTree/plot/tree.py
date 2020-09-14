@@ -12,6 +12,11 @@ from scanpy.plotting._utils import savefig_or_show
 import types
 from matplotlib.backend_bases import GraphicsContextBase, RendererBase
 
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+from numba import njit
+import math
+
 class GC(GraphicsContextBase):
     def __init__(self):
         super().__init__()
@@ -40,16 +45,16 @@ def tree(
        
     RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
     
-    r = adata.uns["tree"]
+    tree = adata.uns["tree"]
     
     emb = adata.obsm[f"X_{basis}"]
-    emb_f = adata[r["cells_fitted"],:].obsm[f"X_{basis}"]
+    emb_f = adata[tree["cells_fitted"],:].obsm[f"X_{basis}"]
     
-    R=r["R"]
+    R=tree["R"]
     
     proj=(np.dot(emb_f.T,R)/R.sum(axis=0)).T
     
-    B=r["B"]
+    B=tree["B"]
     
     fig = plt.figure() 
     ax = plt.subplot()
@@ -108,7 +113,109 @@ def tree(
                        xytext=(-8, 8), textcoords='offset points',bbox=bbox)
             
     savefig_or_show('tree', show=show, save=save)
-        
+    
+    
+def pseudotime(
+    adata: AnnData,
+    basis: str = "umap",
+    emb_back = None,
+    cmap: str = "viridis",
+    alpha_cells: float = 1,
+    sc: float = 1,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None):
+    
+    if "tree" not in adata.uns:
+        raise ValueError(
+            "You need to run `tl.tree` first to compute a princal tree before choosing a root."
+        )
+       
+    RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
+    
+    tree = adata.uns["tree"]
+    
+    emb = adata.obsm[f"X_{basis}"]
+    emb_f = adata[tree["cells_fitted"],:].obsm[f"X_{basis}"]
+    
+    R=tree["R"]
+    
+    proj=(np.dot(emb_f.T,R)/R.sum(axis=0)).T
+    
+    B=tree["B"]
+    
+    B=tree["B"]
+
+    fig = plt.figure() 
+    ax = plt.subplot()
+
+    if emb_back is not None:
+        ax.scatter(emb_back[:,0],emb_back[:,1],s=2,color="lightgrey",alpha=alpha_cells)
+
+    ax.scatter(emb[:,0],emb[:,1],s=2,color="grey",alpha=alpha_cells)
+
+    ax.grid(False)
+    x0,x1 = ax.get_xlim()
+    y0,y1 = ax.get_ylim()
+    ax.set_aspect(abs(x1-x0)/abs(y1-y0))
+    ax.tick_params(
+        axis='both',          # changes apply to the x-axis
+        which='both',      # both major and minor ticks are affected
+        bottom=False,      # ticks along the bottom edge are off
+        top=False,         # ticks along the top edge are off
+        labelbottom=False,
+        left=False,
+        labelleft=False) # labels along the bottom edge are off
+
+    ax.set_xlabel(basis+"1")
+    ax.set_ylabel(basis+"2")
+
+    al = np.array(igraph.Graph.Adjacency((B>0).tolist(),mode="undirected").get_edgelist())
+    segs=al.tolist()
+    vertices=proj.tolist()
+    lines = [[tuple(vertices[j]) for j in i]for i in segs]
+    all_t = pd.Series(list(map(lambda s: tree["pp_info"].time[tree["pp_info"].index.isin(s)].mean().mean(),segs)))
+
+
+    sm = ScalarMappable(norm=Normalize(vmin=all_t.min(), vmax=all_t.max()), cmap="viridis")
+    lc = matplotlib.collections.LineCollection(lines,colors="k",linewidths=7.5*sc,zorder=100)
+    ax.add_collection(lc)      
+
+    g=igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
+    paths=g.get_shortest_paths(tree["root"],tree["tips"])
+    seg=tree["pp_seg"].loc[:,["from","to"]].values.tolist()
+    for s in seg:
+        path=np.array(g.get_shortest_paths(int(s[0]),int(s[1]))[0])        
+        coord=proj[path,]
+        out=np.empty(len(path)-1)
+        cdist_numba(coord,out)
+
+        mid=np.argwhere(out.cumsum()==np.median(out.cumsum()))[0][0]-1
+
+
+
+        ax.quiver(proj[path[mid],0],proj[path[mid],1],
+                  proj[path[mid+1],0]-proj[path[mid],0],
+                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=15*sc,headaxislength=10*sc,headlength=10*sc,units="dots",zorder=101)
+
+        ax.quiver(proj[path[mid],0],proj[path[mid],1],
+                  proj[path[mid+1],0]-proj[path[mid],0],
+                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=12*sc,headaxislength=10*sc,headlength=10*sc,units="dots",
+                  color=sm.to_rgba(tree["pp_info"].loc[path,:].time.iloc[mid]),zorder=102)
+
+
+    lc = matplotlib.collections.LineCollection(lines,colors=[sm.to_rgba(t) for t in all_t],linewidths=5*sc,zorder=104)
+    ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=103,c="k",s=200*sc)
+    ax.add_collection(lc)
+
+    ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=105,
+               c=sm.to_rgba(tree["pp_info"].time.loc[tree["tips"]]),s=140*sc)
+            
+    savefig_or_show('tree', show=show, save=save)
+    
+@njit()
+def cdist_numba(coords,out):
+    for i in range(0,coords.shape[0]-1):
+        out[i] = math.sqrt((coords[i,0] - coords[i+1,0])**2+(coords[i,1] - coords[i+1,1])**2)
         
         
 def scatter3d(emb,col,cell_cex,nm):
