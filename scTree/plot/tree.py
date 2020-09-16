@@ -150,16 +150,16 @@ def pseudotime(
     
     ncells = adata.shape[0]
     if size_cells is None:
-        size_cells = 120000 / ncells
+        size_cells = 60000 / ncells
 
     if emb_back is not None:
         ncells = emb_back.shape[0]
         if size_cells is None:
-            size_cells = 120000 / ncells
-        ax2.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",alpha=alpha_cells)
+            size_cells = 60000 / ncells
+        ax.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",alpha=alpha_cells,edgecolor="none")
 
 
-    ax.scatter(emb[:,0],emb[:,1],s=size_cells,color="grey",alpha=alpha_cells)
+    ax.scatter(emb[:,0],emb[:,1],s=size_cells,color="grey",alpha=alpha_cells,edgecolor="none")
 
     ax.grid(False)
     x0,x1 = ax.get_xlim()
@@ -198,8 +198,6 @@ def pseudotime(
         cdist_numba(coord,out)
 
         mid=np.argwhere(out.cumsum()==np.median(out.cumsum()))[0][0]-1
-
-
 
         ax.quiver(proj[path[mid],0],proj[path[mid],1],
                   proj[path[mid+1],0]-proj[path[mid],0],

@@ -34,9 +34,8 @@ def cluster(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
-    
-    #clusters = pd.Series(adata.uns["tree"]["fit_clusters"])
-    
+    if 'edgecolor' not in kwargs:
+        kwargs['edgecolor'] = 'none'
     
     fitted = pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names).T.copy(deep=True)
     g = adata.obs.groupby('seg')
@@ -134,24 +133,24 @@ def cluster(
         ax2 = hm.fig.add_subplot(gs2[0])
         
         if emb_back is not None:
-            ax2.scatter(emb_back[:,0],emb_back[:,1],s=cell_size,color="lightgrey")
+            ax2.scatter(emb_back[:,0],emb_back[:,1],s=cell_size,color="lightgrey",edgecolor="none")
         
         if cells is not None:
             ax2.scatter(adata.obsm["X_"+basis][~adata.obs_names.isin(cells),0],
                         adata.obsm["X_"+basis][~adata.obs_names.isin(cells),1],
-                        c="lightgrey",s=cell_size)
+                        c="lightgrey",s=cell_size,edgecolor="none")
             ax2.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
                         adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
-                        c="black",s=cell_size*2)
+                        c="black",s=cell_size*2,edgecolor="none")
             ax2.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
                         adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
-                        s=cell_size,
+                        s=cell_size,edgecolor="none",
                         c=fitted.mean(axis=0)[adata[adata.obs_names.isin(cells),:].obs_names],cmap=colormap)
         else:
             cells = adata.obs_names
             ax2.scatter(adata.obsm["X_"+basis][:,0],
                         adata.obsm["X_"+basis][:,1],
-                        s=cell_size,
+                        s=cell_size,edgecolor="none",
                         c=fitted.mean(axis=0)[adata[adata.obs_names.isin(cells),:].obs_names],cmap=colormap)
         ax2.grid(False)
         x0,x1 = ax2.get_xlim()
@@ -181,7 +180,7 @@ def linear_trends(
     milestones = None,
     cell_size=20,
     quant_ord=.7,
-    figsize: tuple = (8,15),
+    figsize: tuple = (8,8),
     basis: str = "umap",
     colormap: str = "RdBu_r",
     pseudo_colormap: str = "viridis",
@@ -263,19 +262,20 @@ def linear_trends(
 
     if highlight_genes is None:
         highlight_genes = adata.var.A[genes].sort_values(ascending=False)[:10].index
-    xs=np.repeat(fitted_sorted.shape[1],len(highlight_genes))
-    ys=np.argwhere(fitted_sorted.index.isin(highlight_genes)).flatten()
+    xs=np.repeat(fitted_sorted.shape[1],len(highlight_genes))  
+    ys=np.array(list(map(lambda g: np.argwhere(fitted_sorted.index==g)[0][0],highlight_genes)))+0.5
     
     texts = []
     for x, y, s in zip(xs, ys, highlight_genes):
         texts.append(ax2.text(x, y, s))
 
-    patch = patches.Rectangle((0, 0), fitted_sorted.shape[1], fitted_sorted.shape[0], alpha=0) # We add a rectangle to make sure the labels don't move to the right    
+    patch = patches.Rectangle((0, 0), fitted_sorted.shape[1]+fitted_sorted.shape[1]/6, fitted_sorted.shape[0], alpha=0) # We add a rectangle to make sure the labels don't move to the right    
     ax.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
     ax2.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
     ax2.add_patch(patch)
 
-    adjust_text(texts,add_objects=[patch],arrowprops=dict(arrowstyle='-', color='k'),va="center",autoalign=False,only_move={"points":"x", "text":"xy", "objects":"x"})
+    adjust_text(texts,add_objects=[patch],arrowprops=dict(arrowstyle='-', color='k'),va="center",ha="left",autoalign=False,
+        force_text=(0.05, 0.25), force_points=(0.05, 0.25),only_move={"points":"x", "text":"y", "objects":"x"})
     
     savefig_or_show('cluster', show=show, save=save)    
     
@@ -292,9 +292,13 @@ def single_trend(
     alpha_expr = 0.3,
     size_expr = 2,
     fitted_linewidth = 2):
+  
+    fig, (ax1, ax2) = plt.subplots(1, 2,figsize=figsize,constrained_layout=True)
+    fig.suptitle(gene)
+    
 
     ncells = adata.shape[0]
-
+    
     if size_cells is None:
         size_cells = 30000 / ncells
 
@@ -302,18 +306,14 @@ def single_trend(
         ncells = emb_back.shape[0]
         if size_cells is None:
             size_cells = 30000 / ncells
-        ax2.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey")
-
-
-    fig, (ax1, ax2) = plt.subplots(1, 2,figsize=figsize,constrained_layout=True)
-    fig.suptitle(gene)
+        ax1.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",edgecolor="none")
 
     df=pd.DataFrame({"t":adata.obs.t,"fitted":adata[:,gene].layers["fitted"].flatten(),"fpm":adata[:,gene].layers["fpm"].flatten(),"seg":adata.obs.seg}).sort_values("t")
 
     if highlight:
-        ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c="k",cmap="RdBu_r",s=size_cells*2)
+        ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c="k",cmap="RdBu_r",s=size_cells*2,edgecolor="none")
 
-    ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c=df.fitted[adata.obs_names],s=size_cells,cmap="RdBu_r")
+    ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c=df.fitted[adata.obs_names],s=size_cells,cmap="RdBu_r",edgecolor="none")
     ax1.grid(b=False)
     ax1.set_xticks([])
     ax1.set_yticks([])
