@@ -1,5 +1,5 @@
 from .tree import tree, pseudotime, tree_3d
-from .cluster import cluster
+from .trends import cluster, linear_trends, single_trend
 from .test_association import test_association
 from .modules import modules
 from .milestones import milestones

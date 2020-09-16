@@ -104,11 +104,11 @@ def tree(
     bbox = dict(facecolor='white', alpha=0.6, edgecolor="white", pad=0.1)
     
     if tips:
-        for tip in r["tips"]:
+        for tip in tree["tips"]:
             ax.annotate(tip, (proj[tip,0], proj[tip,1]), ha="center", va="center",
                        xytext=(-8, 8), textcoords='offset points',bbox=bbox)
     if forks:    
-        for fork in r["forks"]:
+        for fork in tree["forks"]:
             ax.annotate(fork, (proj[fork,0], proj[fork,1]), ha="center", va="center",
                        xytext=(-8, 8), textcoords='offset points',bbox=bbox)
             
@@ -120,8 +120,9 @@ def pseudotime(
     basis: str = "umap",
     emb_back = None,
     cmap: str = "viridis",
+    size_cells = None,
     alpha_cells: float = 1,
-    sc: float = 1,
+    scale_path: float = 1,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
@@ -142,16 +143,23 @@ def pseudotime(
     proj=(np.dot(emb_f.T,R)/R.sum(axis=0)).T
     
     B=tree["B"]
-    
-    B=tree["B"]
+
 
     fig = plt.figure() 
     ax = plt.subplot()
+    
+    ncells = adata.shape[0]
+    if size_cells is None:
+        size_cells = 120000 / ncells
 
     if emb_back is not None:
-        ax.scatter(emb_back[:,0],emb_back[:,1],s=2,color="lightgrey",alpha=alpha_cells)
+        ncells = emb_back.shape[0]
+        if size_cells is None:
+            size_cells = 120000 / ncells
+        ax2.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",alpha=alpha_cells)
 
-    ax.scatter(emb[:,0],emb[:,1],s=2,color="grey",alpha=alpha_cells)
+
+    ax.scatter(emb[:,0],emb[:,1],s=size_cells,color="grey",alpha=alpha_cells)
 
     ax.grid(False)
     x0,x1 = ax.get_xlim()
@@ -177,7 +185,7 @@ def pseudotime(
 
 
     sm = ScalarMappable(norm=Normalize(vmin=all_t.min(), vmax=all_t.max()), cmap="viridis")
-    lc = matplotlib.collections.LineCollection(lines,colors="k",linewidths=7.5*sc,zorder=100)
+    lc = matplotlib.collections.LineCollection(lines,colors="k",linewidths=7.5*scale_path,zorder=100)
     ax.add_collection(lc)      
 
     g=igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
@@ -195,20 +203,20 @@ def pseudotime(
 
         ax.quiver(proj[path[mid],0],proj[path[mid],1],
                   proj[path[mid+1],0]-proj[path[mid],0],
-                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=15*sc,headaxislength=10*sc,headlength=10*sc,units="dots",zorder=101)
+                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=15*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",zorder=101)
 
         ax.quiver(proj[path[mid],0],proj[path[mid],1],
                   proj[path[mid+1],0]-proj[path[mid],0],
-                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=12*sc,headaxislength=10*sc,headlength=10*sc,units="dots",
+                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=12*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",
                   color=sm.to_rgba(tree["pp_info"].loc[path,:].time.iloc[mid]),zorder=102)
 
 
-    lc = matplotlib.collections.LineCollection(lines,colors=[sm.to_rgba(t) for t in all_t],linewidths=5*sc,zorder=104)
-    ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=103,c="k",s=200*sc)
+    lc = matplotlib.collections.LineCollection(lines,colors=[sm.to_rgba(t) for t in all_t],linewidths=5*scale_path,zorder=104)
+    ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=103,c="k",s=200*scale_path)
     ax.add_collection(lc)
 
     ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=105,
-               c=sm.to_rgba(tree["pp_info"].time.loc[tree["tips"]]),s=140*sc)
+               c=sm.to_rgba(tree["pp_info"].time.loc[tree["tips"]]),s=140*scale_path)
             
     savefig_or_show('tree', show=show, save=save)
     
