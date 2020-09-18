@@ -9,14 +9,14 @@ except ImportError:
     print("warning: pypandoc module not found, could not convert Markdown to RST")
     read_md = lambda f: open(f, 'r').read()
 
-setup(name='scanTree',
+setup(name='scFates',
       version='0.1',
       description='scanpy compatible python suite for fast tree inference and advanced pseudotime downstream analysis',
       long_description=read_md('README.md'),
-      url='https://github.com/LouisFaure/scanTree',
+      url='https://github.com/LouisFaure/scFates',
       author='Louis Faure',
       author_email='',
       packages=find_packages(),
-      package_dir={'scanTree': 'scanTree'},
+      package_dir={'scFates': 'scFates'},
       install_requires=requirements,
       zip_safe=False)
