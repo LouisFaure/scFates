@@ -10,6 +10,7 @@ from matplotlib.gridspec import GridSpec
 from scipy import stats
 from adjustText import adjust_text
 from matplotlib import patches
+from scipy import sparse
 
 import warnings
 from . import palette_tools
@@ -21,7 +22,7 @@ from .. import logging as logg
 def cluster(
     adata: AnnData,
     clu = None,
-    genes = None,
+    features = None,
     combi=True,
     root_milestone = None,
     milestones = None,
@@ -69,9 +70,9 @@ def cluster(
     def get_in_clus_order(c):
         test=fitted.loc[clusters.index[clusters==c],:]
         start_cell=adata.obs_names[adata.obs.t==adata.obs.loc[test.idxmax(axis=1).values,"t"].sort_values().iloc[0]]
-        early_gene=test.index[test.idxmax(axis=1).isin(start_cell)][0]
+        early_feature=test.index[test.idxmax(axis=1).isin(start_cell)][0]
 
-        ix = test.T.corr(method="pearson").sort_values(early_gene, ascending=False).index
+        ix = test.T.corr(method="pearson").sort_values(early_feature, ascending=False).index
         return ix
         
 
@@ -80,8 +81,8 @@ def cluster(
         fitted=fitted.loc[clusters.index[clusters==clu],:]
         fitted_sorted = fitted.loc[get_in_clus_order(clu), :]
     else:
-        fitted=fitted.loc[genes,:]
-        varia=list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].var(),genes))
+        fitted=fitted.loc[features,:]
+        varia=list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].var(),features))
 
         z = np.abs(stats.zscore(varia))
         torem = np.argwhere(z > 3)
@@ -92,10 +93,10 @@ def cluster(
             logg.hint( "added\n" + "    'complex' column in (adata.var)")
             adata.var["complex"]=False
             adata.var.complex.iloc[torem]=True
-            genes=adata.var_names[~adata.var["complex"]]
+            features=adata.var_names[~adata.var["complex"]]
         
-        fitted = fitted.loc[genes,:]
-        list(map(lambda x: adata.obs.t[fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].mean(),genes))
+        fitted = fitted.loc[features,:]
+        list(map(lambda x: adata.obs.t[fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].mean(),features))
         ix = fitted.apply(lambda x: adata.obs.t[x>np.quantile(x,q=quant_ord)].mean(),axis=1).sort_values().index
         fitted_sorted = fitted.loc[ix, :]
 
@@ -174,13 +175,15 @@ def cluster(
     
 def linear_trends(
     adata: AnnData,
-    genes = None,
-    highlight_genes = None,
+    features = None,
+    highlight_features = None,
+    n_features: int = 10,
     root_milestone = None,
     milestones = None,
     cell_size=20,
     quant_ord=.7,
     figsize: tuple = (8,8),
+    frame: Union[float,None] = 2,
     basis: str = "umap",
     colormap: str = "RdBu_r",
     pseudo_colormap: str = "viridis",
@@ -188,8 +191,8 @@ def linear_trends(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
-    if genes is None:
-        genes = adata.var_names
+    if features is None:
+        features = adata.var_names
     
     fitted = pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names).T.copy(deep=True)
     g = adata.obs.groupby('seg')
@@ -210,8 +213,8 @@ def linear_trends(
     segs.name = "segs"
 
 
-    fitted=fitted.loc[genes,:]
-    varia=list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].var(),genes))
+    fitted=fitted.loc[features,:]
+    varia=list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].var(),features))
 
     z = np.abs(stats.zscore(varia))
     torem = np.argwhere(z > 3)
@@ -222,10 +225,10 @@ def linear_trends(
         logg.hint( "added\n" + "    'complex' column in (adata.var)")
         adata.var["complex"]=False
         adata.var.complex.iloc[torem]=True
-        genes=adata.var_names[~adata.var["complex"]]
+        features=adata.var_names[~adata.var["complex"]]
 
-    fitted = fitted.loc[genes,:]
-    #list(map(lambda x: adata.obs.t[fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].mean(),genes))
+    fitted = fitted.loc[features,:]
+    #list(map(lambda x: adata.obs.t[fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].mean(),features))
     ix = fitted.apply(lambda x: adata.obs.t[x>np.quantile(x,q=quant_ord)].mean(),axis=1).sort_values().index
     fitted_sorted = fitted.loc[ix, :]
 
@@ -257,16 +260,26 @@ def linear_trends(
     fig.subplots_adjust(hspace=0.01)
 
     sns.heatmap(pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,robust=True,cmap=pseudo_colormap,xticklabels=False,yticklabels=False,cbar=False,ax=ax,vmax=adata.obs.t.max())
-
+        
     sns.heatmap(fitted_sorted,robust=True,cmap=colormap,xticklabels=False,yticklabels=False,ax=ax2,cbar=False)
+    
+    if frame is not None:
+        ax.hlines(y=0,xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
+        ax.hlines(y=1,xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
+        ax.vlines(x=0, ymin=0, ymax=1, color='k',linewidth=frame*2)
+        ax.vlines(x=len(fitted_sorted.columns), ymin=0, ymax=1, color='k',linewidth=frame)
+        ax2.hlines(y=0,xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
+        ax2.hlines(y=fitted_sorted.shape[0],xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
+        ax2.vlines(x=0,ymin=0,ymax=fitted_sorted.shape[0], color='k',linewidth=frame*2)
+        ax2.vlines(x=fitted_sorted.shape[1],ymin=0,ymax=fitted_sorted.shape[0], color='k',linewidth=frame)
 
-    if highlight_genes is None:
-        highlight_genes = adata.var.A[genes].sort_values(ascending=False)[:10].index
-    xs=np.repeat(fitted_sorted.shape[1],len(highlight_genes))  
-    ys=np.array(list(map(lambda g: np.argwhere(fitted_sorted.index==g)[0][0],highlight_genes)))+0.5
+    if highlight_features is None:
+        highlight_features = adata.var.A[features].sort_values(ascending=False)[:n_features].index
+    xs=np.repeat(fitted_sorted.shape[1],len(highlight_features))  
+    ys=np.array(list(map(lambda g: np.argwhere(fitted_sorted.index==g)[0][0],highlight_features)))+0.5
     
     texts = []
-    for x, y, s in zip(xs, ys, highlight_genes):
+    for x, y, s in zip(xs, ys, highlight_features):
         texts.append(ax2.text(x, y, s))
 
     patch = patches.Rectangle((0, 0), fitted_sorted.shape[1]+fitted_sorted.shape[1]/6, fitted_sorted.shape[0], alpha=0) # We add a rectangle to make sure the labels don't move to the right    
@@ -277,24 +290,29 @@ def linear_trends(
     adjust_text(texts,add_objects=[patch],arrowprops=dict(arrowstyle='-', color='k'),va="center",ha="left",autoalign=False,
         force_text=(0.05, 0.25), force_points=(0.05, 0.25),only_move={"points":"x", "text":"y", "objects":"x"})
     
-    savefig_or_show('cluster', show=show, save=save)    
+    savefig_or_show('linear_trends', show=show, save=save)    
     
     
 def single_trend(
     adata: AnnData,
-    gene: str,
+    feature: str,
     basis: str = "umap",
     ylab = "expression",
+    layer = None,
+    colormap: str = "RdBu_r",
+    colorexp = None,
     figsize = (10,5.5),
     emb_back = None,
     size_cells = None,
     highlight = False,
     alpha_expr = 0.3,
     size_expr = 2,
-    fitted_linewidth = 2):
+    fitted_linewidth = 2,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None):
   
     fig, (ax1, ax2) = plt.subplots(1, 2,figsize=figsize,constrained_layout=True)
-    fig.suptitle(gene)
+    fig.suptitle(feature)
     
 
     ncells = adata.shape[0]
@@ -307,13 +325,24 @@ def single_trend(
         if size_cells is None:
             size_cells = 30000 / ncells
         ax1.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",edgecolor="none")
+        
+    if layer is None:
+        if sparse.issparse(adata.X):
+            Xfeature = adata[:,feature].X.A.T.flatten()
+        else:
+            Xfeature = adata[:,feature].X.T.flatten()
+    else:
+        if sparse.issparse(adata.layers[layer]):
+            Xfeature = adata[:,feature].layers[layer].A.T.flatten()
+        else:
+            Xfeature = adata[:,feature].layers[layer].T.flatten()
 
-    df=pd.DataFrame({"t":adata.obs.t,"fitted":adata[:,gene].layers["fitted"].flatten(),"fpm":adata[:,gene].layers["fpm"].flatten(),"seg":adata.obs.seg}).sort_values("t")
+    df=pd.DataFrame({"t":adata.obs.t,"fitted":adata[:,feature].layers["fitted"].flatten(),"expression":Xfeature,"seg":adata.obs.seg}).sort_values("t")
 
     if highlight:
-        ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c="k",cmap="RdBu_r",s=size_cells*2,edgecolor="none")
+        ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c="k",s=size_cells*2,edgecolor="none")
 
-    ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c=df.fitted[adata.obs_names],s=size_cells,cmap="RdBu_r",edgecolor="none")
+    ax1.scatter(adata.obsm["X_"+basis][:,0],adata.obsm["X_"+basis][:,1],c=df.fitted[adata.obs_names],s=size_cells,cmap=colormap,edgecolor="none")
     ax1.grid(b=False)
     ax1.set_xticks([])
     ax1.set_yticks([])
@@ -323,8 +352,12 @@ def single_trend(
     y0,y1 = ax1.get_ylim()
     ax1.set_aspect(abs(x1-x0)/abs(y1-y0))
     for s in df.seg.unique():
-        ax2.scatter(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fpm"],alpha=alpha_expr,s=size_expr)
-        ax2.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],linewidth=fitted_linewidth)
+        if colorexp is None:
+            ax2.scatter(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"expression"],alpha=alpha_expr,s=size_expr)
+            ax2.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],linewidth=fitted_linewidth)
+        else:
+            ax2.scatter(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"expression"],c=colorexp,alpha=alpha_expr,s=size_expr)
+            ax2.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],c=colorexp,linewidth=fitted_linewidth)
 
     ax2.set_ylabel(ylab)
     ax2.set_xlabel("pseudotime")
@@ -332,6 +365,8 @@ def single_trend(
     y0,y1 = ax2.get_ylim()
     ax2.set_aspect(abs(x1-x0)/abs(y1-y0))
     plt.tight_layout()
+    
+    savefig_or_show('single_trend', show=show, save=save)    
     
     
             

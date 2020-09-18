@@ -119,10 +119,11 @@ def pseudotime(
     adata: AnnData,
     basis: str = "umap",
     emb_back = None,
-    cmap: str = "viridis",
+    colormap: str = "viridis",
     size_cells = None,
     alpha_cells: float = 1,
     scale_path: float = 1,
+    arrows: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
@@ -150,12 +151,12 @@ def pseudotime(
     
     ncells = adata.shape[0]
     if size_cells is None:
-        size_cells = 60000 / ncells
+        size_cells = 30000 / ncells
 
     if emb_back is not None:
         ncells = emb_back.shape[0]
         if size_cells is None:
-            size_cells = 60000 / ncells
+            size_cells = 30000 / ncells
         ax.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",alpha=alpha_cells,edgecolor="none")
 
 
@@ -184,7 +185,7 @@ def pseudotime(
     all_t = pd.Series(list(map(lambda s: tree["pp_info"].time[tree["pp_info"].index.isin(s)].mean().mean(),segs)))
 
 
-    sm = ScalarMappable(norm=Normalize(vmin=all_t.min(), vmax=all_t.max()), cmap="viridis")
+    sm = ScalarMappable(norm=Normalize(vmin=all_t.min(), vmax=all_t.max()), cmap=colormap)
     lc = matplotlib.collections.LineCollection(lines,colors="k",linewidths=7.5*scale_path,zorder=100)
     ax.add_collection(lc)      
 
@@ -196,17 +197,18 @@ def pseudotime(
         coord=proj[path,]
         out=np.empty(len(path)-1)
         cdist_numba(coord,out)
+        
+        if arrows:
+            mid=np.argwhere(out.cumsum()==np.median(out.cumsum()))[0][0]-1
 
-        mid=np.argwhere(out.cumsum()==np.median(out.cumsum()))[0][0]-1
+            ax.quiver(proj[path[mid],0],proj[path[mid],1],
+                      proj[path[mid+1],0]-proj[path[mid],0],
+                      proj[path[mid+1],1]-proj[path[mid],1],headwidth=15*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",zorder=101)
 
-        ax.quiver(proj[path[mid],0],proj[path[mid],1],
-                  proj[path[mid+1],0]-proj[path[mid],0],
-                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=15*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",zorder=101)
-
-        ax.quiver(proj[path[mid],0],proj[path[mid],1],
-                  proj[path[mid+1],0]-proj[path[mid],0],
-                  proj[path[mid+1],1]-proj[path[mid],1],headwidth=12*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",
-                  color=sm.to_rgba(tree["pp_info"].loc[path,:].time.iloc[mid]),zorder=102)
+            ax.quiver(proj[path[mid],0],proj[path[mid],1],
+                      proj[path[mid+1],0]-proj[path[mid],0],
+                      proj[path[mid+1],1]-proj[path[mid],1],headwidth=12*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",
+                      color=sm.to_rgba(tree["pp_info"].loc[path,:].time.iloc[mid]),zorder=102)
 
 
     lc = matplotlib.collections.LineCollection(lines,colors=[sm.to_rgba(t) for t in all_t],linewidths=5*scale_path,zorder=104)
@@ -216,7 +218,7 @@ def pseudotime(
     ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=105,
                c=sm.to_rgba(tree["pp_info"].time.loc[tree["tips"]]),s=140*scale_path)
             
-    savefig_or_show('tree', show=show, save=save)
+    savefig_or_show('pseudotime', show=show, save=save)
     
 @njit()
 def cdist_numba(coords,out):

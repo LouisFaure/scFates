@@ -1,1 +1,1 @@
-from scTree.plot import *
+from scanTree.plot import *
