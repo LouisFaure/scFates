@@ -279,8 +279,10 @@ def tree_epg(
         
         
         R = euclidean_mat_gpu(cp.asarray(X_t),cp.asarray(Tree[0]["NodePositions"].T))
-        
-        R = (cp.exp(-R/.001))
+        # Force soft assigment to assign with confidence cells to their closest node
+        # sigma is scaled according to the maximum variance of the data
+        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
+        R = (cp.exp(-R/auto_sigma))
         R = (R.T/R.sum(axis=1)).T
         R[cp.isnan(R)]=0
         
@@ -295,9 +297,10 @@ def tree_epg(
                                                      TrimmingRadius=trimmingradius)
         
         R = euclidean_mat_cpu(X_t,Tree[0]["NodePositions"].T)
-        
         # Force soft assigment to assign with confidence cells to their closest node
-        R = (np.exp(-R/.0001))
+        # sigma is scaled according to the maximum variance of the data
+        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
+        R = (np.exp(-R/auto_sigma))
         R = (R.T/R.sum(axis=1)).T
         R[np.isnan(R)]=0
     
@@ -328,7 +331,7 @@ def tree_epg(
         "added \n"
         "    'epg', dictionnary containing inferred elastic tree generated from elpigraph (adata.uns)\n"
         "    'tree/B', adjacency matrix of the principal points (adata.uns)\n"
-        "    'tree/R', soft assignment (sigma=0.0001) of cells to principal point in representation space (adata.uns)\n"
+        "    'tree/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
         "    'tree/F', coordinates of principal points in representation space (adata.uns)"
     )
     
@@ -623,3 +626,10 @@ def getpath(adata,
             pass
     
     return pd.concat(list(map(gatherpath,leaves)),axis=1)
+
+def round_base_10(x):
+    if x < 0:
+        return 0
+    elif x == 0:
+        return 10
+    return 10**np.ceil(np.log10(x))
