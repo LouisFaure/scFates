@@ -13,6 +13,7 @@ import igraph
 import warnings
 import itertools
 from copy import deepcopy
+import elpigraph
 
 from ..tools.dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
 from ..plot.tree import tree as plot_tree
@@ -268,16 +269,13 @@ def tree_epg(
         np.random.seed(seed)
     
     if device=="gpu":
-        import elpigraphgpu
         import cupy as cp
         from .dist_tools_gpu import euclidean_mat_gpu, cor_mat_gpu
         
-        Tree=elpigraphgpu.computeElasticPrincipalTree(X_t.T,NumNodes=Nodes,
-                                                      Do_PCA=False,InitNodes=initnodes,
-                                                      Lambda=lam,Mu=mu,
-                                                      TrimmingRadius=trimmingradius,
-                                                      drawAccuracyComplexity=False, 
-                                                      drawPCAView=False, drawEnergy=False)
+        Tree=elpigraph.computeElasticPrincipalTree(X_t.T,NumNodes=Nodes,
+                                                   Do_PCA=False,InitNodes=initnodes,
+                                                   Lambda=lam,Mu=mu,
+                                                   TrimmingRadius=trimmingradius,GPU=True)
         
         
         R = euclidean_mat_gpu(cp.asarray(X_t),cp.asarray(Tree[0]["NodePositions"].T))
@@ -290,13 +288,11 @@ def tree_epg(
         
         
     else:  
-        import elpigraph
         from .dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
         
         Tree = elpigraph.computeElasticPrincipalTree(X_t.T,NumNodes=Nodes,Do_PCA=False,
-                                                      Lambda=epg_lambda,Mu=epg_mu,
-                                                      drawAccuracyComplexity=False, 
-                                                      drawPCAView=False, drawEnergy=False)
+                                                     Lambda=epg_lambda,Mu=epg_mu,
+                                                     TrimmingRadius=trimmingradius)
         
         R = euclidean_mat_cpu(X_t,Tree[0]["NodePositions"].T)
         
