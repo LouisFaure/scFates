@@ -1,4 +1,4 @@
-from .tree import tree, pseudotime, tree_3d
+from .tree import tree, trajectory, tree_3d
 from .trends import cluster, linear_trends, single_trend
 from .test_association import test_association
 from .modules import modules

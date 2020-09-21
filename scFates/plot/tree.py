@@ -115,15 +115,18 @@ def tree(
     savefig_or_show('tree', show=show, save=save)
     
     
-def pseudotime(
+def trajectory(
     adata: AnnData,
     basis: str = "umap",
     emb_back = None,
     colormap: str = "viridis",
+    color_cells = "grey",
     size_cells = None,
     alpha_cells: float = 1,
     scale_path: float = 1,
     arrows: bool = False,
+    arrow_offset: int = 10,
+    ax = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
@@ -145,9 +148,9 @@ def pseudotime(
     
     B=tree["B"]
 
-
-    fig = plt.figure() 
-    ax = plt.subplot()
+    if ax is None:
+        fig = plt.figure() 
+        ax = plt.subplot()
     
     ncells = adata.shape[0]
     if size_cells is None:
@@ -160,7 +163,7 @@ def pseudotime(
         ax.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",alpha=alpha_cells,edgecolor="none")
 
 
-    ax.scatter(emb[:,0],emb[:,1],s=size_cells,color="grey",alpha=alpha_cells,edgecolor="none")
+    ax.scatter(emb[:,0],emb[:,1],s=size_cells,color=color_cells,alpha=alpha_cells,edgecolor="none")
 
     ax.grid(False)
     x0,x1 = ax.get_xlim()
@@ -193,21 +196,21 @@ def pseudotime(
     paths=g.get_shortest_paths(tree["root"],tree["tips"])
     seg=tree["pp_seg"].loc[:,["from","to"]].values.tolist()
     for s in seg:
-        path=np.array(g.get_shortest_paths(int(s[0]),int(s[1]))[0])        
-        coord=proj[path,]
-        out=np.empty(len(path)-1)
-        cdist_numba(coord,out)
-        
         if arrows:
-            mid=np.argwhere(out.cumsum()==np.median(out.cumsum()))[0][0]-1
+            path=np.array(g.get_shortest_paths(int(s[0]),int(s[1]))[0])        
+            coord=proj[path,]
+            out=np.empty(len(path)-1)
+            cdist_numba(coord,out)
+            mid=np.argmin(np.abs(out.cumsum()-out.sum()/2))
+            if mid+arrow_offset > (len(path)-1):
+                arrow_offset = len(path)-1-mid
+            ax.quiver(proj[path[mid],0],proj[path[mid],1],
+                      proj[path[mid+arrow_offset],0]-proj[path[mid],0],
+                      proj[path[mid+arrow_offset],1]-proj[path[mid],1],headwidth=15*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",zorder=101)
 
             ax.quiver(proj[path[mid],0],proj[path[mid],1],
-                      proj[path[mid+1],0]-proj[path[mid],0],
-                      proj[path[mid+1],1]-proj[path[mid],1],headwidth=15*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",zorder=101)
-
-            ax.quiver(proj[path[mid],0],proj[path[mid],1],
-                      proj[path[mid+1],0]-proj[path[mid],0],
-                      proj[path[mid+1],1]-proj[path[mid],1],headwidth=12*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",
+                      proj[path[mid+arrow_offset],0]-proj[path[mid],0],
+                      proj[path[mid+arrow_offset],1]-proj[path[mid],1],headwidth=12*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",
                       color=sm.to_rgba(tree["pp_info"].loc[path,:].time.iloc[mid]),zorder=102)
 
 
