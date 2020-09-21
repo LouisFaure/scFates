@@ -180,8 +180,13 @@ def linear_trends(
     n_features: int = 10,
     root_milestone = None,
     milestones = None,
-    cell_size=20,
-    quant_ord=.7,
+    cell_size = 20,
+    order = True,
+    ordering = "max",
+    ord_thre = .7,
+    filter_complex=True,
+    complex_thre = .7,
+    complex_z = 3,
     figsize: tuple = (8,8),
     frame: Union[float,None] = 2,
     basis: str = "umap",
@@ -212,25 +217,35 @@ def linear_trends(
     segs = seg.astype(str).map(pal)
     segs.name = "segs"
 
+    
+    if filter_complex:
+        # remove complex features using quantiles
+        varia = list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=complex_thre)].var(),features))
+        z = np.abs(stats.zscore(varia))
+        torem = np.argwhere(z > complex_z).flatten()
 
-    fitted=fitted.loc[features,:]
-    varia=list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].var(),features))
-
-    z = np.abs(stats.zscore(varia))
-    torem = np.argwhere(z > 3)
-
-    if len(torem)>0:
-        torem=torem[0]
-        logg.info("found "+str(len(torem))+" complex fitted features")
-        logg.hint( "added\n" + "    'complex' column in (adata.var)")
-        adata.var["complex"]=False
-        adata.var.complex.iloc[torem]=True
-        features=adata.var_names[~adata.var["complex"]]
+        if len(torem)>0:
+            logg.info("found "+str(len(torem))+" complex fitted features")
+            logg.hint( "added\n" + "    'complex' column in (adata.var)")
+            adata.var["complex"]=False
+            #adata.var.iloc[torem,"complex"]=True
+            adata.var.loc[fitted.index[torem],"complex"]=True
+            features=adata.var_names[~adata.var["complex"]]
 
     fitted = fitted.loc[features,:]
-    #list(map(lambda x: adata.obs.t[fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].mean(),features))
-    ix = fitted.apply(lambda x: adata.obs.t[x>np.quantile(x,q=quant_ord)].mean(),axis=1).sort_values().index
-    fitted_sorted = fitted.loc[ix, :]
+    
+    if order:
+        if ordering=="quantile":
+            feature_order = fitted.apply(lambda x: adata.obs.t[fitted.columns][x>np.quantile(x,q=ord_thre)].mean(),axis=1).sort_values().index
+        elif ordering=="max":
+            feature_order = fitted.apply(lambda x: adata.obs.t[fitted.columns][(x-x.min())/(x.max()-x.min())>ord_thre].mean(),axis=1).sort_values().index
+        elif ordering in ("pearson", "spearman"):
+            start_feature = fitted.apply(lambda x: adata.obs.t[fitted.columns][(x-x.min())/(x.max()-x.min())>ord_thre].mean(),axis=1).sort_values().index[0]
+            feature_order = fitted.T.corr(method=ordering).loc[start_feature,:].sort_values(ascending=False).index
+
+        fitted_sorted = fitted.loc[feature_order, :]
+    else:
+        fitted_sorted = fitted
 
     
     
@@ -264,12 +279,12 @@ def linear_trends(
     sns.heatmap(fitted_sorted,robust=True,cmap=colormap,xticklabels=False,yticklabels=False,ax=ax2,cbar=False)
     
     if frame is not None:
-        ax.hlines(y=0,xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
-        ax.hlines(y=1,xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
+        ax.hlines(y=0,xmin=0,xmax=fitted_sorted.shape[1]-frame+.5, color='k',linewidth=frame*2)
+        ax.hlines(y=1,xmin=0,xmax=fitted_sorted.shape[1]-frame+.5, color='k',linewidth=frame*2)
         ax.vlines(x=0, ymin=0, ymax=1, color='k',linewidth=frame*2)
         ax.vlines(x=len(fitted_sorted.columns), ymin=0, ymax=1, color='k',linewidth=frame)
-        ax2.hlines(y=0,xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
-        ax2.hlines(y=fitted_sorted.shape[0],xmin=0,xmax=fitted_sorted.shape[1]-frame, color='k',linewidth=frame*2)
+        ax2.hlines(y=0,xmin=0,xmax=fitted_sorted.shape[1]-frame+.5, color='k',linewidth=frame*2)
+        ax2.hlines(y=fitted_sorted.shape[0],xmin=0,xmax=fitted_sorted.shape[1]-frame+.5, color='k',linewidth=frame*2)
         ax2.vlines(x=0,ymin=0,ymax=fitted_sorted.shape[0], color='k',linewidth=frame*2)
         ax2.vlines(x=fitted_sorted.shape[1],ymin=0,ymax=fitted_sorted.shape[0], color='k',linewidth=frame)
 
