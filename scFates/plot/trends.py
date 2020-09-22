@@ -30,13 +30,11 @@ def cluster(
     quant_ord=.7,
     figsize: tuple = (20,12),
     basis: str = "umap",
-    colormap: str = "magma",
+    colormap: str = "RdBu_r",
     emb_back = None,
+    highlight=False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
-    
-    if 'edgecolor' not in kwargs:
-        kwargs['edgecolor'] = 'none'
     
     fitted = pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names).T.copy(deep=True)
     g = adata.obs.groupby('seg')
@@ -140,15 +138,19 @@ def cluster(
             ax2.scatter(adata.obsm["X_"+basis][~adata.obs_names.isin(cells),0],
                         adata.obsm["X_"+basis][~adata.obs_names.isin(cells),1],
                         c="lightgrey",s=cell_size,edgecolor="none")
-            ax2.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
-                        adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
-                        c="black",s=cell_size*2,edgecolor="none")
+            if highlight:
+                ax2.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
+                            adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
+                            c="black",s=cell_size*2,edgecolor="none")
             ax2.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
                         adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
                         s=cell_size,edgecolor="none",
                         c=fitted.mean(axis=0)[adata[adata.obs_names.isin(cells),:].obs_names],cmap=colormap)
         else:
             cells = adata.obs_names
+            if highlight:
+                ax2.scatter(adata.obsm["X_"+basis][:,0],
+                            adata.obsm["X_"+basis][:,1],c="k",s=cell_size*2,edgecolor="none")
             ax2.scatter(adata.obsm["X_"+basis][:,0],
                         adata.obsm["X_"+basis][:,1],
                         s=cell_size,edgecolor="none",
@@ -329,6 +331,10 @@ def single_trend(
     fig, (ax1, ax2) = plt.subplots(1, 2,figsize=figsize,constrained_layout=True)
     fig.suptitle(feature)
     
+    color_key = "seg_colors"
+    if color_key not in adata.uns or len(adata.uns[color_key]):
+        palette_tools._set_default_colors_for_categorical_obs(adata,"seg")
+    pal=dict(zip(adata.obs["seg"].cat.categories,adata.uns[color_key]))
 
     ncells = adata.shape[0]
     
@@ -368,11 +374,28 @@ def single_trend(
     ax1.set_aspect(abs(x1-x0)/abs(y1-y0))
     for s in df.seg.unique():
         if colorexp is None:
-            ax2.scatter(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"expression"],alpha=alpha_expr,s=size_expr)
-            ax2.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],linewidth=fitted_linewidth)
+            plt.scatter(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"expression"],alpha=alpha_expr,s=size_expr,
+                        c=adata.uns['seg_colors'][np.argwhere(adata.obs.seg.cat.categories==s)[0][0]])
+            plt.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],
+                     c=adata.uns['seg_colors'][np.argwhere(adata.obs.seg.cat.categories==s)[0][0]],
+                     linewidth=fitted_linewidth)
+            tolink=adata.uns['tree']['pp_seg'].loc[int(s),"to"]
+            for next_s in adata.uns['tree']['pp_seg'].n.iloc[np.argwhere(adata.uns['tree']['pp_seg'].loc[:,'from'].isin([tolink]).values).flatten()]:
+                plt.plot([df.loc[df.seg==s,"t"].iloc[-1],df.loc[df.seg==next_s,"t"].iloc[0]],
+                     [df.loc[df.seg==s,"fitted"].iloc[-1],df.loc[df.seg==next_s,"fitted"].iloc[0]],
+                     c=adata.uns['seg_colors'][np.argwhere(adata.obs.seg.cat.categories==next_s)[0][0]],
+                             linewidth=fitted_linewidth)
         else:
-            ax2.scatter(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"expression"],c=colorexp,alpha=alpha_expr,s=size_expr)
-            ax2.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],c=colorexp,linewidth=fitted_linewidth)
+            plt.scatter(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"expression"],c=colorexp,alpha=alpha_expr,s=size_expr)
+            plt.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],
+                     c=colorexp,
+                     linewidth=fitted_linewidth)
+            tolink=adata.uns['tree']['pp_seg'].loc[int(s),"to"]
+            for next_s in adata.uns['tree']['pp_seg'].n.iloc[np.argwhere(adata.uns['tree']['pp_seg'].loc[:,'from'].isin([tolink]).values).flatten()]:
+                plt.plot([df.loc[df.seg==s,"t"].iloc[-1],df.loc[df.seg==next_s,"t"].iloc[0]],
+                     [df.loc[df.seg==s,"fitted"].iloc[-1],df.loc[df.seg==next_s,"fitted"].iloc[0]],
+                     c=colorexp,linewidth=fitted_linewidth)
+
 
     ax2.set_ylabel(ylab)
     ax2.set_xlabel("pseudotime")
@@ -386,6 +409,7 @@ def single_trend(
     
             
 def getpath(g,root,tips,tip,tree,df):
+    wf=warnings.filters.copy()
     warnings.filterwarnings("ignore")
     try:
         path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
@@ -396,7 +420,7 @@ def getpath(g,root,tips,tip,tree,df):
         segs=tree["pp_seg"].index[segs]
         pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
         pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filterwarnings("default")
+        warnings.filters=wf
         return(pth)
     except IndexError:
         pass

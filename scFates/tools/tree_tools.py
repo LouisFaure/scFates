@@ -607,7 +607,7 @@ def getpath(adata,
     root = dct[root_milestone]
     
     df = adata.obs.copy()
-    
+    wf=warnings.filters.copy()
     warnings.filterwarnings("ignore")
     #for tip in leaves:
     def gatherpath(tip):    
@@ -620,7 +620,8 @@ def getpath(adata,
             segs=tree["pp_seg"].index[segs]
             pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
             pth["branch"]=str(root)+"_"+str(tip)
-            warnings.filterwarnings("default")
+            #warnings.filterwarnings("default")
+            warnings.filters=wf
             return(pth)
         except IndexError:
             pass

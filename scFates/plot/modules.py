@@ -23,6 +23,7 @@ def modules(
     color: str = "milestones",
     basis: str = "umap",
     alpha: float = 1,
+    cmap_pseudotime = "viridis",
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     layer: Optional[str] = None):
@@ -99,14 +100,14 @@ def modules(
     axs[1,0].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
 
     axs[0,1].scatter(X.loc[:,early_1].mean(axis=1),
-                X.loc[:,early_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha)
+                X.loc[:,early_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha,cmap=cmap_pseudotime)
     axs[0,1].set_aspect(1.0/axs[0,1].get_data_ratio(), adjustable='box')
     axs[0,1].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
     axs[0,1].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
 
 
     axs[1,1].scatter(X.loc[:,late_1].mean(axis=1),
-                X.loc[:,late_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha)
+                X.loc[:,late_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha,cmap=cmap_pseudotime)
     axs[1,1].set_aspect(1.0/axs[1,1].get_data_ratio(), adjustable='box')
     axs[1,1].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
     axs[1,1].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
@@ -122,6 +123,7 @@ def modules(
 
     
 def getpath(g,root,tips,tip,tree,df):
+    wf=warnings.filters.copy()
     warnings.filterwarnings("ignore")
     try:
         path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
@@ -132,7 +134,7 @@ def getpath(g,root,tips,tip,tree,df):
         segs=tree["pp_seg"].index[segs]
         pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
         pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filterwarnings("default")
+        warnings.filters=wf
         return(pth)
     except IndexError:
         pass

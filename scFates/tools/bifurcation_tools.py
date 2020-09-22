@@ -76,9 +76,9 @@ def test_fork(
     
     tree = adata.uns["tree"]
     
-    uns_temp = deepcopy(adata.uns) 
+    uns_temp = adata.uns.copy()
     
-    zmlsc = deepcopy(adata.uns["milestones_colors"])
+    zmlsc = adata.uns["milestones_colors"].copy()
     
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
@@ -365,6 +365,7 @@ def activation(adata: AnnData,
             subtree=getpath(img,root,tree["tips"],leave,tree,df).sort_values("t")
             del subtree["branch"]
             subtree["deriv_cut"]=deriv_cut
+            wf=warnings.filters.copy()
             warnings.filterwarnings("ignore")
             if layer is None:
                 if sparse.issparse(adata.X):
@@ -376,6 +377,7 @@ def activation(adata: AnnData,
                     subtree["exp"] = np.array(adata[subtree.index,feature].layers[layer].A)
                 else:
                     subtree["exp"] = np.array(adata[subtree.index,feature].layers[layer])
+            warnings.filters=wf
             return subtree
             
 
@@ -435,7 +437,8 @@ def activation(adata: AnnData,
 def get_activation(subtree):
     global rmgcv 
     deriv_cut=subtree["deriv_cut"][0]
-    warnings.filterwarnings("default")
+    wf=warnings.filters.copy()
+    warnings.filterwarnings("ignore")
     def gamfit(sdf):
         m = rmgcv.gam(Formula("exp ~ s(t)"),data=sdf,gamma=1)
         return rmgcv.predict_gam(m)
@@ -448,9 +451,11 @@ def get_activation(subtree):
         act=subtree.t.max()+1
     else:
         act=np.min(subtree.t[(deriv>deriv_cut).values])
+    warnings.filters=wf
     return np.min([act,subtree.t.max()])
 
 def getpath(g,root,tips,tip,tree,df):
+    wf=warnings.filters.copy()
     warnings.filterwarnings("ignore")
     try:
         path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
@@ -461,7 +466,7 @@ def getpath(g,root,tips,tip,tree,df):
         segs=tree["pp_seg"].index[segs]
         pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
         pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filterwarnings("default")
+        warnings.filters=wf
         return(pth)
     except IndexError:
         pass

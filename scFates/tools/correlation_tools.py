@@ -401,6 +401,7 @@ def synchro_path(
 
 
 def getpath(g,root,tips,tip,tree,df):
+    wf=warnings.filters.copy()
     warnings.filterwarnings("ignore")
     try:
         path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
@@ -411,7 +412,7 @@ def getpath(g,root,tips,tip,tree,df):
         segs=tree["pp_seg"].index[segs]
         pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
         pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filterwarnings("default")
+        warnings.filters=wf
         return(pth)
     except IndexError:
         pass
