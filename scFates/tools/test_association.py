@@ -16,7 +16,6 @@ from statsmodels.stats.multitest import multipletests
 import igraph
 import warnings
 
-from copy import deepcopy
 
 from joblib import delayed, Parallel
 from tqdm import tqdm
@@ -86,8 +85,8 @@ def test_association(
     
     
     if leaves is not None:
-        mlsc = deepcopy(adata.uns["milestones_colors"])
-        mlsc_temp = deepcopy(mlsc)
+        mlsc = adata.uns["milestones_colors"].copy()
+        mlsc_temp = mlsc.copy()
         dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                        np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
@@ -115,7 +114,7 @@ def test_association(
     if root is None:
         cells = tree["cells_fitted"]
     else:
-        df = adata.obs.copy(deep=True)
+        df = adata.obs.copy()
         edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))

@@ -8,7 +8,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_hex
 from matplotlib.gridspec import GridSpec
-from copy import deepcopy
 from scipy import sparse 
 import warnings
 
@@ -31,7 +30,7 @@ def modules(
     plt.rcParams["axes.grid"] = False
     tree=adata.uns["tree"]
     
-    uns_temp=deepcopy(adata.uns)
+    uns_temp=adata.uns.copy()
     
     dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
@@ -45,7 +44,7 @@ def modules(
     
     
     stats = adata.uns[name]["fork"]
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = adata.uns["milestones_colors"].copy()
     mls = adata.obs.milestones.cat.categories.tolist()
     dct = dict(zip(mls,mlsc))
     df = adata.obs.copy(deep=True)
@@ -59,7 +58,7 @@ def modules(
                    getpath(img,root,adata.uns["tree"]["tips"],leaves[1],tree,df).index]))
 
     
-    cols = deepcopy(adata.uns[color+"_colors"])
+    cols = adata.uns[color+"_colors"].copy()
     obscol = adata.obs[color].cat.categories.tolist()
     dct_c = dict(zip(obscol,cols))
            

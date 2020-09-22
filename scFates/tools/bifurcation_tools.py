@@ -17,7 +17,6 @@ import warnings
 from functools import reduce
 from statsmodels.stats.multitest import multipletests
 import statsmodels.formula.api as sm
-from copy import deepcopy
 
 from scipy import sparse
 
@@ -272,9 +271,9 @@ def branch_specific(
     
     tree=adata.uns["tree"]
     
-    uns_temp = deepcopy(adata.uns)
+    uns_temp = adata.uns.copy()
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = adata.uns["milestones_colors"].copy()
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
@@ -337,9 +336,9 @@ def activation(adata: AnnData,
     
     logg.info("testing activation", reset=True)
     
-    uns_temp = deepcopy(adata.uns)
+    uns_temp = adata.uns.copy()
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))

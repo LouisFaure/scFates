@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import rgb2hex
 
-from copy import deepcopy
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
 
@@ -20,9 +19,9 @@ def slide_cors(
     
     tree = adata.uns["tree"]  
     
-    uns_temp=deepcopy(adata.uns)
+    uns_temp=adata.uns.copy()
     
-    mlsc = np.array(deepcopy(adata.uns["milestones_colors"]))
+    mlsc = np.array(adata.uns["milestones_colors"].copy())
     if mlsc.dtype == "float":
         mlsc=list(map(rgb2hex,mlsc))
         
@@ -41,8 +40,8 @@ def slide_cors(
     nwin = len(freqs)
     genesetA=bif.index[(bif["branch"]==milestones[0]).values & (bif["module"]=="early").values]
     genesetB=bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
-    corA=adata.uns[name]["corAB"].loc[milestones[0]].copy(deep=True)
-    corB=adata.uns[name]["corAB"].loc[milestones[1]].copy(deep=True)
+    corA=adata.uns[name]["corAB"].loc[milestones[0]].copy()
+    corB=adata.uns[name]["corAB"].loc[milestones[1]].copy()
     groupsA=np.ones(corA.shape[0])
     groupsA[corA.index.isin(genesetB)]=2  
     groupsB=np.ones(corA.shape[0])

@@ -8,8 +8,6 @@ from skmisc.loess import loess
 from matplotlib import lines
 
 
-from copy import deepcopy
-
 def synchro_path(
     adata: AnnData,
     root_milestone,
@@ -24,8 +22,8 @@ def synchro_path(
     img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
     img.add_edges(edges)  
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
-    mlsc_temp = deepcopy(mlsc)
+    mlsc = adata.uns["milestones_colors"].copy()
+    mlsc_temp = mlsc.copy()
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))

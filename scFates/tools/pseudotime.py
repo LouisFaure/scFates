@@ -5,6 +5,7 @@ from scipy.sparse import csr_matrix
 from joblib import delayed, Parallel
 from tqdm import tqdm
 import sys
+import igraph
 
 from .. import logging as logg
 from .. import settings
@@ -19,8 +20,9 @@ def pseudotime(
         raise ValueError(
             "You need to run `tl.root` or `tl.roots` before projecting cells."
         )
-        
-        
+    
+    adata = adata.copy() if copy else adata
+    
     tree = adata.uns["tree"]
 
     logg.info("projecting cells onto the principal tree", reset=True)
@@ -134,3 +136,52 @@ def map_cells(tree,multi=False):
     df.drop(["cell","v0","v1","d"],axis=1,inplace=True)
 
     return df
+
+def refine_pseudotime(
+    adata: AnnData,
+    n_jobs: int = 1,
+    copy: bool = False):
+    
+    adata = adata.copy() if copy else adata
+    
+    adata.obs["t_old"]=adata.obs.t.copy()
+    
+    logg.info("refining pseudotime using palantir on each segment of the tree", reset=True)
+    
+    def palantir_on_seg(seg):
+        import palantir
+        adata_sub=adata[adata.obs.seg==seg,]
+        dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata_sub.obsm["X_pca"],index=adata_sub.obs_names))
+        ms_data=palantir.utils.determine_multiscale_space(dm_res)
+        pr=palantir.core.run_palantir(ms_data,adata_sub.obs.t.idxmin())
+        return pr.pseudotime
+
+    pseudotimes = Parallel(n_jobs=n_jobs)(
+        delayed(palantir_on_seg)(
+            s
+        )
+        for s in tqdm(adata.uns["tree"]["pp_seg"].n.values.astype(str),file=sys.stdout)
+    )
+
+    g=igraph.Graph(directed=True)
+
+    g.add_vertices(np.unique(adata.uns["tree"]["pp_seg"].loc[:,["from","to"]].values.flatten().astype(str)))
+    g.add_edges(adata.uns["tree"]["pp_seg"].loc[:,["from","to"]].values.astype(str))
+
+    allpth=g.get_shortest_paths(str(adata.uns["tree"]["root"]),[tip for tip in g.vs["name"] if tip!=str(adata.uns["tree"]["root"])])
+
+    for p in allpth:
+        pth=np.array(g.vs["name"],dtype=int)[p]
+        dt=0
+        for i in range(len(pth)-1):
+            sel=adata.uns["tree"]["pp_seg"].loc[:,["from","to"]].apply(lambda x: np.all(x==pth[i:i+2]),axis=1).values
+            adata.obs.loc[adata.obs.seg==adata.uns["tree"]["pp_seg"].loc[sel,"n"].values[0],"t"]=(pseudotimes[np.argwhere(sel)[0][0]]*adata.uns["tree"]["pp_seg"].loc[sel,"d"].values[0]).values+dt
+            dt=dt+adata.uns["tree"]["pp_seg"].loc[sel,"d"].values[0]
+            
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "updated\n" + "    't' with palantir pseudotime values (adata.obs)\n"
+        "added\n" +"    'old_t', previous pseudotime data (adata.obs)"
+    )
+    
+    return adata if copy else None

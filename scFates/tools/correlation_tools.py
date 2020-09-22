@@ -6,7 +6,6 @@ import igraph
 from anndata import AnnData
 from scipy import sparse
 
-from copy import deepcopy
 from functools import partial
 from statsmodels.stats.weightstats import DescrStatsW
 from skmisc.loess import loess
@@ -31,9 +30,9 @@ def slide_cells(
     
     tree = adata.uns["tree"]
     
-    uns_temp = deepcopy(adata.uns)
+    uns_temp = adata.uns.copy()
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
@@ -136,7 +135,7 @@ def slide_cells(
     
     logg.hint(
         "added \n"
-        "    '"+name+"/cell_freq', probability assignment of cells on non intersecting windows (adata.uns)")
+        "    '"+name+"/cell_freq', probability assignment of cells on "+str(len(freq))+" non intersecting windows (adata.uns)")
     
     return adata if copy else None
 
@@ -154,9 +153,9 @@ def slide_cors(
     
     tree = adata.uns["tree"]    
     
-    uns_temp = deepcopy(adata.uns)
+    uns_temp = adata.uns.copy()
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
@@ -242,9 +241,9 @@ def synchro_path(
     img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
     img.add_edges(edges)  
     
-    uns_temp = deepcopy(adata.uns)
+    uns_temp = adata.uns.copy()
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
@@ -371,7 +370,7 @@ def synchro_path(
     l.fit()
     pred = l.predict(res.t, stderror=True)
 
-    tval=deepcopy(adata.obs.t)
+    tval=adata.obs.t.copy()
     tval[tval>fork_t]=np.nan
 
     def inter_values(tv):

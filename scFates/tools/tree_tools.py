@@ -12,7 +12,6 @@ import sys
 import igraph
 import warnings
 import itertools
-from copy import deepcopy
 import elpigraph
 
 from ..tools.dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
@@ -596,7 +595,7 @@ def getpath(adata,
     
     uns_temp = adata.uns.copy()
     
-    mlsc = deepcopy(adata.uns["milestones_colors"])
+    mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))

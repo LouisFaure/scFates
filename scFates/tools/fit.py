@@ -23,7 +23,6 @@ from scipy import sparse
 from .. import logging as logg
 from .. import settings
 
-from copy import deepcopy
 
 try:
     from rpy2.robjects import pandas2ri, Formula
@@ -83,8 +82,8 @@ def fit(
     tips = tree["tips"]
     
     if leaves is not None:
-        mlsc = deepcopy(adata.uns["milestones_colors"])
-        mlsc_temp = deepcopy(mlsc)
+        mlsc = adata.uns["milestones_colors"].copy()
+        mlsc_temp = mlsc.copy()
         dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                        np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
@@ -111,7 +110,10 @@ def fit(
     stat_assoc=list()
     
     for m in range(n_map):
-        df=tree["pseudotime_list"][str(m)]
+        if "t_old" in adata.obs.columns:
+            df=adata.obs.copy()
+        else:
+            df=tree["pseudotime_list"][str(m)]
         edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
@@ -178,17 +180,17 @@ def fit(
     
     return adata if copy else None
 
-def getpath(g,root,tips,tip,r,df):
+def getpath(g,root,tips,tip,tree,df):
     wf=warnings.filters.copy()
     warnings.filterwarnings("ignore")
     try:
         path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
         segs = list()
         for i in range(len(path)-1):
-            segs= segs + [np.argwhere((r["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
                                                                                     all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=r["pp_seg"].index[segs]
-        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
+        segs=tree["pp_seg"].index[segs]
+        pth=df.loc[df.seg.astype(int).isin(segs),["t","seg","edge"]].copy()
         pth["branch"]=str(root)+"_"+str(tip)
         warnings.filters=wf
         return(pth)
