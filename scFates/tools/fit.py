@@ -68,6 +68,44 @@ def fit(
     copy: bool = False,
     layer: Optional[str] = None):
     
+    """\
+    Model feature expression levels as a function of tree positions.
+    
+    The models are fit using *mgcv* R package. Note that since adata can currently only keep the 
+    same dimensions for each of its layers, the dataset is subsetted to keep only significant
+    feratures.
+    
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    layer
+        adata layer to use for the fitting.
+    n_map
+        number of cell mappings from which to do the test.
+    n_jobs
+        number of cpu processes used to perform the test.
+    gamma
+        stringency of penalty.
+    root
+        restrain the fit to a subset of the tree (in combination with leaves).
+    leaves
+        restrain the fit to a subset of the tree (in combination with root).
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    
+    adata : anndata.AnnData
+        if `copy=True` it returns subsetted or else subset (keeping only
+        significant features) and add fields to `adata`:
+        
+        `.layers['fitted']` 
+            fitted features on the tree for all mappings.
+    
+    """
+    
     adata = adata.copy() if copy else adata
     
     if "signi" not in adata.var.columns:

@@ -32,12 +32,19 @@ def pseudotime(
         Return a copy instead of writing to adata.
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following elements:
-    **edge** (.obs) - assigned edge.
-    **t** (.obs) - assigned pseudotime value.
-    **seg** (.obs) - assigned segment of the tree.
-    **milestones** (.obs) - assigned region surrounding forks and tips.
-    **tree/pseudotime_list** (.uns) -  list of cell projection from all mappings.
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.obs['edge']`
+            assigned edge.
+        `.obs['t']`
+            assigned pseudotime value.
+        `.obs['seg']`
+            assigned segment of the tree.
+        `.obs['milestone']`
+            assigned region surrounding forks and tips.
+        `.uns['tree']['pseudotime_list']`
+            list of cell projection from all mappings.
     """
     
     if "root" not in adata.uns["tree"]:
@@ -181,11 +188,16 @@ def refine_pseudotime(
         Number of cpu processes (max is the number of segments).
     copy
         Return a copy instead of writing to adata.
+        
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following elements:
-    **t** (.obs) - updated assigned pseudotimes value.
-    **t_old** (.obs) - previously assigned pseudotime.
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.obs['t']`
+            updated assigned pseudotimes value.
+        `.obs['t_old']`
+            previously assigned pseudotime.
     """
     
     adata = adata.copy() if copy else adata

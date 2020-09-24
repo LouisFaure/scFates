@@ -94,11 +94,19 @@ def tree(
         Return a copy instead of writing to adata.
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following:
-    **ppt** or **epg** : dictionnary containing inferred tree (adata.uns)
-    **tree/B** : adjacency matrix of the principal points (adata.uns)
-    **tree/R** : soft assignment of cells to principal point in representation space (adata.uns)
-    **tree/F** : coordinates of principal points in representation space (adata.uns)
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['ppt']` 
+            dictionnary containing information from simpelppt tree if method='ppt'
+        `.uns['epg']`
+            dictionnary containing information from elastic principal tree if method='epg'
+        `.uns['tree']['B']`
+            adjacency matrix of the principal points
+        `.uns['tree']['R']`
+            soft assignment of cells to principal point in representation space
+        `.uns['tree']['F']`
+            coordinates of principal points in representation space
     """
     
     logg.info("inferring a principal tree", reset=True, end=" " if settings.verbosity > 2 else "\n")
@@ -423,11 +431,15 @@ def cleanup(
         Return a copy instead of writing to adata.
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following updated elements:
-    **ppt** or **epg** : dictionnary containing inferred tree (adata.uns)
-    **tree/B** : adjacency matrix of the principal points (adata.uns)
-    **tree/R** : soft assignment of cells to principal point in representation space (adata.uns)
-    **tree/F** : coordinates of principal points in representation space (adata.uns)
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['tree']['B']`
+            subsetted adjacency matrix of the principal points.
+        `.uns['tree']['R']`
+            subsetted updated soft assignment of cells to principal point in representation space.
+        `.uns['tree']['F']`
+            subsetted coordinates of principal points in representation space.
     """
     
     adata = adata.copy() if copy else adata
@@ -508,10 +520,15 @@ def root(
         Return a copy instead of writing to adata.
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following elements:
-    **tree/root** (.uns) - selected root.
-    **tree/pp_info** (.uns) - for each PP, its distance vs root and segment assignment.
-    **tree/pp_seg** (.uns) - segments network information.
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['tree']['root']`
+            selected root.
+        `.uns['tree']['pp_info']`
+            for each PP, its distance vs root and segment assignment.
+        `.uns['tree']['pp_seg']`
+            segments network information.
     """
     
     adata = adata.copy() if copy else adata
@@ -596,12 +613,19 @@ def roots(
         Return a copy instead of writing to adata.
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following elements:
-    **tree/root** (.uns) - farthest root selected.
-    **tree/root2** (.uns) - 2nd root selected.
-    **tree/meeting** (.uns) -meeting point on the tree.
-    **tree/pp_info** (.uns) - for each PP, its distance vs root and segment assignment).
-    **tree/pp_seg** (.uns) - segments network information.
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['tree']['root']`
+            farthest root selected.
+        `.uns['tree']['root2']`
+            2nd root selected.
+        `.uns['tree']['meeting']`
+            meeting point on the tree.
+        `.uns['tree']['pp_info']`
+            for each PP, its distance vs root and segment assignment).
+        `.uns['tree']['pp_seg']`
+            segments network information.
     """
     
     adata = adata.copy() if copy else adata

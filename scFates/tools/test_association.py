@@ -92,15 +92,45 @@ def test_association(
     ----------
     adata
         Annotated data matrix.
+    layer
+        adata layer to use for the test.
+    n_map
+        number of cell mappings from which to do the test.
     n_jobs
-        Number of cpu processes (max is the number of segments).
+        number of cpu processes used to perform the test.
+    spline_df
+        dimension of the basis used to represent the smooth term.
+    fdr_cut
+        FDR (Benjamini-Hochberg adjustment) cutoff on significance; significance if FDR < fdr_cut.
+    A_cut
+        amplitude cutoff on significance; significance if A > A_cut.
+    st_cut
+        cutoff on stability (fraction of mappings with significant (fdr,A) pair) of association; significance, significance if st > st_cut.
+    reapply_filters
+        avoid recpmputation and reapply fitlers.
+    plot
+        call scf.pl.test_associationa after the test.
+    root
+        restrain the test to a subset of the tree (in combination with leaves).
+    leaves
+        restrain the test to a subset of the tree (in combination with root).
     copy
         Return a copy instead of writing to adata.
     Returns
     -------
-    Depending on `copy`, updates or returns `adata` with the following elements:
-    **t** (.obs) - updated assigned pseudotimes value.
-    **t_old** (.obs) - previously assigned pseudotime.
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.var['p_val']` 
+            p-values from statistical test.
+        `.var['fdr']` 
+            corrected values from multiple testing
+        `.var['st']` 
+            proportion of mapping in which feature is significant
+        `.var['A']` 
+            amplitue of change of tested feature
+        `.uns['tree']['stat_assoc_list']`
+            list of fitted features on the tree for all mappings
     """
     
     adata = data.copy() if copy else adata

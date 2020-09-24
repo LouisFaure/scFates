@@ -13,8 +13,6 @@ Import scFates as::
 Basic tree inference
 --------------------
 
-**Tools (tl)** 
-
 .. autosummary::
     :toctree: .
 
@@ -23,13 +21,8 @@ Basic tree inference
     tl.root
     tl.roots
     
-**Plot (pl)**  
-
-
 Pseudotime projection
----------------------
-
-**Tools (tl)** 
+--------------------- 
 
 .. autosummary::
     :toctree: .
@@ -37,5 +30,12 @@ Pseudotime projection
     tl.pseudotime
     tl.refine_pseudotime
     tl.test_association
+    tl.fit
 
-**Plot (pl)**  
+Plot
+----
+
+.. autosummary::
+    :toctree: .
+    
+    pl.tree

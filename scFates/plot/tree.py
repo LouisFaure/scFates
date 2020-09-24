@@ -28,15 +28,49 @@ def custom_new_gc(self):
 def tree(
     adata: AnnData,
     basis: str = "umap",
-    emb_back = None,
-    cex_tree: float = None,
+    emb_back : Union[np.ndarray,None] = None,
+    size_nodes: float = None,
     col_tree: bool = False,
-    color: Union[str, None] = None,
+    color_cells: Union[str, None] = None,
     alpha_cells: float = 1,
     tips: bool = True,
     forks: bool = True,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
+    
+    """\
+    Project tree onto embedding.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    basis
+        Name of the `obsm` basis to use.
+    emb_back
+        Other cells to show in background.
+    size_nodes
+        size of the projected prinicpal points.
+    col_tree
+        color tree by segments.
+    color_cells
+        cells color
+    alpha_cells
+        cells alpha
+    tips
+        display tip ids.
+    forks
+        display fork ids.
+    show
+        show the plot.
+    save
+        save the plot.
+    
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+    
+    """
     
     if "tree" not in adata.uns:
         raise ValueError(
@@ -62,12 +96,12 @@ def tree(
     if emb_back is not None:
         ax.scatter(emb_back[:,0],emb_back[:,1],s=2,color="lightgrey",alpha=alpha_cells)
     
-    if color is not None:
-        if adata.obs[color].dtype.name == "str":
-            adata.obs[color]=adata.obs[color].astype("category")
-        if adata.obs[color].dtype.name == "category":
-            if adata.uns[color+"_colors"] is not None:
-                palette = adata.uns[color+"_colors"]
+    if color_cells is not None:
+        if adata.obs[color_cells].dtype.name == "str":
+            adata.obs[color_cells]=adata.obs[color_cells].astype("category")
+        if adata.obs[color_cells].dtype.name == "category":
+            if adata.uns[color_cells+"_colors"] is not None:
+                palette = adata.uns[color_cells+"_colors"]
     
     ax.scatter(emb[:,0],emb[:,1],s=2,color="grey",alpha=alpha_cells)
     
