@@ -128,7 +128,7 @@ def tree(
     lc = matplotlib.collections.LineCollection(lines,colors="k",linewidths=2)
     ax.add_collection(lc)
     
-    ax.scatter(proj[:,0],proj[:,1],s=cex_tree,c="k")
+    ax.scatter(proj[:,0],proj[:,1],s=size_nodes,c="k")
     
     if col_tree==True:
         for seg in np.unique(r["pp_info"]["seg"]):

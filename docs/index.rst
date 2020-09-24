@@ -1,20 +1,37 @@
-.. scFates documentation master file, created by
-   sphinx-quickstart on Thu Sep 24 16:02:57 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 scFates - a suite for advanced pseudotime analysis
 ==================================================
 
 **scFates** is a scalable suite for tree inference and advanced pseudotime analysis.
 
-The methods for tree inference are based on ElPiGraph and SimplePPT, the methods for bifurcation analysis are based on the work done on the analysis of neural crest fates during murine embryonic development.dsdsds
+It initially is a translation from crestree_, a R package developed for the analysis of neural crest fates during 
+murine embryonic development (`Soldatov et al., Science, 2019 <https://doi.org/10.1126/science.aas9536>`_), and used 
+in another study of neural crest derived sensory neurons (`Faure et al., Nature Communications, 2020 <https://doi.org/10.1038/s41467-020-17929-4>`_).
 
-scFates is compatible with scanpy_.
+The initial R version included a tree inference approach inspired from SimplePPT, this version now adds the choice of using ElPiGraph_,
+another method for principal graph learning (`Albergante et al., Entropy, 2020 <https://doi.org/10.3390/e22030296>`_).
+scFates is fully compatible with scanpy_, and contains GPU-accelerated functions for faster and scalable inference.
+
+.. image:: _static/scFates_summary.svg
+   :width: 900
+
+Analysis key steps
+^^^^^^^^^^^^^^^^^^
+- learn a principal tree on the space of your choice (gene expression, PCA, diffusion, ...).
+- obtain a pseudotime value upon selection of a root (or two roots).
+- test and fit features significantly changing along the tree, cluster them.
+- perform differential expression between branches.
+- identify branch-specific early activating features and probe their correlations prior to bifurcation.
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
-   about
    installation
+   notebooks/Basic_usage_example
    api
+   references
+   
+   
+.. _scanpy: https://scanpy.readthedocs.io/
+.. _crestree: https://github.com/hms-dbmi/crestree
+.. _ElPiGraph: https://github.com/j-bac/elpigraph-python/

@@ -44,8 +44,8 @@ def tree(
     
     Learn a simplified representation on any space, compsed of nodes, approximating the 
     position of the cells on a given space such as gene expression, pca, diffusion maps, ...
-    If `method=='ppt'`, uses simpleppt implementation from [Soldatov19].  
-    If `method=='epg'`, uses Elastic Principal Graph approach from [Albergante20]
+    If `method=='ppt'`, uses simpleppt implementation from [Soldatov19]_.  
+    If `method=='epg'`, uses Elastic Principal Graph approach from [Albergante20]_.
     
     Parameters
     ----------
@@ -66,19 +66,19 @@ def tree(
     init
         Initialise the point positions.
     ppt_sigma
-        Regularization parameter for simpleppt [Mao15].
+        Regularization parameter for simpleppt [Mao15]_.
     ppt_lambda
-        Parameter for simpleppt, penalty for the tree length [Mao15].
+        Parameter for simpleppt, penalty for the tree length [Mao15]_.
     ppt_nsteps
         Number of steps for the optimisation process of simpleppt.
     ppt_err_cut
         Stop simpleppt algorithm if proximity of principal points between iterations less than defiend value.
     epg_lambda
-        Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20].
+        Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20]_.
     epg_mu
-        Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20].
+        Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20]_.
     epg_trimmingradius
-        Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20].
+        Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
     epg_initnodes
         numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes 
         in the initial step
@@ -366,7 +366,7 @@ def tree_epg(
         from .dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
         
         Tree = elpigraph.computeElasticPrincipalTree(X_t.T,NumNodes=Nodes,Do_PCA=False,
-                                                     Lambda=epg_lambda,Mu=epg_mu,
+                                                     InitNodes=initnodes,Lambda=lam,Mu=mu,
                                                      TrimmingRadius=trimmingradius)
         
         R = euclidean_mat_cpu(X_t,Tree[0]["NodePositions"].T)

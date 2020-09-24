@@ -31,41 +31,85 @@ try:
     from rpy2.robjects import pandas2ri, Formula
     from rpy2.robjects.packages import importr
     import rpy2.rinterface
-    pandas2ri.activate()
-    
-except ImportError:
-    raise RuntimeError(
+    pandas2ri.activate()  
+except Exception as e:
+    warnings.warn(
         'Cannot compute gene expression trends without installing rpy2. \
         \nPlease use "pip3 install rpy2" to install rpy2'
     )
+    warnings.warn(e.__doc__)
+    warnings.warn(e.message)
 
         
 if not shutil.which("R"):
-    raise RuntimeError(
+    warnings.warn(
         "R installation is necessary for computing gene expression trends. \
         \nPlease install R and try again"
     )
 
 try:
-    rmgcv = importr("mgcv")
-except embedded.RRuntimeError:
-    raise RuntimeError(
+    rstats = importr("stats")    
+except Exception as e:
+    warnings.warn(
+        "R installation is necessary for computing gene expression trends. \
+        \nPlease install R and try again"
+    )
+    print(e.__doc__)
+    print(e.message)
+    
+try:
+    rmgcv = importr("mgcv")  
+except Exception as e:
+    warnings.warn(
         'R package "mgcv" is necessary for computing gene expression trends. \
         \nPlease install gam from https://cran.r-project.org/web/packages/gam/ and try again'
     )
-rmgcv = importr("mgcv")
-rstats = importr("stats")
+    print(e.__doc__)
+    print(e.message)
 
 
 def test_fork(
     adata: AnnData,
     root_milestone,
     milestones,
+    layer: Optional[str] = None,
     n_jobs: int = 1,
     n_map: int = 1,
-    n_map_up: int = 1,
-    copy: bool = False,
-    layer: Optional[str] = None):
+    copy: bool = False):
+    
+    """\
+    Determine genes differentially upregulated after bifurcation point.
+    
+
+    Feature are tested to intify the ones with higher average expression 
+    in one of the derivative branches compared to the progenitor branch. 
+
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    layer
+        layer to use for the test
+    n_map
+        number of cell mappings from which to do the test.
+    n_jobs
+        number of cpu processes used to perform the test.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['root_milestone->milestoneA<>milestoneB']['fork']`
+            DataFrame with fork test results.
+
+    """
     
     adata = adata.copy() if copy else adata
     
@@ -267,6 +311,39 @@ def branch_specific(
     copy: bool = False,
     ):
     
+    """\
+    Assign genes differentially expressed between two post-bifurcation branches.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    effect_b1
+        expression differences to call gene as differentially upregulated at branch 1.
+    effect_b2
+        expression differences to call gene as differentially upregulated at branch 2.
+    stf_cut
+        fraction of projections when gene passed fdr < 0.05.
+    pd_a
+        minimum expression increase at derivative compared to progenitor branches to call gene as branch-specific.
+    pd_p
+        p-value of expression changes of derivative compared to progenitor branches to call gene as branch-specific.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['root_milestone->milestoneA<>milestoneB']['fork']['branch']`
+            assigned branch.
+
+    """
+    
     adata = adata.copy() if copy else adata
     
     tree=adata.uns["tree"]
@@ -331,6 +408,44 @@ def activation(adata: AnnData,
     copy: bool = False,
     n_jobs=-1,
     layer: Optional[str] = None):
+    
+    """\
+    Identify pseudotime of activation of branc-specififc features.
+    
+    This aims in classifying the genes according to their their activation timing
+    compared to the pseudotime of the bifurcation. Any feature activated before the 
+    bifurcation is considered as 'early', others are considered 'late'.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    deriv_cut
+        a first passage of derivative at this cutoff is considered as activation timing
+    pseudotime_offset
+        consider a feature as early if it gets activated before: pseudotime at bifurcation-pseudotime_offset.
+    n_map
+        number of cell mappings from which to do the test.
+    n_jobs
+        number of cpu processes used to perform the test.
+    copy
+        Return a copy instead of writing to adata.
+        
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['root_milestone->milestoneA<>milestoneB']['fork']['module']`
+            classify feature as 'early' or 'late'.
+        `.uns['root_milestone->milestoneA<>milestoneB']['fork']['activation']`
+            pseudotime of activationh.
+
+    """
     
     tree = adata.uns["tree"]
     

@@ -1,4 +1,3 @@
-#from types import MappingProxyType
 from typing import Optional, Tuple, Sequence, Type, Mapping, Any
 from packaging import version
 
@@ -9,9 +8,8 @@ from anndata import AnnData
 from .. import logging as logg
 from .. import settings
 
-import igraph
 import phenograph
-#from scanpy.neighbors import compute_neighbors_umap, _compute_connectivities_umap
+
 
     
 def cluster(
@@ -21,6 +19,40 @@ def cluster(
     device: str = "cpu",
     copy: bool = False,
     n_jobs: int = 1): 
+    
+    """\
+    Cluster feature trends.
+    
+    The models are fit using *mgcv* R package. Note that since adata can currently only keep the 
+    same dimensions for each of its layers, the dataset is subsetted to keep only significant
+    feratures.
+    
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    knn
+        Number of neighbors.
+    metric
+        distance metric to use for clustering.
+    device
+        run the analysis on 'cpu' with phenograph, or on 'gpu' with grapheno.
+    leaves
+        restrain the fit to a subset of the tree (in combination with root).
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    
+    adata : anndata.AnnData
+        if `copy=True` it returns subsetted or else subset (keeping only
+        significant features) and add fields to `adata`:
+        
+        `.var['fit_clusters']` 
+            cluster assignments for features.
+    
+    """
     
     adata = data.copy() if copy else adata
     

@@ -13,7 +13,6 @@ import warnings
 
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
-from . import palette_tools
 
 def modules(
     adata: AnnData,

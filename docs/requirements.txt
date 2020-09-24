@@ -1,0 +1,14 @@
+typing_extensions
+importlib_metadata
+sphinx_rtd_theme>=0.3
+sphinx_autodoc_typehints<=1.6
+matplotlib==3.3.1
+sphinx>=1.7
+docutils==0.15.2
+readthedocs-sphinx-ext
+nbsphinx>=0.7
+ipython
+anndata
+numpy
+pandas
+cycler

@@ -5,6 +5,18 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Union, Mapping
+import mock
+
+MOCK_MODULES = ['scanpy','rpy2','joblib','tqdm','scikit-misc','numba','seaborn',
+               'statsmodels','plotly','adjustText',
+               'statsmodels.stats.multitest','statsmodels.formula.api',
+               'igraph','statsmodels.stats.weightstats',
+               'skmisc.loess','statsmodels.stats.multitest','rpy2.robjects',
+               'rpy2.robjects.packages', 'rpy2.rinterface','scanpy.plotting._utils',
+               'plotly.express','plotly.graph_objects',
+               'elpigraph','phenograph']
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
 
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
@@ -14,9 +26,12 @@ import matplotlib  # noqa
 matplotlib.use("agg")
 
 HERE = Path(__file__).parent
-sys.path.insert(0, f"{HERE.parent.parent}")
-sys.path.insert(0, os.path.abspath("_ext"))
+sys.path.insert(0, f"{HERE.parent}")
+
+
 import scFates
+ 
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +50,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.githubpages",
     "sphinx_autodoc_typehints",
-    'readthedocs_ext.readthedocs'
+    'readthedocs_ext.readthedocs',
+    "nbsphinx"
 ]
 
 
@@ -72,33 +88,21 @@ todo_include_todos = False
 # -- Options for HTML output ----------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
-html_theme_options = {'titles_only': True, 
+html_theme_options = {'titles_only': True,'logo_only': True,
                            # Toc options
     'collapse_navigation': True,
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,
     'titles_only': False}
-                          
-# html_theme_options = {
-#     'logo_only': False,
-#     'display_version': True,
-#     'prev_next_buttons_location': 'bottom',
-#     'style_external_links': False,
-#     'vcs_pageview_mode': '',
-# #    'style_nav_header_background': '#404040',
-#     # Toc options
-#     'collapse_navigation': True,
-#     'sticky_navigation': True,
-#     'navigation_depth': 4,
-#     'includehidden': True,
-#     'titles_only': False
-# }
+
+html_show_sphinx = False
+html_logo = '_static/scFates_Logo.svg'
 html_static_path = ["_static"]
 
 
 def setup(app):
-    app.add_stylesheet("custom.css")
+    app.add_css_file("custom.css")
 
 
 # -- Prettier Param docs --------------------------------------------

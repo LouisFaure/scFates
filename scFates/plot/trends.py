@@ -13,7 +13,6 @@ from matplotlib import patches
 from scipy import sparse
 
 import warnings
-from . import palette_tools
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
 
@@ -48,6 +47,7 @@ def cluster(
     
     color_key = "seg_colors"
     if color_key not in adata.uns or len(adata.uns[color_key]):
+        from . import palette_tools
         palette_tools._set_default_colors_for_categorical_obs(adata,"seg")
     pal=dict(zip(adata.obs["seg"].cat.categories,adata.uns[color_key]))
 
@@ -213,6 +213,7 @@ def linear_trends(
     
     color_key = "seg_colors"
     if color_key not in adata.uns or len(adata.uns[color_key]):
+        from . import palette_tools
         palette_tools._set_default_colors_for_categorical_obs(adata,"seg")
     pal=dict(zip(adata.obs["seg"].cat.categories,adata.uns[color_key]))
 
@@ -333,6 +334,7 @@ def single_trend(
     
     color_key = "seg_colors"
     if color_key not in adata.uns or len(adata.uns[color_key]):
+        from . import palette_tools
         palette_tools._set_default_colors_for_categorical_obs(adata,"seg")
     pal=dict(zip(adata.obs["seg"].cat.categories,adata.uns[color_key]))
 

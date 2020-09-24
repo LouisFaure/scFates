@@ -26,6 +26,35 @@ def slide_cells(
     copy: bool = False,
     ):
     
+    """\
+    Assign cells in a probabilistic manner to non-intersecting windows along pseudotime.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    win
+        number of cell per local pseudotime window.
+    mapping
+        project cells onto tree pseudotime in a probabilistic manner.
+    copy
+        Return a copy instead of writing to adata.
+        
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns subsetted or else subset (keeping only
+        significant features) and add fields to `adata`:
+        
+        `.uns['root_milestone->milestoneA<>milestoneB']['cell_freq']`
+            List of np.array containing probability assignment of cells on non intersecting windows.
+    
+    """
+    
     adata = adata.copy() if copy else adata
     
     tree = adata.uns["tree"]
@@ -145,9 +174,35 @@ def slide_cors(
     adata: AnnData,
     root_milestone,
     milestones,
-    copy: bool = False,
-    layer: Optional[str] = None
+    layer: Optional[str] = None,
+    copy: bool = False
     ):
+    """\
+    Obtain gene module correlations in the non-intersecting windows along pseudotime.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    layer
+        adata layer from which to compute the correlations.
+    copy
+        Return a copy instead of writing to adata.
+        
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns subsetted or else subset (keeping only
+        significant features) and add fields to `adata`:
+        
+        `.uns['root_milestone->milestoneA<>milestoneB']['corAB']`
+            Dataframe containing gene-gene correlation modules.
+    
+    """
     
     adata = adata.copy() if copy else adata
     
@@ -222,13 +277,53 @@ def synchro_path(
     milestones,
     n_map=1,
     n_jobs=None,
+    layer: Optional[str] = None,
     perm=True,
     w=200,
     step=30,
     winp=10,
-    copy: bool = False,
-    layer: Optional[str] = None
+    copy: bool = False
     ):
+    """\
+    Estimates pseudotime trends of local intra- and inter-module correlations of fates-specific modules.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    n_map
+        number of probabilistic cells projection to use for estimates.
+    n_jobs
+        number of cpu processes to perform estimates (per mapping).
+    layer
+        adata layer to use for estimates.
+    perm
+        estimate control trends for local permutations instead of real expression matrix.
+    w
+        local window, in number of cells, to estimate correlations.
+    step
+        steps, in number of cells, between local windows.
+    winp
+        window of permutation in cells.
+    copy
+        Return a copy instead of writing to adata.
+        
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns subsetted or else subset (keeping only
+        significant features) and add fields to `adata`:
+        
+        `.uns['root_milestone->milestoneA<>milestoneB']['synchro']`
+            Dataframe containing mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.
+        `.obs['intercor root_milestone->milestoneA<>milestoneB']`
+            loess fit of inter-module mean local gene-gene correlations prior to bifurcation
+    
+    """
     
     adata = adata.copy() if copy else adata
        

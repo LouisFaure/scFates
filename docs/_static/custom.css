@@ -1,7 +1,13 @@
+/* Fix logo size */
+img.logo {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* ReadTheDocs theme colors */
 
 .wy-nav-top { background-color: #404040 }
-.wy-nav-content { max-width: 950px }
+.wy-nav-content { max-width: 900px }
 .wy-side-nav-search { background-color: transparent }
 .wy-side-nav-search input[type="text"] { border-width: 0 }
 

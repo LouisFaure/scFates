@@ -177,7 +177,7 @@ def refine_pseudotime(
     Refine computed pseudotime.
     
     Projection using principal tree can lead to compressed pseudotimes for the cells localised 
-    near the tips. To counteract this, diffusion based pseudotime is performed using palantir on each
+    near the tips. To counteract this, diffusion based pseudotime is performed using Palantir [Setty19]_ on each
     segment separately.
     
     Parameters

@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/scfates/badge/?version=latest)](https://scfates.readthedocs.io/en/latest/?badge=latest)
+
 Description
 ===========
 

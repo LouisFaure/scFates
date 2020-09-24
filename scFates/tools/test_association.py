@@ -30,30 +30,41 @@ try:
     from rpy2.robjects import pandas2ri, Formula
     from rpy2.robjects.packages import importr
     import rpy2.rinterface
-    pandas2ri.activate()
-    
-except ImportError:
-    raise RuntimeError(
+    pandas2ri.activate()  
+except Exception as e:
+    warnings.warn(
         'Cannot compute gene expression trends without installing rpy2. \
         \nPlease use "pip3 install rpy2" to install rpy2'
     )
+    print(e.__doc__)
+    print(e.message)
 
         
 if not shutil.which("R"):
-    raise RuntimeError(
+    warnings.warn(
         "R installation is necessary for computing gene expression trends. \
         \nPlease install R and try again"
     )
 
 try:
-    rmgcv = importr("mgcv")
-except embedded.RRuntimeError:
-    raise RuntimeError(
+    rstats = importr("stats")    
+except Exception as e:
+    warnings.warn(
+        "R installation is necessary for computing gene expression trends. \
+        \nPlease install R and try again"
+    )
+    print(e.__doc__)
+    print(e.message)
+    
+try:
+    rmgcv = importr("mgcv")  
+except Exception as e:
+    warnings.warn(
         'R package "mgcv" is necessary for computing gene expression trends. \
         \nPlease install gam from https://cran.r-project.org/web/packages/gam/ and try again'
     )
-rmgcv = importr("mgcv")
-rstats = importr("stats")
+    print(e.__doc__)
+    print(e.message)
 
 
 

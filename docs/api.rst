@@ -10,8 +10,8 @@ Import scFates as::
 
    import scFates as scf
 
-Basic tree inference
---------------------
+Tree inference
+--------------
 
 .. autosummary::
     :toctree: .
@@ -21,8 +21,8 @@ Basic tree inference
     tl.root
     tl.roots
     
-Pseudotime projection
---------------------- 
+Pseudotime analysis
+------------------- 
 
 .. autosummary::
     :toctree: .
@@ -31,6 +31,28 @@ Pseudotime projection
     tl.refine_pseudotime
     tl.test_association
     tl.fit
+    tl.cluster
+    
+Bifurcation analysis
+--------------------
+
+**Branch specific feature extraction and classification**
+
+.. autosummary::
+    :toctree: .
+
+    tl.test_fork
+    tl.branch_specific
+    tl.activation
+    
+**Correlation analysis**
+
+.. autosummary::
+    :toctree: .
+
+    tl.slide_cells
+    tl.slide_cors
+    tl.synchro_path
 
 Plot
 ----

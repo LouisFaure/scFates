@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, find_packages
 
 with open('requirements.txt') as f:
@@ -9,6 +10,10 @@ except ImportError:
     print("warning: pypandoc module not found, could not convert Markdown to RST")
     read_md = lambda f: open(f, 'r').read()
 
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if on_rtd:
+    requirements = []    
+    
 setup(name='scFates',
       version='0.1',
       description='scanpy compatible python suite for fast tree inference and advanced pseudotime downstream analysis',
