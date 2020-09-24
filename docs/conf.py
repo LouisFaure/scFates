@@ -72,7 +72,28 @@ todo_include_todos = False
 # -- Options for HTML output ----------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
-html_theme_options = dict(navigation_depth=1, titles_only=True)
+html_theme_options = {'titles_only': True, 
+                           # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False}
+                          
+# html_theme_options = {
+#     'logo_only': False,
+#     'display_version': True,
+#     'prev_next_buttons_location': 'bottom',
+#     'style_external_links': False,
+#     'vcs_pageview_mode': '',
+# #    'style_nav_header_background': '#404040',
+#     # Toc options
+#     'collapse_navigation': True,
+#     'sticky_navigation': True,
+#     'navigation_depth': 4,
+#     'includehidden': True,
+#     'titles_only': False
+# }
 html_static_path = ["_static"]
 
 

@@ -1,4 +1,7 @@
+.. module:: scFates
 .. automodule:: scFates
+   :noindex:
+
 
 API
 ===
@@ -7,10 +10,10 @@ Import scFates as::
 
    import scFates as scf
 
-Tools (tl)
-----------
+Basic tree inference
+--------------------
 
-**Basic tree inference** 
+**Tools (tl)** 
 
 .. autosummary::
     :toctree: .
@@ -20,9 +23,13 @@ Tools (tl)
     tl.root
     tl.roots
     
-    
+**Plot (pl)**  
 
-**Pseudotime projection** 
+
+Pseudotime projection
+---------------------
+
+**Tools (tl)** 
 
 .. autosummary::
     :toctree: .
@@ -30,3 +37,5 @@ Tools (tl)
     tl.pseudotime
     tl.refine_pseudotime
     tl.test_association
+
+**Plot (pl)**  
