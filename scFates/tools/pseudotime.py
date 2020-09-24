@@ -15,6 +15,30 @@ def pseudotime(
     n_jobs: int = 1,
     n_map: int = 1,
     copy: bool = False):
+    """\
+    Compute pseudotime.
+    
+    Projects cells onto the tree, and uses distance from the root as a pseudotime value.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    n_jobs
+        Number of cpu processes to use in case of performing multiple mapping.
+    n_map
+        number of probabilistic mapping of cells onto the tree to use. If n_map=1 then likelihood cell mapping is used.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    Depending on `copy`, updates or returns `adata` with the following elements:
+    **edge** (.obs) - assigned edge.
+    **t** (.obs) - assigned pseudotime value.
+    **seg** (.obs) - assigned segment of the tree.
+    **milestones** (.obs) - assigned region surrounding forks and tips.
+    **tree/pseudotime_list** (.uns) -  list of cell projection from all mappings.
+    """
     
     if "root" not in adata.uns["tree"]:
         raise ValueError(
@@ -142,6 +166,28 @@ def refine_pseudotime(
     n_jobs: int = 1,
     copy: bool = False):
     
+    """\
+    Refine computed pseudotime.
+    
+    Projection using principal tree can lead to compressed pseudotimes for the cells localised 
+    near the tips. To counteract this, diffusion based pseudotime is performed using palantir on each
+    segment separately.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    n_jobs
+        Number of cpu processes (max is the number of segments).
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    Depending on `copy`, updates or returns `adata` with the following elements:
+    **t** (.obs) - updated assigned pseudotimes value.
+    **t_old** (.obs) - previously assigned pseudotime.
+    """
+    
     adata = adata.copy() if copy else adata
     
     adata.obs["t_old"]=adata.obs.t.copy()
@@ -181,7 +227,7 @@ def refine_pseudotime(
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "updated\n" + "    't' with palantir pseudotime values (adata.obs)\n"
-        "added\n" +"    'old_t', previous pseudotime data (adata.obs)"
+        "added\n" +"    't_old', previous pseudotime data (adata.obs)"
     )
     
     return adata if copy else None

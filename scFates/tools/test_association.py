@@ -74,6 +74,35 @@ def test_association(
     copy: bool = False,
     layer: Optional[str] = None):
     
+    """\
+    Determine a set of genes significantly associated with the tree.
+    
+
+    Feature expression is modeled as a function of pseudotime in a branch-specific manner, 
+    using cubic spline regression :math:`g_{i} \\sim\ t_{i}` for each branch independently. 
+    This tree-dependent model is then compared with an unconstrained model :math:`g_{i} \\sim\ 1` 
+    using F-test. 
+    
+    The models are fit using *mgcv* R package. 
+    
+    Benjamini-Hochberg correction is used to adjust for multiple hypothesis testing. 
+
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    n_jobs
+        Number of cpu processes (max is the number of segments).
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    Depending on `copy`, updates or returns `adata` with the following elements:
+    **t** (.obs) - updated assigned pseudotimes value.
+    **t_old** (.obs) - previously assigned pseudotime.
+    """
+    
     adata = data.copy() if copy else adata
     
     if "pseudotime_list" not in adata.uns["tree"]:

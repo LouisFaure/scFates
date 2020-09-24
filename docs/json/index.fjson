@@ -1,0 +1,8 @@
+{
+    "body": "<div class=\"section\" id=\"scfates-a-suite-for-advanced-pseudotime-analysis\">\n<h1>scFates - a suite for advanced pseudotime analysis<a class=\"headerlink\" href=\"#scfates-a-suite-for-advanced-pseudotime-analysis\" title=\"Permalink to this headline\">\u00b6</a></h1>\n<p><strong>scFates</strong> is a scalable suite for tree inference and advanced pseudotime analysis.</p>\n<p>The methods for tree inference are based on ElPiGraph and SimplePPT, the methods for bifurcation analysis are based on the work done on the analysis of neural crest fates during murine embryonic development.</p>\n<p>scFates is compatible with <a href=\"#id1\"><span class=\"problematic\" id=\"id2\">scanpy_</span></a>.</p>\n<div class=\"toctree-wrapper compound\">\n</div>\n</div>\n",
+    "title": "scFates - a suite for advanced pseudotime analysis",
+    "sourcename": "index.rst.txt",
+    "current_page_name": "index",
+    "toc": "<ul>\n<li><a class=\"reference internal\" href=\"#\">scFates - a suite for advanced pseudotime analysis</a></li>\n</ul>\n",
+    "page_source_suffix": ".rst"
+}

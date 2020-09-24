@@ -23,27 +23,93 @@ def tree(
     adata: AnnData,
     Nodes: int = None,
     use_rep: str = None,
-    method: str = None,
-    basis: Optional[str] = "umap",
     ndims_rep: Optional[int] = None,
+    method: str = None,
     init: Optional[DataFrame] = None,
     ppt_sigma: Optional[Union[float, int]] = 0.1,
     ppt_lambda: Optional[Union[float, int]] = 1,
+    ppt_nsteps: int = 50,
+    ppt_err_cut: float = 5e-3,
     epg_lambda: Optional[Union[float, int]] = 0.01,
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 2,
-    ppt_nsteps: int = 50,
-    ppt_err_cut: float = 5e-3,
     device: str = "cpu",
     plot: bool = False,
+    basis: Optional[str] = "umap",
     seed: Optional[int] = None,
     copy: bool = False):
+    """\
+    Generate a principal tree.
     
+    Learn a simplified representation on any space, compsed of nodes, approximating the 
+    position of the cells on a given space such as gene expression, pca, diffusion maps, ...
+    If `method=='ppt'`, uses simpleppt implementation from [Soldatov19].  
+    If `method=='epg'`, uses Elastic Principal Graph approach from [Albergante20]
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    Nodes
+        Number of nodes composing the principial tree, use a range of 10 to 100 for 
+        ElPiGraph approach and 100 to 2000 for PPT approach.
+    use_rep
+        Choose the space to be learned by the principal tree.
+    ndims_rep
+        Number of dimensions to use for the inference.
+    method
+        If `ppt`, uses simpleppt approach, `ppt_lambda` and `ppt_sigma` are the 
+        parameters controlling the algorithm. If `epg`, uses ComputeElasticPrincipalTree
+        function from elpigraph python package, `epg_lambda` `epg_mu` and `epg_trimmingradius` 
+        are the parameters controlling the algorithm.
+    init
+        Initialise the point positions.
+    ppt_sigma
+        Regularization parameter for simpleppt [Mao15].
+    ppt_lambda
+        Parameter for simpleppt, penalty for the tree length [Mao15].
+    ppt_nsteps
+        Number of steps for the optimisation process of simpleppt.
+    ppt_err_cut
+        Stop simpleppt algorithm if proximity of principal points between iterations less than defiend value.
+    epg_lambda
+        Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20].
+    epg_mu
+        Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20].
+    epg_trimmingradius
+        Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20].
+    epg_initnodes
+        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes 
+        in the initial step
+    device
+        Run either mehtod on `cpu` or on `gpu`  
+    plot
+        Plot the resulting tree.
+    basis
+        Basis onto which the resulting tree should be projected.
+    seed
+        A numpy random seed.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    Depending on `copy`, updates or returns `adata` with the following:
+    **ppt** or **epg** : dictionnary containing inferred tree (adata.uns)
+    **tree/B** : adjacency matrix of the principal points (adata.uns)
+    **tree/R** : soft assignment of cells to principal point in representation space (adata.uns)
+    **tree/F** : coordinates of principal points in representation space (adata.uns)
+    """
     
     logg.info("inferring a principal tree", reset=True, end=" " if settings.verbosity > 2 else "\n")
     
     adata = adata.copy() if copy else adata
+    
+    if Nodes is None:
+        if adata.shape[0]*2>2000:
+            Nodes = 2000
+        else:
+            Nodes = int(adata.shape[0]/2)
     
     if method == "ppt":
         logg.hint(
@@ -342,6 +408,27 @@ def cleanup(
     minbranchlength: int = 3,
     leaves: Optional[int] = None,
     copy: bool = False):
+    """\
+    Remove spurious branches from the tree.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    minbranchlength
+        Branches having less than the defined amount of nodes are discarded
+    leaves
+        Manually select branch tips to remove
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    Depending on `copy`, updates or returns `adata` with the following updated elements:
+    **ppt** or **epg** : dictionnary containing inferred tree (adata.uns)
+    **tree/B** : adjacency matrix of the principal points (adata.uns)
+    **tree/R** : soft assignment of cells to principal point in representation space (adata.uns)
+    **tree/F** : coordinates of principal points in representation space (adata.uns)
+    """
     
     adata = adata.copy() if copy else adata
     
@@ -408,6 +495,24 @@ def root(
     adata: AnnData,
     root: int,
     copy: bool = False):
+    """\
+    Define the root of the tree.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root
+        Id of the tip of the fork to be considered as a root.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    Depending on `copy`, updates or returns `adata` with the following elements:
+    **tree/root** (.uns) - selected root.
+    **tree/pp_info** (.uns) - for each PP, its distance vs root and segment assignment.
+    **tree/pp_seg** (.uns) - segments network information.
+    """
     
     adata = adata.copy() if copy else adata
     
@@ -477,6 +582,27 @@ def roots(
     roots,
     meeting,
     copy: bool = False):
+    
+    """\
+    Define 2 roots of the tree.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    roots
+        list of tips or forks to be considered a roots.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    Depending on `copy`, updates or returns `adata` with the following elements:
+    **tree/root** (.uns) - farthest root selected.
+    **tree/root2** (.uns) - 2nd root selected.
+    **tree/meeting** (.uns) -meeting point on the tree.
+    **tree/pp_info** (.uns) - for each PP, its distance vs root and segment assignment).
+    **tree/pp_seg** (.uns) - segments network information.
+    """
     
     adata = adata.copy() if copy else adata
     
@@ -574,7 +700,7 @@ def roots(
         "added\n" + "    "+str(root)+" is the farthest root\n"
         "    'tree/root', farthest root selected (adata.uns)\n"
         "    'tree/root2', 2nd root selected (adata.uns)\n"
-        "    'tree/meeting', meeting point on the three (adata.uns)\n"
+        "    'tree/meeting', meeting point on the tree (adata.uns)\n"
         "    'tree/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
         "    'tree/pp_seg', segments network information (adata.uns)"
     )
