@@ -14,6 +14,7 @@ def slide_cors(
     root_milestone,
     milestones,
     basis: str = "umap",
+    win_keep: Union[None,int] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
@@ -51,10 +52,14 @@ def slide_cors(
 
     maxlim=np.max([corB.max().max(),np.abs(corB.min().min()),corA.max().max(),np.abs(corA.min().min())])+0.01
 
+    if win_keep is not None:
+        nwin = win_keep
+    
     fig, axs = plt.subplots(2,nwin,figsize=(nwin*3, 6))
 
     fig.subplots_adjust(hspace = .05, wspace=.05)
     emb=adata[adata.uns["tree"]["cells_fitted"],:].obsm["X_"+basis]
+    
     for i in range(nwin):
         freq=freqs[i]
         axs[0,i].scatter(emb[np.argsort(freq),0],emb[np.argsort(freq),1],

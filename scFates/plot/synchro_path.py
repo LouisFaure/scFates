@@ -23,6 +23,8 @@ def synchro_path(
     img.add_edges(edges)  
     
     mlsc = adata.uns["milestones_colors"].copy()
+    if isinstance(mlsc,(list)):
+        mlsc=np.array(mlsc)
     mlsc_temp = mlsc.copy()
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))

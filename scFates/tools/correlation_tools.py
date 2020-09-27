@@ -160,7 +160,11 @@ def slide_cells(
     
     adata.uns=uns_temp
     
-    adata.uns[name]["cell_freq"]=freq
+    
+    
+    adata.uns[name]["cell_freq"]=list(map(lambda f: 
+                                          pd.Series(f,index=adata.uns["tree"]["cells_fitted"]),
+                                          freq))
     
     logg.hint(
         "added \n"
@@ -242,10 +246,10 @@ def slide_cors(
             X = adata[:,genesets].layers[layer]
     
     X=pd.DataFrame(X,index=adata.obs_names,columns=genesets)
-    
+    X_r=X.rank(axis=0)
     def gather_cor(i,geneset):
-        freq=freqs[i]
-        cormat = pd.DataFrame(DescrStatsW(X.values,weights=freq).corrcoef,
+        freq=freqs[i][adata.obs_names]
+        cormat = pd.DataFrame(DescrStatsW(X_r.values,weights=freq).corrcoef,
                               index=genesets,columns=genesets)
         np.fill_diagonal(cormat.values, np.nan)
         return cormat.loc[:,geneset].mean(axis=1)
@@ -361,31 +365,32 @@ def synchro_path(
 
         genesetA=bif.index[(bif.module=="early") & (bif.branch==milestones[0])]
         genesetB=bif.index[(bif.module=="early") & (bif.branch==milestones[1])]
-
+        genesets = np.concatenate([genesetA,genesetB])
+        
         def synchro_milestone(leave):
             cells=getpath(img,root,tree["tips"],leave,tree,df).index
             
             if layer is None:
                 if sparse.issparse(adata.X):
-                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].X.A,
-                        index=cells,columns=bif.index[bif.module=="early"])
+                    mat = pd.DataFrame(adata[cells,genesets].X.A,
+                        index=cells,columns=genesets)
                 else:
-                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].X,
-                        index=cells,columns=bif.index[bif.module=="early"])
+                    mat = pd.DataFrame(adata[cells,genesets].X,
+                        index=cells,columns=genesets)
             else:
                 if sparse.issparse(adata.layers[layer]):
-                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].layers[layer].A,
-                        index=cells,columns=bif.index[bif.module=="early"])
+                    mat = pd.DataFrame(adata[cells,genesets].layers[layer].A,
+                        index=cells,columns=genesets)
                 else:
-                    mat = pd.DataFrame(adata[cells,bif.index[bif.module=="early"]].layers[layer],
-                        index=cells,columns=bif.index[bif.module=="early"])
+                    mat = pd.DataFrame(adata[cells,genesets].layers[layer],
+                        index=cells,columns=genesets)
             
             mat=mat.iloc[adata.obs.t[mat.index].argsort().values,:]
 
             if permut==True:
                 winperm=np.min([winp,mat.shape[0]])
                 for i in np.arange(0,mat.shape[0]-winperm,winperm):
-                    mat.iloc[i:(i+winp),:]=mat.iloc[i:(i+winp),np.random.permutation(mat.shape[1])].values
+                    mat.iloc[i:(i+winperm),:]=mat.iloc[i:(i+winperm),:].apply(np.random.permutation,axis=0).values
 
             def slide_path(i):
                 cls=mat.index[i:(i+w)]
@@ -489,7 +494,7 @@ def synchro_path(
     logg.hint(
         "added \n"
         "    '"+name+"/synchro', mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules (adata.uns)\n"
-        "    'inter_cor "+name+"', loess fit of itner-module mean local gene-gene correlations prior to bifurcation (adata.obs)")
+        "    'inter_cor "+name+"', loess fit of inter-module mean local gene-gene correlations prior to bifurcation (adata.obs)")
     
     return adata if copy else None
 
