@@ -286,6 +286,7 @@ def synchro_path(
     w=200,
     step=30,
     winp=10,
+    loess_span=.2,
     copy: bool = False
     ):
     """\
@@ -313,6 +314,8 @@ def synchro_path(
         steps, in number of cells, between local windows.
     winp
         window of permutation in cells.
+    loess_span
+        fraction of points to take in account for loess fit
     copy
         Return a copy instead of writing to adata.
         
@@ -395,7 +398,6 @@ def synchro_path(
             def slide_path(i):
                 cls=mat.index[i:(i+w)]
                 cor=mat.loc[cls,:].corr(method="spearman")
-                np.fill_diagonal(cor.values, np.nan)
                 corA=cor.loc[:,genesetA].mean(axis=1)
                 corB=cor.loc[:,genesetB].mean(axis=1)
                 corA[genesetA] = (corA[genesetA] - 1/len(genesetA))*len(genesetA)/(len(genesetA)-1)
@@ -451,7 +453,7 @@ def synchro_path(
         for r in range(len(runs)):
             for mil in milestones:
                 res=allcor.loc[runs[r]].loc[mil]
-                l = loess(res.t, res[cc])
+                l = loess(res.t, res[cc],span=loess_span)
                 l.fit()
                 pred = l.predict(res.t, stderror=True)
                 conf = pred.confidence()
@@ -466,7 +468,7 @@ def synchro_path(
     fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()
     res=allcor.loc[allcor.t<fork_t,:]
     res=res[~res.t.duplicated()]
-    l = loess(res.t, res["corAB"])
+    l = loess(res.t, res["corAB"],span=loess_span)
     l.fit()
     pred = l.predict(res.t, stderror=True)
 

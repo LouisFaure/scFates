@@ -11,7 +11,8 @@ from matplotlib import lines
 def synchro_path(
     adata: AnnData,
     root_milestone,
-    milestones):
+    milestones,
+    loess_span=.2):
     
     plt.rcParams["axes.grid"] = False
     
@@ -58,7 +59,7 @@ def synchro_path(
         for cc in ["corAA","corBB","corAB"]:
             for mil in milestones:
                 res=allcor.loc[runs[r]].loc[mil]
-                l = loess(res.t, res[cc])
+                l = loess(res.t, res[cc],span=loess_span)
                 l.fit()
                 pred = l.predict(res.t, stderror=True)
                 conf = pred.confidence()

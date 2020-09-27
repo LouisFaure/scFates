@@ -27,7 +27,8 @@ Analysis key steps
    :hidden:
 
    installation
-   notebooks/Basic_usage_example
+   notebooks/Basic_pseudotime_analysis
+   notebooks/Advanced_bifurcation_analysis
    api
    references
    

@@ -1,3 +1,9 @@
+@font-face {
+    font-family: "Lato";
+    src: url("Lato-Regular.ttf");
+}
+
+
 /* Fix logo size */
 img.logo {
   width: 100% !important;

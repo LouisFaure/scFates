@@ -78,10 +78,10 @@ def test_fork(
     copy: bool = False):
     
     """\
-    Determine genes differentially upregulated after bifurcation point.
+    Test for branch differential gene expression, and differential upregulation after bifurcation point.
     
-
-    Feature are tested to intify the ones with higher average expression 
+    First, differential gene expression between two branches is performed. Then,
+    the feature are tested to intify the ones with higher average expression 
     in one of the derivative branches compared to the progenitor branch. 
 
 
