@@ -13,7 +13,7 @@ Currently, scFates can only be installed from GitHub_ using::
 or::
 
     git clone https://github.com/LouisFaure/scFates
-    pip install -e scvelo
+    pip install -e scFates
     
     
 R dependencies
@@ -24,8 +24,8 @@ tree. Package is installed in an R session with the following command::
 
     install.packages('mgcv')
 
-GPU related dependencies
------------------------
+GPU dependencies (optional)
+---------------------------
 
 If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, 
 the following dependencies are required::

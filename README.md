@@ -3,7 +3,7 @@
 Description
 ===========
 
-This package provides an Python tool suite for fast tree inference and advanced pseudotime downstream analysis, with a focus on fate biasing. This package is compatible with anndata object format generated via scanpy or scvelo pipelines.
+This package provides an Python tool suite for fast tree inference and advanced pseudotime downstream analysis, with a focus on fate biasing. This package is compatible with anndata object format used in scanpy or scvelo pipelines. A complete documentation of this package is available [here](https://scfates.readthedocs.io/en/latest).
 
 Tree inference algorithms
 =========================
@@ -21,7 +21,7 @@ Zinovyev](https://github.com/auranic/) and [Evgeny
 Mirkes](https://github.com/Mirkes)) is also
 [available](https://github.com/auranic/Elastic-principal-graphs)
 
-## PPT
+## Simple PPT
 
 A [simple PPT](https://www.acsu.buffalo.edu/~yijunsun/lab/Paper/simplePPT.pdf) inspired approach, translated from the [crestree R package](https://github.com/hms-dbmi/crestree), code has been also adapted to run on GPU for accelerated tree inference.
 
@@ -37,31 +37,29 @@ if you are using ElPiGraph, please cite :
 Albergante, L., Mirkes, E. M., Chen, H., Martin, A., Faure, L., Barillot, E., … Zinovyev, A. (2020). Robust And Scalable Learning Of Complex Dataset Topologies Via Elpigraph. Entropy, 22(3), 296.
 
 
-Requirements
+Installation
 ============
 
-This code was tested with Python 3.6, elpigraph needs to be installed via its github repo:
+Currently, scFates can only be installed from GitHub_ using::
 
-```bash
-pip install git+https://github.com/j-bac/elpigraph-python.git
-```
+    pip install git+https://github.com/LouisFaure/scFates
 
-if you have a CUDA ready GPU you have to install:
-```bash
-pip install cupy==8.0.0b3
-```
+or::
 
-Installation & Usage
-====================
+    git clone https://github.com/LouisFaure/scFates
+    pip install -e scFates
+    
+    
+## R dependencies
 
-To install that package, clone this git, open a terminal on the root of the git folder and type:
-```bash
-pip install .
-```
+scFates rely on the R package *mgcv* to perform testing and fitting of the features on the peudotime
+tree. Package is installed in an R session with the following command::
 
-Or, without cloning, simply run the following command
-```bash
-pip install git+https://github.com/LouisFaure/scTree.git
-```
+    install.packages('mgcv')
 
-Example of usage is [described here](documentation/Basic_usage_example_ElPiGraph.ipynb)
+## GPU dependencies (optional)
+
+If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, 
+the following dependencies are required::
+
+    pip install cupy cudf grapheno
