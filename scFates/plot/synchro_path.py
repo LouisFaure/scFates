@@ -6,13 +6,17 @@ import igraph
 import matplotlib.pyplot as plt
 from skmisc.loess import loess
 from matplotlib import lines
+from typing import Union, Optional
 
+from scanpy.plotting._utils import savefig_or_show
 
 def synchro_path(
     adata: AnnData,
     root_milestone,
     milestones,
-    loess_span=.2):
+    loess_span=.2,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None):
     
     plt.rcParams["axes.grid"] = False
     
@@ -103,3 +107,4 @@ def synchro_path(
 
 
             i=i+1
+    savefig_or_show('synchro_path', show=show, save=save)

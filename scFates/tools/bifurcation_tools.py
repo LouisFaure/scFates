@@ -121,8 +121,6 @@ def test_fork(
     
     uns_temp = adata.uns.copy()
     
-    zmlsc = adata.uns["milestones_colors"].copy()
-    
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
@@ -350,7 +348,6 @@ def branch_specific(
     
     uns_temp = adata.uns.copy()
     
-    mlsc = adata.uns["milestones_colors"].copy()
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
@@ -452,8 +449,6 @@ def activation(adata: AnnData,
     logg.info("testing activation", reset=True)
     
     uns_temp = adata.uns.copy()
-    
-    mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))

@@ -14,7 +14,7 @@ def slide_cors(
     root_milestone,
     milestones,
     basis: str = "umap",
-    win_keep: Union[None,int] = None,
+    win_keep: Union[None,list] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
@@ -53,7 +53,7 @@ def slide_cors(
     maxlim=np.max([corB.max().max(),np.abs(corB.min().min()),corA.max().max(),np.abs(corA.min().min())])+0.01
 
     if win_keep is not None:
-        nwin = win_keep
+        nwin = len(win_keep)
     
     fig, axs = plt.subplots(2,nwin,figsize=(nwin*3, 6))
 
@@ -67,7 +67,7 @@ def slide_cors(
         axs[0,i].grid(b=None)
         axs[0,i].set_xticks([]) 
         axs[0,i].set_yticks([]) 
-
+    
     c_mil=np.array(mlsc)[np.argwhere(adata.obs.milestones.cat.categories.isin(milestones))].flatten()    
     genesets=[genesetA,genesetB]
     for i in range(nwin):

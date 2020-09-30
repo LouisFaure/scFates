@@ -775,7 +775,7 @@ def getpath(adata,
         except IndexError:
             pass
     
-    return pd.concat(list(map(gatherpath,leaves)),axis=1)
+    return pd.concat(list(map(gatherpath,leaves)),axis=0)
 
 def round_base_10(x):
     if x < 0:
