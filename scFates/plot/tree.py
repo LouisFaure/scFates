@@ -197,9 +197,8 @@ def trajectory(
             size_cells = 30000 / ncells
         ax.scatter(emb_back[:,0],emb_back[:,1],s=size_cells,color="lightgrey",alpha=alpha_cells,edgecolor="none")
 
-    
-    sc.pl.scatter(adata,basis=basis,color=color_cells,ax=ax,show=False,legend_loc="none",alpha=alpha_cells)
 
+    ax.scatter(emb[:,0],emb[:,1],s=size_cells,color=color_cells,alpha=alpha_cells,edgecolor="none")
 
     ax.grid(False)
     x0,x1 = ax.get_xlim()
@@ -213,6 +212,9 @@ def trajectory(
         labelbottom=False,
         left=False,
         labelleft=False) # labels along the bottom edge are off
+
+    ax.set_xlabel(basis+"1")
+    ax.set_ylabel(basis+"2")
 
     al = np.array(igraph.Graph.Adjacency((B>0).tolist(),mode="undirected").get_edgelist())
     segs=al.tolist()
@@ -254,7 +256,7 @@ def trajectory(
     ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=105,
                c=sm.to_rgba(tree["pp_info"].time.loc[tree["tips"]]),s=140*scale_path)
             
-    savefig_or_show('trajectory', show=show, save=save)
+    savefig_or_show('pseudotime', show=show, save=save)
     
 @njit()
 def cdist_numba(coords,out):
