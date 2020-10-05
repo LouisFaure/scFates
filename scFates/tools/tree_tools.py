@@ -555,7 +555,10 @@ def root(
                           "time":root_dist_matrix,
                           "seg":np.zeros(csr.shape[0])})
     
+    
     nodes = np.argwhere(np.apply_along_axis(arr=(csr>0).todense(),axis=0,func1d=np.sum)!=2).flatten()
+    nodes = np.unique(np.append(nodes,root))
+    
     pp_seg = pd.DataFrame(columns = ["n","from","to","d"])
     for node1,node2 in itertools.combinations(nodes,2):
         paths12 = g.get_shortest_paths(node1,node2)

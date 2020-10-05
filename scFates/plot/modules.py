@@ -21,6 +21,8 @@ def modules(
     color: str = "milestones",
     basis: str = "umap",
     mode: str = "2d",
+    marker_size: int = 20,
+    highlight: bool = False,
     incl_3d: int = 30,
     rot_3d: int = 315,
     alpha: float = 1,
@@ -87,30 +89,44 @@ def modules(
     
     if mode=="2d":
         fig, axs = plt.subplots(2,2)
-
+        
+        if highlight:
+            axs[0,0].scatter(X.loc[:,early_1].mean(axis=1),
+                        X.loc[:,early_2].mean(axis=1),s=marker_size*2,c="k")
+            axs[1,0].scatter(X.loc[:,late_1].mean(axis=1),
+                        X.loc[:,late_2].mean(axis=1),s=marker_size*2,c="k")
+            axs[0,1].scatter(X.loc[:,early_1].mean(axis=1),
+                    X.loc[:,early_2].mean(axis=1),s=marker_size*2,c="k")
+            axs[1,1].scatter(X.loc[:,late_1].mean(axis=1),
+                    X.loc[:,late_2].mean(axis=1),s=marker_size*2,c="k")
+        
         for m in obscol:
             axs[0,0].scatter(X.loc[miles.index[miles==m],early_1].mean(axis=1),
-                        X.loc[miles.index[miles==m],early_2].mean(axis=1),c=dct_c[m],alpha=alpha)
+                        X.loc[miles.index[miles==m],early_2].mean(axis=1),
+                             s=marker_size,c=dct_c[m],alpha=alpha)
         axs[0,0].set_aspect(1.0/axs[0,0].get_data_ratio(), adjustable='box')
         axs[0,0].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
         axs[0,0].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
 
         for m in obscol:
             axs[1,0].scatter(X.loc[miles.index[miles==m],late_1].mean(axis=1),
-                        X.loc[miles.index[miles==m],late_2].mean(axis=1),c=dct_c[m],alpha=alpha)
+                        X.loc[miles.index[miles==m],late_2].mean(axis=1),
+                             s=marker_size, c=dct_c[m],alpha=alpha)
         axs[1,0].set_aspect(1.0/axs[1,0].get_data_ratio(), adjustable='box')
         axs[1,0].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
         axs[1,0].set_ylabel("late "+str(keys[vals==leaves[1]][0]))
 
         axs[0,1].scatter(X.loc[:,early_1].mean(axis=1),
-                    X.loc[:,early_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha,cmap=cmap_pseudotime)
+                    X.loc[:,early_2].mean(axis=1),c=adata.obs.t[X.index],
+                         s=marker_size,alpha=alpha,cmap=cmap_pseudotime)
         axs[0,1].set_aspect(1.0/axs[0,1].get_data_ratio(), adjustable='box')
         axs[0,1].set_xlabel("early "+str(keys[vals==leaves[0]][0]))
         axs[0,1].set_ylabel("early "+str(keys[vals==leaves[1]][0]))
 
 
         axs[1,1].scatter(X.loc[:,late_1].mean(axis=1),
-                    X.loc[:,late_2].mean(axis=1),c=adata.obs.t[X.index],alpha=alpha,cmap=cmap_pseudotime)
+                    X.loc[:,late_2].mean(axis=1),c=adata.obs.t[X.index],
+                         s=marker_size,alpha=alpha,cmap=cmap_pseudotime)
         axs[1,1].set_aspect(1.0/axs[1,1].get_data_ratio(), adjustable='box')
         axs[1,1].set_xlabel("late "+str(keys[vals==leaves[0]][0]))
         axs[1,1].set_ylabel("late "+str(keys[vals==leaves[1]][0]))

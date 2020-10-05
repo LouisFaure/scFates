@@ -176,13 +176,14 @@ def cluster(
     savefig_or_show('cluster', show=show, save=save)
 
     
-def linear_trends(
+def trends(
     adata: AnnData,
     features = None,
     highlight_features = None,
     n_features: int = 10,
     root_milestone = None,
     milestones = None,
+    show_milsetones: bool = True,
     cell_size = 20,
     order = True,
     ordering = "max",
@@ -211,36 +212,6 @@ def linear_trends(
     
     fitted=fitted.apply(lambda x: (x-x.min())/(x.max()-x.min()),axis=1)
 
-    seg=adata.obs["seg"].copy(deep=True)
-    
-    
-    color_key = "seg_colors"
-    if color_key not in adata.uns or len(adata.uns[color_key]):
-        from . import palette_tools
-        palette_tools._set_default_colors_for_categorical_obs(adata,"seg")
-    pal=dict(zip(adata.obs["seg"].cat.categories,adata.uns[color_key]))
-
-    segs = seg.astype(str).map(pal)
-    segs.name = "segs"
-    
-    
-    def milestones_prog(s):
-        cfrom=adata.obs.t[adata.obs.seg==s].idxmin()
-        cto=adata.obs.t[adata.obs.seg==s].idxmax()
-        mfrom=adata.obs.milestones[cfrom]
-        mto=adata.obs.milestones[cto]
-        import numpy as np
-        mfrom_c=adata.uns["milestones_colors"][np.argwhere(adata.obs.milestones.cat.categories==mfrom)[0][0]]
-        mto_c=adata.uns["milestones_colors"][np.argwhere(adata.obs.milestones.cat.categories==mto)[0][0]]
-
-        from matplotlib.colors import LinearSegmentedColormap
-
-        cm=LinearSegmentedColormap.from_list("test",[mfrom_c,mto_c],N=1000)
-        pst=(adata.obs.t[adata.obs.seg==s]-adata.obs.t[adata.obs.seg==s].min())/(adata.obs.t[adata.obs.seg==s].max()-adata.obs.t[adata.obs.seg==s].min())
-        return pd.Series(list(map(to_hex,cm(pst))),index=pst.index)
-    
-    mil_cmap=pd.concat(list(map(milestones_prog,seg_order)))
-    
     if filter_complex:
         # remove complex features using quantiles
         varia = list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=complex_thre)].var(),features))
@@ -294,34 +265,62 @@ def linear_trends(
         cells=None
     
     
-    fig, (ax,ax1,ax2) = plt.subplots(ncols=1,nrows=3,figsize=figsize,gridspec_kw={'height_ratios':[1,1,figsize[1]*2]})
+    
+    if show_milsetones:
+        color_key = "milestones_colors"
+        if color_key not in adata.uns or len(adata.uns[color_key]):
+            from . import palette_tools
+            palette_tools._set_default_colors_for_categorical_obs(adata,"milestones")
+
+        def milestones_prog(s):
+            cfrom=adata.obs.t[adata.obs.seg==s].idxmin()
+            cto=adata.obs.t[adata.obs.seg==s].idxmax()
+            mfrom=adata.obs.milestones[cfrom]
+            mto=adata.obs.milestones[cto]
+            import numpy as np
+            mfrom_c=adata.uns["milestones_colors"][np.argwhere(adata.obs.milestones.cat.categories==mfrom)[0][0]]
+            mto_c=adata.uns["milestones_colors"][np.argwhere(adata.obs.milestones.cat.categories==mto)[0][0]]
+
+            from matplotlib.colors import LinearSegmentedColormap
+
+            cm=LinearSegmentedColormap.from_list("test",[mfrom_c,mto_c],N=1000)
+            pst=(adata.obs.t[adata.obs.seg==s]-adata.obs.t[adata.obs.seg==s].min())/(adata.obs.t[adata.obs.seg==s].max()-adata.obs.t[adata.obs.seg==s].min())
+            return pd.Series(list(map(to_hex,cm(pst))),index=pst.index)
+
+        mil_cmap=pd.concat(list(map(milestones_prog,seg_order)))
+        
+        fig, (ax,ax1,ax2) = plt.subplots(ncols=1,nrows=3,figsize=figsize,gridspec_kw={'height_ratios':[1,1,figsize[1]*2]})
+        sns.heatmap(pd.DataFrame(range(fitted_sorted.shape[1])).T,robust=False,
+                 cmap=mil_cmap[fitted_sorted.columns].values.tolist(),
+                 xticklabels=False,yticklabels=False,cbar=False,ax=ax1)
+    
+    
+    
+    else:
+        fig, (ax,ax2) = plt.subplots(ncols=1,nrows=2,figsize=figsize,gridspec_kw={'height_ratios':[1,figsize[1]*2]})
+    
     fig.subplots_adjust(hspace=0)
     
     sns.heatmap(fitted_sorted,robust=True,cmap=colormap,xticklabels=False,yticklabels=False,ax=ax2,cbar=False)
-    sns.heatmap(pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,robust=True,cmap=pseudo_colormap,xticklabels=False,yticklabels=False,cbar=False,ax=ax,vmax=adata.obs.t.max())
-    
-    sns.heatmap(pd.DataFrame(range(fitted_sorted.shape[1])).T,robust=False,
-                 cmap=mil_cmap[fitted_sorted.columns].values.tolist(),
-                 xticklabels=False,yticklabels=False,cbar=False,ax=ax1)
-        
+    sns.heatmap(pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,robust=True,cmap=pseudo_colormap,xticklabels=False,yticklabels=False,cbar=False,ax=ax,vmax=adata.obs.t.max())    
     
     
-    if frame is not None:
-        def add_frames(axis,vert):
-            rect = patches.Rectangle((0,0),len(fitted.columns),vert,linewidth=1,edgecolor='k',facecolor='none')
-            # Add the patch to the Axes
+    def add_frames(axis,vert):
+        rect = patches.Rectangle((0,0),len(fitted_sorted.columns),vert,linewidth=1,edgecolor='k',facecolor='none')
+        # Add the patch to the Axes
+        axis.add_patch(rect)
+        offset=0
+        for s in seg_order[:-1]:
+            prev_offset=offset
+            offset=offset+(adata.obs.seg==s).sum()
+            rect = patches.Rectangle((prev_offset,0),(adata.obs.seg==s).sum(),vert,linewidth=1,edgecolor='k',facecolor='none')
             axis.add_patch(rect)
-            offset=0
-            for s in seg_order[:-1]:
-                prev_offset=offset
-                offset=offset+(adata.obs.seg==s).sum()
-                rect = patches.Rectangle((prev_offset,0),(adata.obs.seg==s).sum(),vert,linewidth=1,edgecolor='k',facecolor='none')
-                axis.add_patch(rect)
-            return axis
-        
-        ax=add_frames(ax,1)
+        return axis
+
+    ax=add_frames(ax,1)
+    if show_milsetones:
         ax1=add_frames(ax1,1)
-        ax2=add_frames(ax2,fitted_sorted.shape[1])
+    ax2=add_frames(ax2,fitted_sorted.shape[0])
         
 
 
@@ -336,20 +335,16 @@ def linear_trends(
 
     patch = patches.Rectangle((0, 0), fitted_sorted.shape[1]+fitted_sorted.shape[1]/6, fitted_sorted.shape[0], alpha=0) # We add a rectangle to make sure the labels don't move to the right    
     ax.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
-    ax1.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
+    if show_milsetones:
+        ax1.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
     ax2.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
-    
     ax2.add_patch(patch)
-    
-    #yl = ax2.get_ylim()
-    #ax2.set_ylim((yl[1]-0.5,yl[0]))
-    
     ax2.hlines(fitted_sorted.shape[0],0,fitted_sorted.shape[1], color="k", clip_on=True) 
     
     adjust_text(texts,add_objects=[patch],arrowprops=dict(arrowstyle='-', color='k'),va="center",ha="left",autoalign=False,
         force_text=(0.05, 0.25), force_points=(0.05, 0.25),only_move={"points":"x", "text":"y", "objects":"x"})
     
-    savefig_or_show('linear_trends', show=show, save=save)    
+    savefig_or_show('trends', show=show, save=save)    
     
     
 def single_trend(
@@ -374,7 +369,7 @@ def single_trend(
     fig.suptitle(feature)
     
     color_key = "seg_colors"
-    if color_key not in adata.uns or len(adata.uns[color_key]):
+    if color_key not in adata.uns:
         from . import palette_tools
         palette_tools._set_default_colors_for_categorical_obs(adata,"seg")
     pal=dict(zip(adata.obs["seg"].cat.categories,adata.uns[color_key]))

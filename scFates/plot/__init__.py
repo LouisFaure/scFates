@@ -1,5 +1,5 @@
 from .tree import tree, trajectory, tree_3d
-from .trends import cluster, linear_trends, single_trend
+from .features import cluster, trends, single_trend
 from .test_association import test_association
 from .modules import modules
 from .milestones import milestones
