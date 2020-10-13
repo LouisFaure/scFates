@@ -28,9 +28,13 @@ GPU dependencies (optional)
 ---------------------------
 
 If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, 
-the following dependencies are required::
+the latest version of cupy is required (at least 8.0)::
 
-    pip install cupy cudf grapheno
+    pip install cupy-cuda11
+
+Modify the cuda version to match yours, for feature clustering using GPU, the following dependency is required::
+
+    pip install grapheno
 
 
 
