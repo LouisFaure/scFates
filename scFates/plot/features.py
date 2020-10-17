@@ -34,7 +34,8 @@ def cluster(
     filter_complex=True,
     highlight=False,
     show: Optional[bool] = None,
-    save: Union[str, bool, None] = None):
+    save: Union[str, bool, None] = None,
+    save_genes: Optional[bool] = None):
     
     fitted = pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names).T.copy(deep=True)
     g = adata.obs.groupby('seg')
@@ -173,6 +174,11 @@ def cluster(
         for axis in ['top','bottom','left','right']:
             ax2.spines[axis].set_linewidth(2)
     
+    if save_genes is not None:
+        with open(save_genes, 'w') as f:
+            for item in fitted_sorted.index:
+                f.write("%s\n" % item)
+    
     savefig_or_show('cluster', show=show, save=save)
 
     
@@ -198,7 +204,8 @@ def trends(
     pseudo_colormap: str = "viridis",
     emb_back = None,
     show: Optional[bool] = None,
-    save: Union[str, bool, None] = None):
+    save: Union[str, bool, None] = None,
+    save_genes: Optional[bool] = None):
     
     if features is None:
         features = adata.var_names
@@ -343,6 +350,11 @@ def trends(
     
     adjust_text(texts,add_objects=[patch],arrowprops=dict(arrowstyle='-', color='k'),va="center",ha="left",autoalign=False,
         force_text=(0.05, 0.25), force_points=(0.05, 0.25),only_move={"points":"x", "text":"y", "objects":"x"})
+    
+    if save_genes is not None:
+        with open(save_genes, 'w') as f:
+            for item in fitted_sorted.index:
+                f.write("%s\n" % item)
     
     savefig_or_show('trends', show=show, save=save)    
     
