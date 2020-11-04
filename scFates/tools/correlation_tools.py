@@ -24,6 +24,7 @@ def slide_cells(
     win: int = 50,
     mapping: bool = True,
     copy: bool = False,
+    ext: bool = False
     ):
     
     """\
@@ -43,6 +44,8 @@ def slide_cells(
         project cells onto tree pseudotime in a probabilistic manner.
     copy
         Return a copy instead of writing to adata.
+    ext
+        Output the list externally instead of writting to anndata
         
     Returns
     -------
@@ -160,17 +163,20 @@ def slide_cells(
     
     adata.uns=uns_temp
     
+    freqs=list(map(lambda f: pd.Series(f,index=adata.uns["tree"]["cells_fitted"]),freq))
     
+    if ext is False:
+        adata.uns[name]["cell_freq"]=freqs
+        logg.hint(
+            "added \n"
+            "    '"+name+"/cell_freq', probability assignment of cells on "+str(len(freq))+" non intersecting windows (adata.uns)")
     
-    adata.uns[name]["cell_freq"]=list(map(lambda f: 
-                                          pd.Series(f,index=adata.uns["tree"]["cells_fitted"]),
-                                          freq))
-    
-    logg.hint(
-        "added \n"
-        "    '"+name+"/cell_freq', probability assignment of cells on "+str(len(freq))+" non intersecting windows (adata.uns)")
-    
-    return adata if copy else None
+    if copy:
+        return adata
+    elif ext:
+        return freqs
+    else: 
+        None
 
 
 

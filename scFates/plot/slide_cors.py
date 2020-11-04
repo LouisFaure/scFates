@@ -53,7 +53,7 @@ def slide_cors(
     maxlim=np.max([corB.max().max(),np.abs(corB.min().min()),corA.max().max(),np.abs(corA.min().min())])+0.01
 
     if win_keep is not None:
-        freqs=freqs[win_keep]
+        freqs=[freqs[i] for i in win_keep]
     nwin = len(freqs)
     fig, axs = plt.subplots(2,nwin,figsize=(nwin*3, 6))
 

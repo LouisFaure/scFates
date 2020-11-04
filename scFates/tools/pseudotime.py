@@ -171,6 +171,8 @@ def map_cells(tree,multi=False):
 def refine_pseudotime(
     adata: AnnData,
     n_jobs: int = 1,
+    ms_data = None,
+    use_rep = None,
     copy: bool = False):
     
     """\
@@ -206,11 +208,20 @@ def refine_pseudotime(
     
     logg.info("refining pseudotime using palantir on each segment of the tree", reset=True)
     
-    def palantir_on_seg(seg):
+    def palantir_on_seg(seg,ms_data=ms_data):
         import palantir
         adata_sub=adata[adata.obs.seg==seg,]
-        dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata_sub.obsm["X_pca"],index=adata_sub.obs_names))
-        ms_data=palantir.utils.determine_multiscale_space(dm_res)
+        
+        if use_rep is not None:
+            dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata_sub.obsm["X_"+use_rep],
+                                                                  index=adata_sub.obs_names))
+            ms_data=palantir.utils.determine_multiscale_space(dm_res)
+        elif ms_data is not None:
+            ms_data=pd.DataFrame(adata_sub.obsm["X_"+ms_data],index=adata_sub.obs_names)
+        else:
+            dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata_sub.X,
+                                                                  index=adata_sub.obs_names))
+            ms_data=palantir.utils.determine_multiscale_space(dm_res)
         pr=palantir.core.run_palantir(ms_data,adata_sub.obs.t.idxmin())
         return pr.pseudotime
 

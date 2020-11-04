@@ -11,6 +11,7 @@ from scipy import stats
 from adjustText import adjust_text
 from matplotlib import patches
 from scipy import sparse
+import scanpy as sc
 
 import warnings
 from typing import Union, Optional
@@ -43,7 +44,9 @@ def cluster(
     cell_order=np.concatenate(list(map(lambda x: adata.obs.t[adata.obs.seg==x].sort_values().index,seg_order)))
     fitted=fitted.loc[:,cell_order]
     fitted=fitted.apply(lambda x: (x-x.mean())/x.std(),axis=1)
-
+    #fitted.values=sc.pp.scale(fitted.values)
+    
+    
     seg=adata.obs["seg"].copy(deep=True)
     
     
@@ -207,6 +210,29 @@ def trends(
     save: Union[str, bool, None] = None,
     save_genes: Optional[bool] = None):
     
+    
+    
+    if root_milestone is not None:
+        adata = adata.copy()
+        dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
+                   np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
+        keys = np.array(list(dct.keys()))
+        vals = np.array(list(dct.values()))
+
+        leaves = list(map(lambda leave: dct[leave],milestones))
+        root = dct[root_milestone]
+        df = adata.obs.copy(deep=True)
+        edges=adata.uns["tree"]["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        img = igraph.Graph()
+        img.add_vertices(np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_edges(edges)
+        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["tree"]["tips"],leaves[0],adata.uns["tree"],df).index,
+                       getpath(img,root,adata.uns["tree"]["tips"],leaves[1],adata.uns["tree"],df).index]))
+
+        adata=adata[cells]
+        
+    
+    
     if features is None:
         features = adata.var_names
     
@@ -247,35 +273,11 @@ def trends(
         fitted_sorted = fitted.loc[feature_order, :]
     else:
         fitted_sorted = fitted
-
-    
-    
-    if root_milestone is not None:
-        dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
-                   np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
-        keys = np.array(list(dct.keys()))
-        vals = np.array(list(dct.values()))
-
-        leaves = list(map(lambda leave: dct[leave],milestones))
-        root = dct[root_milestone]
-        df = adata.obs.copy(deep=True)
-        edges=adata.uns["tree"]["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
-        img = igraph.Graph()
-        img.add_vertices(np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
-        img.add_edges(edges)
-        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["tree"]["tips"],leaves[0],adata.uns["tree"],df).index,
-                       getpath(img,root,adata.uns["tree"]["tips"],leaves[1],adata.uns["tree"],df).index]))
-
-        fitted_sorted=fitted_sorted.loc[:,fitted_sorted.columns.isin(cells)]
-        
-    else:
-        cells=None
-    
     
     
     if show_milsetones:
         color_key = "milestones_colors"
-        if color_key not in adata.uns or len(adata.uns[color_key]):
+        if color_key not in adata.uns or len(adata.uns[color_key])==1:
             from . import palette_tools
             palette_tools._set_default_colors_for_categorical_obs(adata,"milestones")
 

@@ -399,8 +399,10 @@ def branch_specific(
 def activation(adata: AnnData,
     root_milestone,
     milestones,
-    deriv_cut: float = 0.015,
+    deriv_cut: float = 0.15,
     pseudotime_offset: float = 0,
+    nwin: int = 10,
+    steps: int = 5,
     n_map: int =1,
     copy: bool = False,
     n_jobs=-1,
@@ -422,9 +424,13 @@ def activation(adata: AnnData,
     milestones
         tips defining the progenies branches.
     deriv_cut
-        a first passage of derivative at this cutoff is considered as activation timing
+        a first passage of derivative at this cutoff (in proportion to the full dynamic range of the fitted feature) is considered as activation timing
     pseudotime_offset
         consider a feature as early if it gets activated before: pseudotime at bifurcation-pseudotime_offset.
+    nwin
+        windows of pseudotime to use for assessing activation timimg
+    steps
+        number of steps dividing a window for that will slide along the pseudotime
     n_map
         number of cell mappings from which to do the test.
     n_jobs
@@ -473,7 +479,11 @@ def activation(adata: AnnData,
             global rmgcv
             subtree=getpath(img,root,tree["tips"],leave,tree,df).sort_values("t")
             del subtree["branch"]
+            # save parameters to dataframe
             subtree["deriv_cut"]=deriv_cut
+            subtree["nwin"]=nwin
+            subtree["steps"]=steps
+            
             wf=warnings.filters.copy()
             warnings.filterwarnings("ignore")
             if layer is None:
@@ -488,11 +498,11 @@ def activation(adata: AnnData,
                     subtree["exp"] = np.array(adata[subtree.index,feature].layers[layer])
             warnings.filters=wf
             return subtree
-            
-
+        
         genes1 = stats.index[stats["branch"]==str(keys[vals==leaves[0]][0])]
         leave = leaves[0]
         dfs=list(map(get_df,genes1))
+
         
         acts1 = Parallel(n_jobs=n_jobs)(
             delayed(get_activation)(
@@ -545,7 +555,11 @@ def activation(adata: AnnData,
 
 def get_activation(subtree):
     global rmgcv 
+    # load parameters
     deriv_cut=subtree["deriv_cut"][0]
+    nwin=subtree["nwin"][0]
+    steps=subtree["steps"][0]
+                        
     wf=warnings.filters.copy()
     warnings.filterwarnings("ignore")
     def gamfit(sdf):
@@ -553,15 +567,33 @@ def get_activation(subtree):
         return rmgcv.predict_gam(m)
 
     subtree["fitted"]=gamfit(subtree)
-    deriv_d = subtree.fitted.max()-subtree.fitted.min()
-    deriv_n=subtree.fitted.diff()
-    deriv = deriv_n/deriv_d
-    if sum((deriv>deriv_cut).values)==0:
+    
+    window=(subtree.t.max()-subtree.t.min())/nwin
+    step=window/steps
+    
+    wins=pd.DataFrame({"start": [step*i for i in range(nwin*steps)]+subtree.t.min(),
+              "end": [step*i for i in range(nwin*steps)]+subtree.t.min()+window})
+    wins=wins.loc[wins.end<subtree.t.max()]
+    
+    
+    df_t=subtree.t.sort_values()
+    
+    
+    fitted = subtree.fitted
+    fitted = (fitted-fitted.min())/(fitted.max()-fitted.min())
+    fitted = fitted[df_t.index]
+    changes=wins.apply(lambda x: (fitted.loc[df_t[(df_t>x[0]) & (df_t<x[1])].index]).diff().sum(),axis=1)
+    
+
+
+    if sum(changes>deriv_cut)==0:
         act=subtree.t.max()+1
     else:
-        act=np.min(subtree.t[(deriv>deriv_cut).values])
+        act=wins.mean(axis=1)[changes>deriv_cut].min()
     warnings.filters=wf
-    return np.min([act,subtree.t.max()])
+    
+    return(act)
+
 
 def getpath(g,root,tips,tip,tree,df):
     wf=warnings.filters.copy()
