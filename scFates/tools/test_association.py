@@ -135,18 +135,20 @@ def test_association(
         `.var['p_val']` 
             p-values from statistical test.
         `.var['fdr']` 
-            corrected values from multiple testing
+            corrected values from multiple testing.
         `.var['st']` 
-            proportion of mapping in which feature is significant
+            proportion of mapping in which feature is significant.
         `.var['A']` 
-            amplitue of change of tested feature
-        `.uns['tree']['stat_assoc_list']`
-            list of fitted features on the tree for all mappings
+            amplitue of change of tested feature.
+        '.var['signi']`
+            feature is significantly changing along pseuodtime 
+        `.uns['stat_assoc_list']`
+            list of fitted features on the tree for all mappings.
     """
     
     adata = data.copy() if copy else adata
     
-    if "pseudotime_list" not in adata.uns["tree"]:
+    if "pseudotime_list" not in adata.uns:
         raise ValueError(
             "You need to run `tl.pseudotime` before testing for association."
         )
@@ -167,8 +169,8 @@ def test_association(
     else:
         mlsc_temp=None
     
-    if reapply_filters & ("stat_assoc_list" in adata.uns["tree"]):
-        stat_assoc_l = list(adata.uns["tree"]["stat_assoc_list"].values())
+    if reapply_filters & ("stat_assoc_list" in adata.uns):
+        stat_assoc_l = list(adata.uns["stat_assoc_list"].values())
         #stat_assoc_l = list(map(lambda x: pd.DataFrame(x,index=x["features"]),stat_assoc_l))
         adata = apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut)
         
@@ -210,7 +212,7 @@ def test_association(
     stat_assoc_l=list()
     
     for m in range(n_map):
-        data = list(zip([tree["pseudotime_list"][str(m)].loc[cells,:]]*len(Xgenes),Xgenes))
+        data = list(zip([adata.uns["pseudotime_list"][str(m)].loc[cells,:]]*len(Xgenes),Xgenes))
         
         stat = Parallel(n_jobs=n_jobs)(
             delayed(gt_fun)(
@@ -234,7 +236,8 @@ def test_association(
         "    'fdr' corrected values from multiple testing (adata.var)\n"
         "    'st' proportion of mapping in which feature is significant (adata.var)\n"
         "    'A' amplitue of change of tested feature (adata.var)\n"
-        "    'tree/stat_assoc_list', list of fitted features on the tree for all mappings (adata.uns)"
+        "    'signi' feature is significantly changing along pseuodtime (adata.var)\n"
+        "    'stat_assoc_list', list of fitted features on the tree for all mappings (adata.uns)"
     )
     
     if plot:
@@ -303,7 +306,7 @@ def apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut):
     #                stat_assoc_l))
     
     dictionary = dict(zip(names, stat_assoc_l))
-    adata.uns["tree"]["stat_assoc_list"]=dictionary
+    adata.uns["stat_assoc_list"]=dictionary
     
     return adata
 

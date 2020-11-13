@@ -72,6 +72,7 @@ def test_fork(
     adata: AnnData,
     root_milestone,
     milestones,
+    rescale: bool = False,
     layer: Optional[str] = None,
     n_jobs: int = 1,
     n_map: int = 1,
@@ -93,6 +94,8 @@ def test_fork(
         tip defining progenitor branch.
     milestones
         tips defining the progenies branches.
+    rescale
+        By default, analysis restrict to only cells having a pseudotime lower than the shortest branch maximum pseudotime, this can be avoided by rescaling the post bifurcation pseudotime of both branches to 1.
     layer
         layer to use for the test
     n_map
@@ -144,7 +147,7 @@ def test_fork(
         logg.info("    mapping: "+str(m))
         ## Diff expr between forks
         
-        df = tree["pseudotime_list"][str(m)]
+        df = adata.uns["pseudotime_list"][str(m)]
         def get_branches(i):
             x = vpath[i][1:]
             segs=tree["pp_info"].loc[x,:].seg.unique()
@@ -160,6 +163,10 @@ def test_fork(
             brcells["w"] = matw[gene,:][:,tree["cells_fitted"]]
 
         brcells.drop(["seg","edge"],axis=1,inplace=True)
+        
+        if rescale:
+            brcells.loc[brcells.i==0,"t"]=(brcells.loc[brcells.i==0].t-brcells.loc[brcells.i==0].t.min())/(brcells.loc[brcells.i==0].t.max()-brcells.loc[brcells.i==0].t.min())
+            brcells.loc[brcells.i==1,"t"]=(brcells.loc[brcells.i==1].t-brcells.loc[brcells.i==1].t.min())/(brcells.loc[brcells.i==1].t.max()-brcells.loc[brcells.i==1].t.min())
 
         if layer is None:
             if sparse.issparse(adata.X):
@@ -469,7 +476,7 @@ def activation(adata: AnnData,
     stats = adata.uns[name]["fork"]
     
     for m in range(n_map):
-        df = tree["pseudotime_list"][str(m)]
+        df = adata.uns["pseudotime_list"][str(m)]
         edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))

@@ -162,7 +162,7 @@ def fit(
         if "t_old" in adata.obs.columns:
             df=adata.obs.copy()
         else:
-            df=tree["pseudotime_list"][str(m)]
+            df=adata.uns["pseudotime_list"][str(m)]
         edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))

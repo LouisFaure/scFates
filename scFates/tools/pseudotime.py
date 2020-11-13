@@ -43,7 +43,7 @@ def pseudotime(
             assigned segment of the tree.
         `.obs['milestone']`
             assigned region surrounding forks and tips.
-        `.uns['tree']['pseudotime_list']`
+        `.uns['pseudotime_list']`
             list of cell projection from all mappings.
     """
     
@@ -95,11 +95,11 @@ def pseudotime(
     names = np.arange(len(df_l)).astype(str).tolist()
     #vals = todict
     dictionary = dict(zip(names, df_l))
-    adata.uns["tree"]["pseudotime_list"]=dictionary
+    adata.uns["pseudotime_list"]=dictionary
     
     if n_map > 1:
         adata.obs["t_sd"]=pd.concat(list(map(lambda x: pd.Series(x["_t"]),
-                           list(adata.uns["tree"]["pseudotime_list"].values()))),axis=1).apply(np.std,axis=1).values
+                           list(adata.uns["pseudotime_list"].values()))),axis=1).apply(np.std,axis=1).values
 
    
     milestones=pd.Series(index=adata.obs_names)
@@ -116,7 +116,7 @@ def pseudotime(
         "    't', pseudotime value (adata.obs)\n"
         "    'seg', segment of the tree where the cell is assigned to (adata.obs)\n"
         "    'milestones', milestones assigned to (adata.obs)\n"
-        "    'tree/pseudotime_list', list of cell projection from all mappings (adata.uns)"
+        "    'pseudotime_list', list of cell projection from all mappings (adata.uns)"
     )
     
     return adata if copy else None

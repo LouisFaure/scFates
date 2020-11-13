@@ -366,7 +366,7 @@ def synchro_path(
     bif = adata.uns[name]["fork"]
     
     def synchro_map(m):
-        df = tree["pseudotime_list"][str(m)]
+        df = adata.uns["pseudotime_list"][str(m)]
         edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
         img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
@@ -488,7 +488,7 @@ def synchro_path(
             return tv
     adata.obs["inter_cor "+name]=list(map(inter_values,tval))
     
-    df = tree["pseudotime_list"][str(0)]
+    df = adata.uns["pseudotime_list"][str(0)]
     cells=np.concatenate([getpath(img,root,tree["tips"],leaves[0],tree,df).index,
                           getpath(img,root,tree["tips"],leaves[1],tree,df).index])
     
