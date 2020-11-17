@@ -15,9 +15,104 @@ import itertools
 import elpigraph
 
 from ..tools.dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
-from ..plot.tree import tree as plot_tree
+from ..plot.trajectory import trajectory as plot_trajectory
 from .. import logging as logg
 from .. import settings
+
+
+def curve(
+    adata: AnnData,
+    Nodes: int = None,
+    use_rep: str = None,
+    ndims_rep: Optional[int] = None,
+    init: Optional[DataFrame] = None,
+    epg_lambda: Optional[Union[float, int]] = 0.01,
+    epg_mu: Optional[Union[float, int]] = 0.1,
+    epg_trimmingradius: Optional = np.inf,
+    epg_initnodes: Optional[int] = 2,
+    device: str = "cpu",
+    plot: bool = False,
+    basis: Optional[str] = "umap",
+    seed: Optional[int] = None,
+    copy: bool = False):
+    """\
+    Generate a principal curve.
+    
+    Learn a curved representation on any space, composed of nodes, approximating the 
+    position of the cells on a given space such as gene expression, pca, diffusion maps, ... 
+    Uses ElpiGraph algorithm.
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    Nodes
+        Number of nodes composing the principial tree, use a range of 10 to 100 for 
+        ElPiGraph approach and 100 to 2000 for PPT approach.
+    use_rep
+        Choose the space to be learned by the principal tree.
+    ndims_rep
+        Number of dimensions to use for the inference.
+    init
+        Initialise the point positions.
+    epg_lambda
+        Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20]_.
+    epg_mu
+        Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20]_.
+    epg_trimmingradius
+        Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
+    epg_initnodes
+        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes 
+        in the initial step
+    device
+        Run either mehtod on `cpu` or on `gpu`  
+    plot
+        Plot the resulting tree.
+    basis
+        Basis onto which the resulting tree should be projected.
+    seed
+        A numpy random seed.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        
+        `.uns['epg']`
+            dictionnary containing information from elastic principal curve
+        `.uns['tree']['B']`
+            adjacency matrix of the principal points
+        `.uns['tree']['R']`
+            soft assignment of cells to principal point in representation space
+        `.uns['tree']['F']`
+            coordinates of principal points in representation space
+    """
+    
+    logg.info("inferring a principal tree", reset=True, end=" " if settings.verbosity > 2 else "\n")
+    
+    adata = adata.copy() if copy else adata
+    
+    if Nodes is None:
+        if adata.shape[0]*2>100:
+            Nodes = 100
+        else:
+            Nodes = int(adata.shape[0]/2)
+    
+
+    logg.hint(
+    "parameters used \n"
+    "    "+str(Nodes)+ " principal points, mu = "+str(epg_mu)+", lambda = "+str(epg_lambda)
+    )
+    curve_epg(adata,Nodes,use_rep,ndims_rep,init,
+             epg_lambda,epg_mu,epg_trimmingradius,epg_initnodes,
+             device,seed)
+    
+    if plot:
+        plot_trajectory(adata,basis)   
+    
+    return adata if copy else None
+
 
 def tree(
     adata: AnnData,
@@ -139,7 +234,7 @@ def tree(
                  device,seed)
     
     if plot:
-        plot_tree(adata,basis)   
+        plot_trajectory(adata,basis)   
     
     return adata if copy else None
 
@@ -366,6 +461,103 @@ def tree_epg(
         from .dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
         
         Tree = elpigraph.computeElasticPrincipalTree(X_t.T,NumNodes=Nodes,Do_PCA=False,
+                                                     InitNodes=initnodes,Lambda=lam,Mu=mu,
+                                                     TrimmingRadius=trimmingradius)
+        
+        R = euclidean_mat_cpu(X_t,Tree[0]["NodePositions"].T)
+        # Force soft assigment to assign with confidence cells to their closest node
+        # sigma is scaled according to the maximum variance of the data
+        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
+        R = (np.exp(-R/auto_sigma))
+        R = (R.T/R.sum(axis=1)).T
+        R[np.isnan(R)]=0
+    
+    g = igraph.Graph(directed=False)
+    g.add_vertices(np.unique(Tree[0]["Edges"][0].flatten().astype(int)))
+    g.add_edges(pd.DataFrame(Tree[0]["Edges"][0]).astype(int).apply(tuple,axis=1).values)
+    
+    #mat = np.asarray(g.get_adjacency().data)
+    #mat = mat + mat.T - np.diag(np.diag(mat))
+    #B=((mat>0).astype(int))
+    
+    B = np.asarray(g.get_adjacency().data)
+
+    tips = np.argwhere(np.array(g.degree())==1).flatten()
+    forks = np.argwhere(np.array(g.degree())>2).flatten()
+    
+    tree = {"B":B,"R":R,"F":Tree[0]["NodePositions"].T,"tips":tips,"forks":forks,
+            "cells_fitted":X.index.tolist(),"metrics":"euclidean"}
+    
+    Tree[0]["Edges"] = list(Tree[0]["Edges"])
+    
+    adata.uns["tree"] = tree
+    adata.uns["epg"] = Tree[0]
+    
+        
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added \n"
+        "    'epg', dictionnary containing inferred elastic tree generated from elpigraph (adata.uns)\n"
+        "    'tree/B', adjacency matrix of the principal points (adata.uns)\n"
+        "    'tree/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
+        "    'tree/F', coordinates of principal points in representation space (adata.uns)"
+    )
+    
+    return adata
+
+
+def curve_epg(
+    adata: AnnData,
+    Nodes: int = None,
+    use_rep: str = None,
+    ndims_rep: Optional[int] = None,
+    init: Optional[DataFrame] = None,
+    lam: Optional[Union[float, int]] = 0.01,
+    mu: Optional[Union[float, int]] = 0.1,
+    trimmingradius: Optional = np.inf,
+    initnodes: int = None,
+    device: str = "cpu",
+    seed: Optional[int] = None):
+    
+
+    if use_rep is None:
+        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
+        n_pcs = None if use_rep == "X" else n_pcs
+    elif use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
+        use_rep = f"X_{use_rep}"
+    
+    X=DataFrame(adata.obsm[use_rep],index=adata.obs_names)
+    
+    X_t=X.values.T
+    
+    if seed is not None:
+        np.random.seed(seed)
+    
+    if device=="gpu":
+        import cupy as cp
+        from .dist_tools_gpu import euclidean_mat_gpu, cor_mat_gpu
+        
+        Tree=elpigraph.computeElasticPrincipalCurve(X_t.T,NumNodes=Nodes,
+                                                   Do_PCA=False,InitNodes=initnodes,
+                                                   Lambda=lam,Mu=mu,
+                                                   TrimmingRadius=trimmingradius,GPU=True)
+        
+        
+        R = euclidean_mat_gpu(cp.asarray(X_t),cp.asarray(Tree[0]["NodePositions"].T))
+        # Force soft assigment to assign with confidence cells to their closest node
+        # sigma is scaled according to the maximum variance of the data
+        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
+        R = (cp.exp(-R/auto_sigma))
+        R = (R.T/R.sum(axis=1)).T
+        R[cp.isnan(R)]=0
+        
+        R=cp.asnumpy(R)
+        
+        
+    else:  
+        from .dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
+        
+        Tree = elpigraph.computeElasticPrincipalCurve(X_t.T,NumNodes=Nodes,Do_PCA=False,
                                                      InitNodes=initnodes,Lambda=lam,Mu=mu,
                                                      TrimmingRadius=trimmingradius)
         

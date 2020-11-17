@@ -26,7 +26,7 @@ class GC(GraphicsContextBase):
 def custom_new_gc(self):
     return GC()
 
-def tree(
+def trajectory(
     adata: AnnData,
     basis: str = "umap",
     emb_back : Union[np.ndarray,None] = None,
@@ -150,7 +150,7 @@ def tree(
     savefig_or_show('tree', show=show, save=save)
     
     
-def trajectory(
+def trajectory_pseudotime(
     adata: AnnData,
     basis: str = "umap",
     emb_back = None,
@@ -268,7 +268,7 @@ def scatter3d(emb,col,cell_cex,nm):
     return go.Scatter3d(x=emb[:,0], y=emb[:,1], z=emb[:,2], mode='markers',
                  marker=dict(size=cell_cex,color=col,opacity=0.9),name=nm)
 
-def tree_3d(
+def trajectory_3d(
     adata: AnnData,
     basis: str = "umap3d",
     color: str = None,

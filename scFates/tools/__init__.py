@@ -1,4 +1,4 @@
-from .tree_tools import tree, cleanup, root, roots, getpath
+from .graph_tools import tree, curve, cleanup, root, roots, getpath
 from .pseudotime import pseudotime, refine_pseudotime
 from .test_association import test_association
 from .fit import fit
