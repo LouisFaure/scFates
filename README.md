@@ -63,3 +63,11 @@ If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in
 the following dependencies are required::
 
     pip install cupy cudf grapheno
+    
+    
+## Docker container
+
+scFates can be run on a [Docker container](https://hub.docker.com/repository/docker/louisfaure/scfates) based on Rapids container, which provide a gpu enabled environment with Jupyter Lab. Use the following command::
+
+    docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
+        louisfaure/scfates:tagname        

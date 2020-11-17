@@ -37,6 +37,14 @@ Modify the cuda version to match yours, for feature clustering using GPU, the fo
     pip install grapheno
 
 
+Docker container
+----------------
 
+scFates can be run on a `Docker container`_ based on Rapids container, which provide a gpu enabled environment with Jupyter Lab. Use the following command::
+
+    docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
+        louisfaure/scfates:tagname        
+        
 .. _Miniconda: http://conda.pydata.org/miniconda.html
 .. _Github: https://github.com/LouisFaure/scFates
+.. _`Docker container`: https://hub.docker.com/repository/docker/louisfaure/scfates
