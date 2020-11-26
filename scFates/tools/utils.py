@@ -13,6 +13,30 @@ def cor_mat_gpu(A,B):
     res = (B1.T.dot(A1)).T/cp.sqrt((A1**2).sum(axis=0).reshape(A1.shape[1],1) @ (B1**2).sum(axis=0).reshape(1,B1.shape[1]))
     return res.T
 
+def mst_gpu(d):
+    import cugraph
+    import cudf
+    import cupy as cp
+    from cupyx.scipy.sparse.csr import csr_matrix as csr_cupy
+    from cupyx.scipy.sparse.coo import coo_matrix
+    from cugraph.tree.minimum_spanning_tree_wrapper import mst_double, mst_float
+    import scipy
+    csr_gpu = csr_cupy(d)
+    offsets = cudf.Series(csr_gpu.indptr)
+    indices = cudf.Series(csr_gpu.indices)
+
+    num_verts = csr_gpu.shape[0]
+    num_edges = len(csr_gpu.indices)
+    weights = cudf.Series(csr_gpu.data)
+    
+    if weights.dtype == np.float32:
+         mst = mst_float(num_verts, num_edges, offsets, indices, weights)
+
+    else:
+         mst = mst_double(num_verts, num_edges, offsets, indices, weights)
+    
+    mst = csr_cupy(coo_matrix((mst.weight.values,(mst.src.values,mst.dst.values)),shape=(num_verts,num_verts))).get()
+    return csr_cupy(scipy.sparse.triu(mst))
 
 def getpath(g,root,tips,tip,tree,df):
     import warnings
