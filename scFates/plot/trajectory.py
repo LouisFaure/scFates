@@ -31,7 +31,7 @@ def trajectory(
     basis: str = "umap",
     emb_back : Union[np.ndarray,None] = None,
     size_nodes: float = None,
-    col_tree: bool = False,
+    col_traj: bool = False,
     color_cells: Union[str, None] = None,
     alpha_cells: float = 1,
     tips: bool = True,
@@ -40,7 +40,7 @@ def trajectory(
     save: Union[str, bool, None] = None):
     
     """\
-    Project tree onto embedding.
+    Project trajectory onto embedding.
     
     Parameters
     ----------
@@ -52,8 +52,8 @@ def trajectory(
         Other cells to show in background.
     size_nodes
         size of the projected prinicpal points.
-    col_tree
-        color tree by segments.
+    col_traj
+        color trajectory by segments.
     color_cells
         cells color
     alpha_cells
@@ -73,23 +73,23 @@ def trajectory(
     
     """
     
-    if "tree" not in adata.uns:
+    if "graph" not in adata.uns:
         raise ValueError(
-            "You need to run `tl.tree` first to compute a princal tree before choosing a root."
+            "You need to run `tl.tree` or `tl.curve` first to compute a princal graph before plotting."
         )
        
     RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
     emb = adata.obsm[f"X_{basis}"]
-    emb_f = adata[tree["cells_fitted"],:].obsm[f"X_{basis}"]
+    emb_f = adata[graph["cells_fitted"],:].obsm[f"X_{basis}"]
     
-    R=tree["R"]
+    R=graph["R"]
     
     proj=(np.dot(emb_f.T,R)/R.sum(axis=0)).T
     
-    B=tree["B"]
+    B=graph["B"]
     
     fig = plt.figure() 
     ax = plt.subplot()
@@ -131,7 +131,7 @@ def trajectory(
     
     ax.scatter(proj[:,0],proj[:,1],s=size_nodes,c="k")
     
-    if col_tree==True:
+    if col_traj==True:
         for seg in np.unique(r["pp_info"]["seg"]):
             subproj=proj[r["pp_info"]["seg"]==seg,:]
             ax.scatter(subproj[:,0],subproj[:,1],zorder=2)
@@ -139,15 +139,15 @@ def trajectory(
     bbox = dict(facecolor='white', alpha=0.6, edgecolor="white", pad=0.1)
     
     if tips:
-        for tip in tree["tips"]:
+        for tip in graph["tips"]:
             ax.annotate(tip, (proj[tip,0], proj[tip,1]), ha="center", va="center",
                        xytext=(-8, 8), textcoords='offset points',bbox=bbox)
     if forks:    
-        for fork in tree["forks"]:
+        for fork in graph["forks"]:
             ax.annotate(fork, (proj[fork,0], proj[fork,1]), ha="center", va="center",
                        xytext=(-8, 8), textcoords='offset points',bbox=bbox)
             
-    savefig_or_show('tree', show=show, save=save)
+    savefig_or_show('trajectory', show=show, save=save)
     
     
 def trajectory_pseudotime(
@@ -165,23 +165,23 @@ def trajectory_pseudotime(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
-    if "tree" not in adata.uns:
+    if "graph" not in adata.uns:
         raise ValueError(
-            "You need to run `tl.tree` first to compute a princal tree before choosing a root."
+            "You need to run `tl.pseudotime` first before plotting."
         )
        
     RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
     emb = adata.obsm[f"X_{basis}"]
-    emb_f = adata[tree["cells_fitted"],:].obsm[f"X_{basis}"]
+    emb_f = adata[graph["cells_fitted"],:].obsm[f"X_{basis}"]
     
-    R=tree["R"]
+    R=graph["R"]
     
     proj=(np.dot(emb_f.T,R)/R.sum(axis=0)).T
     
-    B=tree["B"]
+    B=graph["B"]
 
     if ax is None:
         fig = plt.figure() 
@@ -220,7 +220,7 @@ def trajectory_pseudotime(
     segs=al.tolist()
     vertices=proj.tolist()
     lines = [[tuple(vertices[j]) for j in i]for i in segs]
-    all_t = pd.Series(list(map(lambda s: tree["pp_info"].time[tree["pp_info"].index.isin(s)].mean().mean(),segs)))
+    all_t = pd.Series(list(map(lambda s: graph["pp_info"].time[graph["pp_info"].index.isin(s)].mean().mean(),segs)))
 
 
     sm = ScalarMappable(norm=Normalize(vmin=all_t.min(), vmax=all_t.max()), cmap=colormap)
@@ -228,8 +228,8 @@ def trajectory_pseudotime(
     ax.add_collection(lc)      
 
     g=igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
-    paths=g.get_shortest_paths(tree["root"],tree["tips"])
-    seg=tree["pp_seg"].loc[:,["from","to"]].values.tolist()
+    paths=g.get_shortest_paths(graph["root"],graph["tips"])
+    seg=graph["pp_seg"].loc[:,["from","to"]].values.tolist()
     for s in seg:
         if arrows:
             path=np.array(g.get_shortest_paths(int(s[0]),int(s[1]))[0])        
@@ -246,15 +246,15 @@ def trajectory_pseudotime(
             ax.quiver(proj[path[mid],0],proj[path[mid],1],
                       proj[path[mid+arrow_offset],0]-proj[path[mid],0],
                       proj[path[mid+arrow_offset],1]-proj[path[mid],1],headwidth=12*scale_path,headaxislength=10*scale_path,headlength=10*scale_path,units="dots",
-                      color=sm.to_rgba(tree["pp_info"].loc[path,:].time.iloc[mid]),zorder=102)
+                      color=sm.to_rgba(graph["pp_info"].loc[path,:].time.iloc[mid]),zorder=102)
 
 
     lc = matplotlib.collections.LineCollection(lines,colors=[sm.to_rgba(t) for t in all_t],linewidths=5*scale_path,zorder=104)
-    ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=103,c="k",s=200*scale_path)
+    ax.scatter(proj[graph["tips"],0],proj[graph["tips"],1],zorder=103,c="k",s=200*scale_path)
     ax.add_collection(lc)
 
-    ax.scatter(proj[tree["tips"],0],proj[tree["tips"],1],zorder=105,
-               c=sm.to_rgba(tree["pp_info"].time.loc[tree["tips"]]),s=140*scale_path)
+    ax.scatter(proj[graph["tips"],0],proj[graph["tips"],1],zorder=105,
+               c=sm.to_rgba(v["pp_info"].time.loc[graph["tips"]]),s=140*scale_path)
             
     savefig_or_show('pseudotime', show=show, save=save)
     
@@ -272,13 +272,13 @@ def trajectory_3d(
     adata: AnnData,
     basis: str = "umap3d",
     color: str = None,
-    tree_cex: int = 5,
+    traj_cex: int = 5,
     cell_cex: int = 2,
     figsize: tuple = (900,900),
     cmap = None,
     palette = None):
     
-    r = adata.uns["tree"]
+    r = adata.uns["graph"]
     
     emb = adata.obsm[f"X_{basis}"]
     if emb.shape[1]>3:
@@ -368,7 +368,7 @@ def trajectory_3d(
         z=z_lines,
         mode='lines',
         name='lines',
-        line=dict(width=tree_cex)
+        line=dict(width=traj_cex)
     )]
 
     fig = go.Figure(data=trace1+trace2)

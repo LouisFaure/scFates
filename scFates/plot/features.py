@@ -18,6 +18,7 @@ from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
 
 from .. import logging as logg
+from ..tools.utils import getpath
 
 def cluster(
     adata: AnnData,
@@ -107,19 +108,19 @@ def cluster(
     
     if root_milestone is not None:
         dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
-                   np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 
         leaves = list(map(lambda leave: dct[leave],milestones))
         root = dct[root_milestone]
         df = adata.obs.copy(deep=True)
-        edges=adata.uns["tree"]["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges=adata.uns["graph"]["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
-        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["tree"]["tips"],leaves[0],adata.uns["tree"],df).index,
-                       getpath(img,root,adata.uns["tree"]["tips"],leaves[1],adata.uns["tree"],df).index]))
+        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["graph"]["tips"],leaves[0],adata.uns["graph"],df).index,
+                       getpath(img,root,adata.uns["graph"]["tips"],leaves[1],adata.uns["graph"],df).index]))
 
         col_colors=col_colors[col_colors.index.isin(cells)]
         fitted_sorted=fitted_sorted.loc[:,fitted_sorted.columns.isin(cells)]
@@ -215,19 +216,19 @@ def trends(
     if root_milestone is not None:
         adata = adata.copy()
         dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
-                   np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 
         leaves = list(map(lambda leave: dct[leave],milestones))
         root = dct[root_milestone]
         df = adata.obs.copy(deep=True)
-        edges=adata.uns["tree"]["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges=adata.uns["graph"]["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(adata.uns["tree"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
-        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["tree"]["tips"],leaves[0],adata.uns["tree"],df).index,
-                       getpath(img,root,adata.uns["tree"]["tips"],leaves[1],adata.uns["tree"],df).index]))
+        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["graph"]["tips"],leaves[0],adata.uns["graph"],df).index,
+                       getpath(img,root,adata.uns["graph"]["tips"],leaves[1],adata.uns["graph"],df).index]))
 
         adata=adata[cells]
         
@@ -431,8 +432,8 @@ def single_trend(
             plt.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],
                      c=adata.uns['seg_colors'][np.argwhere(adata.obs.seg.cat.categories==s)[0][0]],
                      linewidth=fitted_linewidth)
-            tolink=adata.uns['tree']['pp_seg'].loc[int(s),"to"]
-            for next_s in adata.uns['tree']['pp_seg'].n.iloc[np.argwhere(adata.uns['tree']['pp_seg'].loc[:,'from'].isin([tolink]).values).flatten()]:
+            tolink=adata.uns['graph']['pp_seg'].loc[int(s),"to"]
+            for next_s in adata.uns['graph']['pp_seg'].n.iloc[np.argwhere(adata.uns['graph']['pp_seg'].loc[:,'from'].isin([tolink]).values).flatten()]:
                 plt.plot([df.loc[df.seg==s,"t"].iloc[-1],df.loc[df.seg==next_s,"t"].iloc[0]],
                      [df.loc[df.seg==s,"fitted"].iloc[-1],df.loc[df.seg==next_s,"fitted"].iloc[0]],
                      c=adata.uns['seg_colors'][np.argwhere(adata.obs.seg.cat.categories==next_s)[0][0]],
@@ -442,8 +443,8 @@ def single_trend(
             plt.plot(df.loc[df.seg==s,"t"],df.loc[df.seg==s,"fitted"],
                      c=colorexp,
                      linewidth=fitted_linewidth)
-            tolink=adata.uns['tree']['pp_seg'].loc[int(s),"to"]
-            for next_s in adata.uns['tree']['pp_seg'].n.iloc[np.argwhere(adata.uns['tree']['pp_seg'].loc[:,'from'].isin([tolink]).values).flatten()]:
+            tolink=adata.uns['graph']['pp_seg'].loc[int(s),"to"]
+            for next_s in adata.uns['graph']['pp_seg'].n.iloc[np.argwhere(adata.uns['graph']['pp_seg'].loc[:,'from'].isin([tolink]).values).flatten()]:
                 plt.plot([df.loc[df.seg==s,"t"].iloc[-1],df.loc[df.seg==next_s,"t"].iloc[0]],
                      [df.loc[df.seg==s,"fitted"].iloc[-1],df.loc[df.seg==next_s,"fitted"].iloc[0]],
                      c=colorexp,linewidth=fitted_linewidth)
@@ -457,23 +458,3 @@ def single_trend(
     plt.tight_layout()
     
     savefig_or_show('single_trend', show=show, save=save)    
-    
-    
-            
-def getpath(g,root,tips,tip,tree,df):
-    wf=warnings.filters.copy()
-    warnings.filterwarnings("ignore")
-    try:
-        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
-        segs = list()
-        for i in range(len(path)-1):
-            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
-                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=tree["pp_seg"].index[segs]
-        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
-        pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filters=wf
-        return(pth)
-    except IndexError:
-        pass
-    

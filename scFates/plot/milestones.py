@@ -11,22 +11,22 @@ def milestones(adata,
                roots=None,
                figsize=(500,500)):
 
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
 
-    B=tree["B"]
-    R=tree["R"]
-    F=tree["F"]
+    B=graph["B"]
+    R=graph["R"]
+    F=graph["F"]
     g=igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
     tips = np.argwhere(np.array(g.degree())==1).flatten()
     branches = np.argwhere(np.array(g.degree())>2).flatten()
 
 
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
 
-    edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    edges=graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
     img = igraph.Graph(directed=True)
     img.add_vertices(vals.astype(str))
     img.add_edges(edges)
@@ -35,11 +35,11 @@ def milestones(adata,
 
     dct=dict(zip(img.vs["name"],img.vs["label"]))
     if roots is None:
-        if "root2" not in adata.uns["tree"]:
-            roots=[dct[str(adata.uns["tree"]["root"])]]
+        if "root2" not in adata.uns["graph"]:
+            roots=[dct[str(adata.uns["graph"]["root"])]]
         else:
-            roots=[dct[str(adata.uns["tree"]["root"])],
-                   dct[str(adata.uns["tree"]["root2"])]]
+            roots=[dct[str(adata.uns["graph"]["root"])],
+                   dct[str(adata.uns["graph"]["root2"])]]
 
     layout=img.layout_reingold_tilford(root=list(map(lambda root: np.argwhere(np.array(img.vs["label"])==root)[0][0],roots)))
 

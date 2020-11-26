@@ -14,7 +14,6 @@ import warnings
 import itertools
 import elpigraph
 
-from ..tools.dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
 from ..plot.trajectory import trajectory as plot_trajectory
 from .. import logging as logg
 from .. import settings
@@ -81,11 +80,11 @@ def curve(
         
         `.uns['epg']`
             dictionnary containing information from elastic principal curve
-        `.uns['tree']['B']`
+        `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['tree']['R']`
+        `.uns['graph']['R']`
             soft assignment of cells to principal point in representation space
-        `.uns['tree']['F']`
+        `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
     
@@ -196,11 +195,11 @@ def tree(
             dictionnary containing information from simpelppt tree if method='ppt'
         `.uns['epg']`
             dictionnary containing information from elastic principal tree if method='epg'
-        `.uns['tree']['B']`
+        `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['tree']['R']`
+        `.uns['graph']['R']`
             soft assignment of cells to principal point in representation space
-        `.uns['tree']['F']`
+        `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
     
@@ -270,7 +269,9 @@ def tree_ppt(
     
     if device=="gpu":
         import cupy as cp
-        from .dist_tools_gpu import euclidean_mat_gpu, cor_mat_gpu
+        from cuml.metrics import pairwise_distances
+        from .utils import cor_mat_gpu
+        
         X_gpu=cp.asarray(X_t)
         W=cp.empty_like(X_gpu)
         W.fill(1)
@@ -285,11 +286,11 @@ def tree_ppt(
 
         iterator = tqdm(range(nsteps),file=sys.stdout,desc="    fitting")
         for i in iterator:
-            R = euclidean_mat_gpu(X_gpu,F_mat_gpu)
+            R = pairwise_distances(X_gpu.T,F_mat_gpu.T)
             R = (cp.exp(-R/sigma))
             R = (R.T/R.sum(axis=1)).T
             R[cp.isnan(R)]=0
-            d = euclidean_mat_gpu(F_mat_gpu,F_mat_gpu)
+            d = pairwise_distances(F_mat_gpu.T)
 
             csr = csr_matrix(np.triu(cp.asnumpy(d),k=-1))
             Tcsr = minimum_spanning_tree(csr)
@@ -326,8 +327,10 @@ def tree_ppt(
         r = [X.index.tolist(),cp.asnumpy(score),cp.asnumpy(F_mat_gpu),cp.asnumpy(R),
              (B),cp.asnumpy(L),cp.asnumpy(d),lam,sigma,nsteps,tips,forks,
             "euclidean"]
-    else:  
-        from .dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
+    else:
+        from sklearn.metrics import pairwise_distances
+        from .utils import cor_mat_cpu
+
         X_cpu=np.asarray(X_t)
         W=np.empty_like(X_cpu)
         W.fill(1)
@@ -344,11 +347,11 @@ def tree_ppt(
         #while ((j <= nsteps) & (err > err_cut)):
         iterator = tqdm(range(nsteps),file=sys.stdout,desc="    ")
         for i in iterator:
-            R = euclidean_mat_cpu(X_cpu,F_mat_cpu)
+            R = pairwise_distances(X_cpu.T,F_mat_cpu.T)
             R = (np.exp(-R/sigma))
             R = (R.T/R.sum(axis=1)).T
             R[np.isnan(R)]=0
-            d = euclidean_mat_cpu(F_mat_cpu,F_mat_cpu)
+            d = pairwise_distances(F_mat_cpu.T)
 
             csr = csr_matrix(np.triu(d,k=-1))
             Tcsr = minimum_spanning_tree(csr)
@@ -389,10 +392,10 @@ def tree_ppt(
              'sigma','nsteps','tips','forks','metrics','rep_used']
     r = dict(zip(names, r))
     
-    tree = {"B":r["B"],"R":r["R"],"F":r["F"],"tips":tips,"forks":forks,
+    graph = {"B":r["B"],"R":r["R"],"F":r["F"],"tips":tips,"forks":forks,
             "cells_fitted":X.index.tolist(),"metrics":"euclidean"}
     
-    adata.uns["tree"] = tree
+    adata.uns["graph"] = graph
     
     adata.uns["ppt"] = r
         
@@ -400,9 +403,9 @@ def tree_ppt(
     logg.hint(
         "added \n"
         "    'ppt', dictionnary containing inferred tree (adata.uns)\n"
-        "    'tree/B', adjacency matrix of the principal points (adata.uns)\n"
-        "    'tree/R', soft assignment of cells to principal point in representation space (adata.uns)\n"
-        "    'tree/F', coordinates of principal points in representation space (adata.uns)"
+        "    'graph/B', adjacency matrix of the principal points (adata.uns)\n"
+        "    'graph/R', soft assignment of cells to principal point in representation space (adata.uns)\n"
+        "    'graph/F', coordinates of principal points in representation space (adata.uns)"
     )
     
     return adata
@@ -438,7 +441,8 @@ def tree_epg(
     
     if device=="gpu":
         import cupy as cp
-        from .dist_tools_gpu import euclidean_mat_gpu, cor_mat_gpu
+        from cuml.metrics import pairwise_distances
+        from .utils import cor_mat_gpu
         
         Tree=elpigraph.computeElasticPrincipalTree(X_t.T,NumNodes=Nodes,
                                                    Do_PCA=False,InitNodes=initnodes,
@@ -446,7 +450,7 @@ def tree_epg(
                                                    TrimmingRadius=trimmingradius,GPU=True)
         
         
-        R = euclidean_mat_gpu(cp.asarray(X_t),cp.asarray(Tree[0]["NodePositions"].T))
+        R = pairwise_distances(cp.asarray(X.values),cp.asarray(Tree[0]["NodePositions"]))
         # Force soft assigment to assign with confidence cells to their closest node
         # sigma is scaled according to the maximum variance of the data
         auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
@@ -458,13 +462,14 @@ def tree_epg(
         
         
     else:  
-        from .dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
+        from .utils import cor_mat_cpu
+        from sklearn.metrics import pairwise_distances
         
         Tree = elpigraph.computeElasticPrincipalTree(X_t.T,NumNodes=Nodes,Do_PCA=False,
                                                      InitNodes=initnodes,Lambda=lam,Mu=mu,
                                                      TrimmingRadius=trimmingradius)
         
-        R = euclidean_mat_cpu(X_t,Tree[0]["NodePositions"].T)
+        R = pairwise_distances(X.values,Tree[0]["NodePositions"])
         # Force soft assigment to assign with confidence cells to their closest node
         # sigma is scaled according to the maximum variance of the data
         auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
@@ -485,12 +490,12 @@ def tree_epg(
     tips = np.argwhere(np.array(g.degree())==1).flatten()
     forks = np.argwhere(np.array(g.degree())>2).flatten()
     
-    tree = {"B":B,"R":R,"F":Tree[0]["NodePositions"].T,"tips":tips,"forks":forks,
+    graph = {"B":B,"R":R,"F":Tree[0]["NodePositions"].T,"tips":tips,"forks":forks,
             "cells_fitted":X.index.tolist(),"metrics":"euclidean"}
     
     Tree[0]["Edges"] = list(Tree[0]["Edges"])
     
-    adata.uns["tree"] = tree
+    adata.uns["graph"] = graph
     adata.uns["epg"] = Tree[0]
     
         
@@ -498,9 +503,9 @@ def tree_epg(
     logg.hint(
         "added \n"
         "    'epg', dictionnary containing inferred elastic tree generated from elpigraph (adata.uns)\n"
-        "    'tree/B', adjacency matrix of the principal points (adata.uns)\n"
-        "    'tree/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
-        "    'tree/F', coordinates of principal points in representation space (adata.uns)"
+        "    'graph/B', adjacency matrix of the principal points (adata.uns)\n"
+        "    'graph/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
+        "    'graph/F', coordinates of principal points in representation space (adata.uns)"
     )
     
     return adata
@@ -535,15 +540,16 @@ def curve_epg(
     
     if device=="gpu":
         import cupy as cp
-        from .dist_tools_gpu import euclidean_mat_gpu, cor_mat_gpu
+        from .utils import cor_mat_gpu
+        from cuml.metrics import pairwise_distances
         
-        Tree=elpigraph.computeElasticPrincipalCurve(X_t.T,NumNodes=Nodes,
+        Curve=elpigraph.computeElasticPrincipalCurve(X_t.T,NumNodes=Nodes,
                                                    Do_PCA=False,InitNodes=initnodes,
                                                    Lambda=lam,Mu=mu,
                                                    TrimmingRadius=trimmingradius,GPU=True)
         
         
-        R = euclidean_mat_gpu(cp.asarray(X_t),cp.asarray(Tree[0]["NodePositions"].T))
+        R = pairwise_distances(cp.asarray(X.values),cp.asarray(Curve[0]["NodePositions"]))
         # Force soft assigment to assign with confidence cells to their closest node
         # sigma is scaled according to the maximum variance of the data
         auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
@@ -555,13 +561,14 @@ def curve_epg(
         
         
     else:  
-        from .dist_tools_cpu import euclidean_mat_cpu, cor_mat_cpu
+        from .utils import cor_mat_cpu
+        from sklearn.metrics import pairwise_distances
         
-        Tree = elpigraph.computeElasticPrincipalCurve(X_t.T,NumNodes=Nodes,Do_PCA=False,
+        Curve = elpigraph.computeElasticPrincipalCurve(X_t.T,NumNodes=Nodes,Do_PCA=False,
                                                      InitNodes=initnodes,Lambda=lam,Mu=mu,
                                                      TrimmingRadius=trimmingradius)
         
-        R = euclidean_mat_cpu(X_t,Tree[0]["NodePositions"].T)
+        R = pairwise_distances(X.values,Curve[0]["NodePositions"])
         # Force soft assigment to assign with confidence cells to their closest node
         # sigma is scaled according to the maximum variance of the data
         auto_sigma = round_base_10(np.max((X_t.T).std(axis=0)))/1000
@@ -570,8 +577,8 @@ def curve_epg(
         R[np.isnan(R)]=0
     
     g = igraph.Graph(directed=False)
-    g.add_vertices(np.unique(Tree[0]["Edges"][0].flatten().astype(int)))
-    g.add_edges(pd.DataFrame(Tree[0]["Edges"][0]).astype(int).apply(tuple,axis=1).values)
+    g.add_vertices(np.unique(Curve[0]["Edges"][0].flatten().astype(int)))
+    g.add_edges(pd.DataFrame(Curve[0]["Edges"][0]).astype(int).apply(tuple,axis=1).values)
     
     #mat = np.asarray(g.get_adjacency().data)
     #mat = mat + mat.T - np.diag(np.diag(mat))
@@ -582,22 +589,22 @@ def curve_epg(
     tips = np.argwhere(np.array(g.degree())==1).flatten()
     forks = np.argwhere(np.array(g.degree())>2).flatten()
     
-    tree = {"B":B,"R":R,"F":Tree[0]["NodePositions"].T,"tips":tips,"forks":forks,
+    graph = {"B":B,"R":R,"F":Curve[0]["NodePositions"].T,"tips":tips,"forks":forks,
             "cells_fitted":X.index.tolist(),"metrics":"euclidean"}
     
-    Tree[0]["Edges"] = list(Tree[0]["Edges"])
+    Curve[0]["Edges"] = list(Curve[0]["Edges"])
     
-    adata.uns["tree"] = tree
-    adata.uns["epg"] = Tree[0]
+    adata.uns["graph"] = graph
+    adata.uns["epg"] = Curve[0]
     
         
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    'epg', dictionnary containing inferred elastic tree generated from elpigraph (adata.uns)\n"
-        "    'tree/B', adjacency matrix of the principal points (adata.uns)\n"
-        "    'tree/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
-        "    'tree/F', coordinates of principal points in representation space (adata.uns)"
+        "    'graph/B', adjacency matrix of the principal points (adata.uns)\n"
+        "    'graph/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
+        "    'graph/F', coordinates of principal points in representation space (adata.uns)"
     )
     
     return adata
@@ -626,25 +633,25 @@ def cleanup(
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
         
-        `.uns['tree']['B']`
+        `.uns['graph']['B']`
             subsetted adjacency matrix of the principal points.
-        `.uns['tree']['R']`
+        `.uns['graph']['R']`
             subsetted updated soft assignment of cells to principal point in representation space.
-        `.uns['tree']['F']`
+        `.uns['graph']['F']`
             subsetted coordinates of principal points in representation space.
     """
     
     adata = adata.copy() if copy else adata
     
-    if "tree" not in adata.uns:
+    if "graph" not in adata.uns:
         raise ValueError(
-            "You need to run `tl.ppt_tree` first to compute a princal tree before cleaning it"
+            "You need to run `tl.tree` first to compute a princal tree before cleaning it"
         )
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
-    B=tree["B"]
-    R=tree["R"]
-    F=tree["F"]
+    B=graph["B"]
+    R=graph["R"]
+    F=graph["F"]
     init_num=B.shape[0]
     init_pp=np.arange(B.shape[0])
     if leaves is not None:
@@ -678,16 +685,16 @@ def cleanup(
         R=np.delete(R,tip_torem,axis=1)
         F=np.delete(F,tip_torem,axis=1)
     R = (R.T/R.sum(axis=1)).T
-    tree["R"]=R
-    tree["B"]=B
-    tree["F"]=F
+    graph["R"]=R
+    graph["B"]=B
+    graph["F"]=F
     g = igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
-    tree["tips"] = np.argwhere(np.array(g.degree())==1).flatten()
-    tree["forks"] = np.argwhere(np.array(g.degree())>2).flatten()
+    graph["tips"] = np.argwhere(np.array(g.degree())==1).flatten()
+    graph["forks"] = np.argwhere(np.array(g.degree())>2).flatten()
     
-    adata.uns["tree"] = tree
+    adata.uns["graph"] = graph
     
-    logg.info("    tree cleaned", time=False, end=" " if settings.verbosity > 2 else "\n")
+    logg.info("    graph cleaned", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "removed "+str(init_num-B.shape[0])+" principal points"
     )
@@ -700,7 +707,7 @@ def root(
     root: int,
     copy: bool = False):
     """\
-    Define the root of the tree.
+    Define the root of the trajectory.
     
     Parameters
     ----------
@@ -715,27 +722,27 @@ def root(
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
         
-        `.uns['tree']['root']`
+        `.uns['graph']['root']`
             selected root.
-        `.uns['tree']['pp_info']`
+        `.uns['graph']['pp_info']`
             for each PP, its distance vs root and segment assignment.
-        `.uns['tree']['pp_seg']`
+        `.uns['graph']['pp_seg']`
             segments network information.
     """
     
     adata = adata.copy() if copy else adata
     
-    if "tree" not in adata.uns:
+    if "graph" not in adata.uns:
         raise ValueError(
-            "You need to run `tl.tree` first to compute a princal tree before choosing a root."
+            "You need to run `tl.tree` or `tl.curve` first to compute a princal graph before choosing a root."
         )
-        
-    tree = adata.uns["tree"]
     
-    if (tree["metrics"]=="euclidean"):
-        d = 1e-6 + euclidean_mat_cpu(tree["F"],tree["F"])
+    graph = adata.uns["graph"]
     
-    to_g = tree["B"]*d
+    from sklearn.metrics import pairwise_distances
+    d = 1e-6 + pairwise_distances(graph["F"].T,graph["F"].T,metric=graph["metrics"])
+    
+    to_g = graph["B"]*d
     
     csr = csr_matrix(to_g)
     
@@ -773,17 +780,17 @@ def root(
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
     
-    tree["pp_info"]=pp_info
-    tree["pp_seg"]=pp_seg
-    tree["root"]=root
+    graph["pp_info"]=pp_info
+    graph["pp_seg"]=pp_seg
+    graph["root"]=root
     
-    adata.uns["tree"] = tree
+    adata.uns["graph"] = graph
     
     logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'tree/root', selected root (adata.uns)\n"
-        "    'tree/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
-        "    'tree/pp_seg', segments network information (adata.uns)"
+        "added\n" + "    'graph/root', selected root (adata.uns)\n"
+        "    'graph/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
+        "    'graph/pp_seg', segments network information (adata.uns)"
     )
     
     return adata if copy else None
@@ -811,31 +818,31 @@ def roots(
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
         
-        `.uns['tree']['root']`
+        `.uns['graph']['root']`
             farthest root selected.
-        `.uns['tree']['root2']`
+        `.uns['graph']['root2']`
             2nd root selected.
-        `.uns['tree']['meeting']`
+        `.uns['graph']['meeting']`
             meeting point on the tree.
-        `.uns['tree']['pp_info']`
+        `.uns['graph']['pp_info']`
             for each PP, its distance vs root and segment assignment).
-        `.uns['tree']['pp_seg']`
+        `.uns['graph']['pp_seg']`
             segments network information.
     """
     
     adata = adata.copy() if copy else adata
     
-    if "tree" not in adata.uns:
+    if "graph" not in adata.uns:
         raise ValueError(
             "You need to run `tl.tree` first to compute a princal tree before choosing two roots."
         )
         
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
-    if (tree["metrics"]=="euclidean"):
-        d = 1e-6 + euclidean_mat_cpu(tree["F"],tree["F"])
+    from sklearn.metrics import pairwise_distances
+    d = 1e-6 + pairwise_distances(graph["F"].T,graph["F"].T,metric=graph["metrics"])
 
-    to_g = tree["B"]*d
+    to_g = graph["B"]*d
 
     csr = csr_matrix(to_g)
 
@@ -875,7 +882,7 @@ def roots(
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
 
 
-    tips=tree["tips"]
+    tips=graph["tips"]
     tips=tips[~np.isin(tips,roots)]
 
 
@@ -906,22 +913,22 @@ def roots(
     
     
     
-    tree["pp_info"]=pp_info
-    tree["pp_seg"]=pp_seg
-    tree["root"]=root
-    tree["root2"]=root2
-    tree["meeting"]=meeting
+    graph["pp_info"]=pp_info
+    graph["pp_seg"]=pp_seg
+    graph["root"]=root
+    graph["root2"]=root2
+    graph["meeting"]=meeting
     
-    adata.uns["tree"] = tree
+    adata.uns["graph"] = graph
     
     logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added\n" + "    "+str(root)+" is the farthest root\n"
-        "    'tree/root', farthest root selected (adata.uns)\n"
-        "    'tree/root2', 2nd root selected (adata.uns)\n"
-        "    'tree/meeting', meeting point on the tree (adata.uns)\n"
-        "    'tree/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
-        "    'tree/pp_seg', segments network information (adata.uns)"
+        "    'graph/root', farthest root selected (adata.uns)\n"
+        "    'graph/root2', 2nd root selected (adata.uns)\n"
+        "    'graph/meeting', meeting point on the tree (adata.uns)\n"
+        "    'graph/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
+        "    'graph/pp_seg', segments network information (adata.uns)"
     )
     
     return adata if copy else None
@@ -931,11 +938,11 @@ def getpath(adata,
             root_milestone,
             milestones):
     
-    tree = adata.uns["tree"]    
+    graph = adata.uns["graph"]    
     
-    edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
     g = igraph.Graph()
-    g.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    g.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
     g.add_edges(edges)  
     
     uns_temp = adata.uns.copy()
@@ -943,7 +950,7 @@ def getpath(adata,
     mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
@@ -959,9 +966,9 @@ def getpath(adata,
             path = np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
             segs = list()
             for i in range(len(path)-1):
-                segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+                segs= segs + [np.argwhere((graph["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
                                                                                         all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-            segs=tree["pp_seg"].index[segs]
+            segs=graph["pp_seg"].index[segs]
             pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
             pth["branch"]=str(root)+"_"+str(tip)
             #warnings.filterwarnings("default")
@@ -978,3 +985,6 @@ def round_base_10(x):
     elif x == 0:
         return 10
     return 10**np.ceil(np.log10(x))
+
+
+

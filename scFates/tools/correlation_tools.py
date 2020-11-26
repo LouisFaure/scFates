@@ -13,6 +13,7 @@ from skmisc.loess import loess
 import warnings
 from .. import logging as logg
 from .. import settings
+from .utils import getpath
 
 import sys
 sys.setrecursionlimit(10000)
@@ -60,43 +61,43 @@ def slide_cells(
     
     adata = adata.copy() if copy else adata
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
     uns_temp = adata.uns.copy()
     
     mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
-    def getsegs(g,root,leave,tree):
+    def getsegs(g,root,leave,graph):
         path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(leave)))][0]
         segs = list()
         for i in range(len(path)-1):
-            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
+            segs= segs + [np.argwhere((graph["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
                                                                                     all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=tree["pp_seg"].index[segs].tolist()
+        segs=graph["pp_seg"].index[segs].tolist()
         return(segs)
 
 
-    edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    edges=graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
     img = igraph.Graph()
-    img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
     img.add_edges(edges)
 
-    paths = list(map(lambda l: getsegs(img,root,l,tree),leaves))
+    paths = list(map(lambda l: getsegs(img,root,l,graph),leaves))
     
     
     seg_progenies = list(set.intersection(*[set(path) for path in paths]))
     seg_branch1 = list(set.difference(set(paths[0]),set(seg_progenies)))
     seg_branch2 = list(set.difference(set(paths[1]),set(seg_progenies)))
-    pp_probs = tree["R"].sum(axis=0)
-    pps = tree["pp_info"].PP[tree["pp_info"].seg.isin(np.array(seg_progenies+seg_branch1+seg_branch2).astype(str))].index
+    pp_probs = graph["R"].sum(axis=0)
+    pps = graph["pp_info"].PP[graph["pp_info"].seg.isin(np.array(seg_progenies+seg_branch1+seg_branch2).astype(str))].index
 
     seg_branch1 = [str(seg) for seg in seg_branch1]
     seg_branch2 = [str(seg) for seg in seg_branch2]
@@ -105,57 +106,57 @@ def slide_cells(
     def region_extract(pt_cur,segs_cur):
         freq = list()
 
-        pp_next = pps[(tree["pp_info"].loc[pps,"time"].values >= pt_cur) & 
-                      tree["pp_info"].loc[pps,"seg"].isin(segs_cur).values]
+        pp_next = pps[(graph["pp_info"].loc[pps,"time"].values >= pt_cur) & 
+                      graph["pp_info"].loc[pps,"seg"].isin(segs_cur).values]
 
 
-        cmsm = np.cumsum(pp_probs[pp_next][np.argsort(tree["pp_info"].loc[pp_next,"time"].values)])
+        cmsm = np.cumsum(pp_probs[pp_next][np.argsort(graph["pp_info"].loc[pp_next,"time"].values)])
         inds=np.argwhere(cmsm > win).flatten()
 
         if len(inds)==0:
             if (cmsm.max() > win/2):
                 if mapping:
-                    cell_probs = tree["R"][:,pp_next].sum(axis=1)
+                    cell_probs = graph["R"][:,pp_next].sum(axis=1)
                 else:
-                    cell_probs = np.isin(np.apply_along_axis(lambda x: np.argmax(x),axis=1,arr=tree["R"]),pp_next)*1
+                    cell_probs = np.isin(np.apply_along_axis(lambda x: np.argmax(x),axis=1,arr=graph["R"]),pp_next)*1
                 freq = freq+[cell_probs]
             return freq
         else: 
-            pps_region = pp_next[np.argsort(tree["pp_info"].loc[pp_next,"time"].values)][:inds[0]]
+            pps_region = pp_next[np.argsort(graph["pp_info"].loc[pp_next,"time"].values)][:inds[0]]
             if mapping:
-                cell_probs = tree["R"][:,pps_region].sum(axis=1)
+                cell_probs = graph["R"][:,pps_region].sum(axis=1)
             else:
-                cell_probs = np.isin(np.apply_along_axis(lambda x: np.argmax(x),axis=1,arr=tree["R"]),pps_region)*1
+                cell_probs = np.isin(np.apply_along_axis(lambda x: np.argmax(x),axis=1,arr=graph["R"]),pps_region)*1
 
             freq = freq+[cell_probs]
-            pt_cur = tree["pp_info"].loc[pps_region,"time"].max()
+            pt_cur = graph["pp_info"].loc[pps_region,"time"].max()
 
 
 
-            if (sum(~tree["pp_info"].loc[pps_region,:].seg.isin(seg_progenies))==0):
+            if (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_progenies))==0):
                 res = region_extract(pt_cur,segs_cur)
                 return freq+res
 
-            elif (sum(~tree["pp_info"].loc[pps_region,:].seg.isin(seg_branch1))==0):
+            elif (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_branch1))==0):
                 res = region_extract(pt_cur,segs_cur)
                 return freq+res
 
-            elif (sum(~tree["pp_info"].loc[pps_region,:].seg.isin(seg_branch2))==0):
+            elif (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_branch2))==0):
 
                 res = region_extract(pt_cur,segs_cur)
                 return freq+res
 
 
-            elif (~(sum(~tree["pp_info"].loc[pps_region,:].seg.isin([str(seg) for seg in seg_progenies]))==0)):
-                pt_cur1 = tree["pp_info"].loc[pps_region,"time"][tree["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch1])].max()
+            elif (~(sum(~graph["pp_info"].loc[pps_region,:].seg.isin([str(seg) for seg in seg_progenies]))==0)):
+                pt_cur1 = graph["pp_info"].loc[pps_region,"time"][graph["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch1])].max()
                 segs_cur1 = seg_branch1
-                pt_cur2 = tree["pp_info"].loc[pps_region,"time"][tree["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch2])].max()
+                pt_cur2 = graph["pp_info"].loc[pps_region,"time"][graph["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch2])].max()
                 segs_cur2 =seg_branch2
                 res1 = region_extract(pt_cur1,segs_cur1)
                 res2 = region_extract(pt_cur2,segs_cur2)
                 return freq+res1+res2
             
-    pt_cur = tree["pp_info"].loc[pps,"time"].min()
+    pt_cur = graph["pp_info"].loc[pps,"time"].min()
     segs_cur=np.unique(np.array(seg_progenies+seg_branch1+seg_branch2).flatten().astype(str))
     
     freq=region_extract(pt_cur,segs_cur)
@@ -163,7 +164,7 @@ def slide_cells(
     
     adata.uns=uns_temp
     
-    freqs=list(map(lambda f: pd.Series(f,index=adata.uns["tree"]["cells_fitted"]),freq))
+    freqs=list(map(lambda f: pd.Series(f,index=adata.uns["graph"]["cells_fitted"]),freq))
     
     if ext is False:
         adata.uns[name]["cell_freq"]=freqs
@@ -216,14 +217,14 @@ def slide_cors(
     
     adata = adata.copy() if copy else adata
     
-    tree = adata.uns["tree"]    
+    graph = adata.uns["graph"]    
     
     uns_temp = adata.uns.copy()
     
     mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
@@ -342,11 +343,11 @@ def synchro_path(
        
     logg.info("computing local correlations", reset=True)
     
-    tree = adata.uns["tree"]    
+    graph = adata.uns["graph"]    
     
-    edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
     img = igraph.Graph()
-    img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
     img.add_edges(edges)  
     
     uns_temp = adata.uns.copy()
@@ -354,7 +355,7 @@ def synchro_path(
     mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
@@ -367,9 +368,9 @@ def synchro_path(
     
     def synchro_map(m):
         df = adata.uns["pseudotime_list"][str(m)]
-        edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)  
 
         genesetA=bif.index[(bif.module=="early") & (bif.branch==milestones[0])]
@@ -377,7 +378,7 @@ def synchro_path(
         genesets = np.concatenate([genesetA,genesetB])
         
         def synchro_milestone(leave):
-            cells=getpath(img,root,tree["tips"],leave,tree,df).index
+            cells=getpath(img,root,graph["tips"],leave,graph,df).index
             
             if layer is None:
                 if sparse.issparse(adata.X):
@@ -471,7 +472,7 @@ def synchro_path(
     
     fork=list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
     fork=np.array(img.vs["name"],dtype=int)[fork]
-    fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()
+    fork_t=adata.uns["graph"]["pp_info"].loc[fork,"time"].max()
     res=allcor.loc[allcor.t<fork_t,:]
     res=res[~res.t.duplicated()]
     l = loess(res.t, res["corAB"],span=loess_span)
@@ -489,8 +490,8 @@ def synchro_path(
     adata.obs["inter_cor "+name]=list(map(inter_values,tval))
     
     df = adata.uns["pseudotime_list"][str(0)]
-    cells=np.concatenate([getpath(img,root,tree["tips"],leaves[0],tree,df).index,
-                          getpath(img,root,tree["tips"],leaves[1],tree,df).index])
+    cells=np.concatenate([getpath(img,root,graph["tips"],leaves[0],graph,df).index,
+                          getpath(img,root,graph["tips"],leaves[1],graph,df).index])
     
     adata.obs["inter_cor "+name][~adata.obs_names.isin(cells)]=np.nan              
     
@@ -505,21 +506,3 @@ def synchro_path(
         "    'inter_cor "+name+"', loess fit of inter-module mean local gene-gene correlations prior to bifurcation (adata.obs)")
     
     return adata if copy else None
-
-
-def getpath(g,root,tips,tip,tree,df):
-    wf=warnings.filters.copy()
-    warnings.filterwarnings("ignore")
-    try:
-        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
-        segs = list()
-        for i in range(len(path)-1):
-            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
-                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=tree["pp_seg"].index[segs]
-        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
-        pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filters=wf
-        return(pth)
-    except IndexError:
-        pass

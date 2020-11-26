@@ -24,6 +24,7 @@ from scipy import sparse
 from .. import logging as logg
 from .. import settings
 from ..plot.test_association import test_association as plot_test_association
+from .utils import getpath
 
 
 try:
@@ -86,7 +87,7 @@ def test_association(
     layer: Optional[str] = None):
     
     """\
-    Determine a set of genes significantly associated with the tree.
+    Determine a set of genes significantly associated with the trajectory.
     
 
     Feature expression is modeled as a function of pseudotime in a branch-specific manner, 
@@ -153,14 +154,14 @@ def test_association(
             "You need to run `tl.pseudotime` before testing for association."
         )
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
     
     if leaves is not None:
         mlsc = adata.uns["milestones_colors"].copy()
         mlsc_temp = mlsc.copy()
         dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                       np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                       np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 
@@ -184,16 +185,16 @@ def test_association(
     
     genes = adata.var_names
     if root is None:
-        cells = tree["cells_fitted"]
+        cells = graph["cells_fitted"]
     else:
         df = adata.obs.copy()
-        edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
         
         cells = np.unique(np.concatenate(list(map(lambda leave:
-                                          getpath(img,root,tree["tips"],leave,tree,df).index,leaves))))
+                                          getpath(img,root,graph["tips"],leave,graph,df).index,leaves))))
     
     if layer is None:
         if sparse.issparse(adata.X):
@@ -207,7 +208,7 @@ def test_association(
             Xgenes = adata[cells,genes].layers[layer].T.tolist()
         
      
-    logg.info("test features for association with the tree", reset=True, end="\n")
+    logg.info("test features for association with the trajectory", reset=True, end="\n")
        
     stat_assoc_l=list()
     
@@ -237,7 +238,7 @@ def test_association(
         "    'st' proportion of mapping in which feature is significant (adata.var)\n"
         "    'A' amplitue of change of tested feature (adata.var)\n"
         "    'signi' feature is significantly changing along pseuodtime (adata.var)\n"
-        "    'stat_assoc_list', list of fitted features on the tree for all mappings (adata.uns)"
+        "    'stat_assoc_list', list of fitted features on the graph for all mappings (adata.uns)"
     )
     
     if plot:
@@ -309,21 +310,3 @@ def apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut):
     adata.uns["stat_assoc_list"]=dictionary
     
     return adata
-
-
-def getpath(g,root,tips,tip,tree,df):
-    wf=warnings.filters.copy()
-    warnings.filterwarnings("ignore")
-    try:
-        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
-        segs = list()
-        for i in range(len(path)-1):
-            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
-                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=tree["pp_seg"].index[segs]
-        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
-        pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filters=wf
-        return(pth)
-    except IndexError:
-        pass

@@ -13,6 +13,7 @@ import warnings
 
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
+from ..tools.utils import getpath
 
 def modules(
     adata: AnnData,
@@ -32,12 +33,12 @@ def modules(
     layer: Optional[str] = None):
     
     plt.rcParams["axes.grid"] = False
-    tree=adata.uns["tree"]
+    graph=adata.uns["graph"]
     
     uns_temp=adata.uns.copy()
     
     dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
@@ -52,14 +53,14 @@ def modules(
     mls = adata.obs.milestones.cat.categories.tolist()
     dct = dict(zip(mls,mlsc))
     df = adata.obs.copy(deep=True)
-    edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    edges=graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
     img = igraph.Graph()
-    img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
     img.add_edges(edges)
 
     
-    cells=np.unique(np.concatenate([getpath(img,root,adata.uns["tree"]["tips"],leaves[0],tree,df).index,
-                   getpath(img,root,adata.uns["tree"]["tips"],leaves[1],tree,df).index]))
+    cells=np.unique(np.concatenate([getpath(img,root,adata.uns["graph"]["tips"],leaves[0],graph,df).index,
+                   getpath(img,root,adata.uns["graph"]["tips"],leaves[1],graph,df).index]))
 
     
     cols = adata.uns[color+"_colors"].copy()
@@ -167,22 +168,3 @@ def modules(
     adata.uns=uns_temp
     
     savefig_or_show('modules', show=show, save=save)
-
-
-    
-def getpath(g,root,tips,tip,tree,df):
-    wf=warnings.filters.copy()
-    warnings.filterwarnings("ignore")
-    try:
-        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
-        segs = list()
-        for i in range(len(path)-1):
-            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
-                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=tree["pp_seg"].index[segs]
-        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
-        pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filters=wf
-        return(pth)
-    except IndexError:
-        pass

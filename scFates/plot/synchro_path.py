@@ -20,11 +20,11 @@ def synchro_path(
     
     plt.rcParams["axes.grid"] = False
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
-    edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
     img = igraph.Graph()
-    img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
     img.add_edges(edges)  
     
     mlsc = adata.uns["milestones_colors"].copy()
@@ -32,7 +32,7 @@ def synchro_path(
         mlsc=np.array(mlsc)
     mlsc_temp = mlsc.copy()
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
 
@@ -44,7 +44,7 @@ def synchro_path(
     
     fork=list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
     fork=np.array(img.vs["name"],dtype=int)[fork]
-    fork_t=adata.uns["tree"]["pp_info"].loc[fork,"time"].max()
+    fork_t=adata.uns["graph"]["pp_info"].loc[fork,"time"].max()
 
     allcor=adata.uns[name]["synchro"]
     runs=pd.DataFrame(allcor.to_records())["level_0"].unique()

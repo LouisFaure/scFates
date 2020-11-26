@@ -47,24 +47,24 @@ def pseudotime(
             list of cell projection from all mappings.
     """
     
-    if "root" not in adata.uns["tree"]:
+    if "root" not in adata.uns["graph"]:
         raise ValueError(
             "You need to run `tl.root` or `tl.roots` before projecting cells."
         )
     
     adata = adata.copy() if copy else adata
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
 
-    logg.info("projecting cells onto the principal tree", reset=True)
+    logg.info("projecting cells onto the principal graph", reset=True)
     
     
     if n_map == 1:
-        df_l = [map_cells(tree,multi=False)]
+        df_l = [map_cells(graph,multi=False)]
     else:
         df_l = Parallel(n_jobs=n_jobs)(
             delayed(map_cells)(
-                tree=tree,multi=True
+                graph=graph,multi=True
             )
             for m in tqdm(range(n_map),file=sys.stdout,desc="    mappings")
         )
@@ -103,10 +103,10 @@ def pseudotime(
 
    
     milestones=pd.Series(index=adata.obs_names)
-    for seg in tree["pp_seg"].n:
+    for seg in graph["pp_seg"].n:
         cell_seg=adata.obs.loc[adata.obs["seg"]==seg,"t"]
-        milestones[cell_seg.index[(cell_seg-min(cell_seg)-(max(cell_seg-min(cell_seg))/2)<0)]]=tree["pp_seg"].loc[int(seg),"from"]
-        milestones[cell_seg.index[(cell_seg-min(cell_seg)-(max(cell_seg-min(cell_seg))/2)>0)]]=tree["pp_seg"].loc[int(seg),"to"]
+        milestones[cell_seg.index[(cell_seg-min(cell_seg)-(max(cell_seg-min(cell_seg))/2)<0)]]=graph["pp_seg"].loc[int(seg),"from"]
+        milestones[cell_seg.index[(cell_seg-min(cell_seg)-(max(cell_seg-min(cell_seg))/2)>0)]]=graph["pp_seg"].loc[int(seg),"to"]
     adata.obs["milestones"]=milestones
     adata.obs.milestones=adata.obs.milestones.astype("category")
     
@@ -121,15 +121,15 @@ def pseudotime(
     
     return adata if copy else None
 
-def map_cells(tree,multi=False):
+def map_cells(graph,multi=False):
     import igraph
-    g = igraph.Graph.Adjacency((tree["B"]>0).tolist(),mode="undirected")
+    g = igraph.Graph.Adjacency((graph["B"]>0).tolist(),mode="undirected")
     # Add edge weights and node labels.
-    g.es['weight'] = tree["B"][tree["B"].nonzero()]
+    g.es['weight'] = graph["B"][graph["B"].nonzero()]
     if multi: 
-        rrm = (np.apply_along_axis(lambda x: np.random.choice(np.arange(len(x)),size=1,p=x),axis=1,arr=tree["R"])).T.flatten()
+        rrm = (np.apply_along_axis(lambda x: np.random.choice(np.arange(len(x)),size=1,p=x),axis=1,arr=graph["R"])).T.flatten()
     else:
-        rrm = np.apply_along_axis(np.argmax,axis=1,arr=tree["R"])
+        rrm = np.apply_along_axis(np.argmax,axis=1,arr=graph["R"])
     
     def map_on_edges(v):
         vcells=np.argwhere(rrm==v)
@@ -138,29 +138,29 @@ def map_cells(tree,multi=False):
             nv = np.array(g.neighborhood(v,order=1))
             nvd = np.array(g.shortest_paths(v,nv)[0])
 
-            spi = np.apply_along_axis(np.argmax,axis=1,arr=tree["R"][vcells,nv[1:]])
+            spi = np.apply_along_axis(np.argmax,axis=1,arr=graph["R"][vcells,nv[1:]])
             ndf = pd.DataFrame({"cell":vcells.flatten(),"v0":v,"v1":nv[1:][spi],"d":nvd[1:][spi]})
 
-            p0 = tree["R"][vcells,v].flatten()
-            p1 = np.array(list(map(lambda x: tree["R"][vcells[x],ndf.v1[x]],range(len(vcells))))).flatten()
+            p0 = graph["R"][vcells,v].flatten()
+            p1 = np.array(list(map(lambda x: graph["R"][vcells[x],ndf.v1[x]],range(len(vcells))))).flatten()
 
             alpha = np.random.uniform(size=len(vcells))
             f = np.abs( (np.sqrt(alpha*p1**2+(1-alpha)*p0**2)-p0)/(p1-p0) )
-            ndf["t"] = tree["pp_info"].loc[ndf.v0,"time"].values+(tree["pp_info"].loc[ndf.v1,"time"].values-tree["pp_info"].loc[ndf.v0,"time"].values)*alpha
+            ndf["t"] = graph["pp_info"].loc[ndf.v0,"time"].values+(graph["pp_info"].loc[ndf.v1,"time"].values-graph["pp_info"].loc[ndf.v0,"time"].values)*alpha
             ndf["seg"] = 0
-            isinfork = (tree["pp_info"].loc[ndf.v0,"PP"].isin(tree["forks"])).values
-            ndf.loc[isinfork,"seg"] = tree["pp_info"].loc[ndf.loc[isinfork,"v1"],"seg"].values
-            ndf.loc[~isinfork,"seg"] = tree["pp_info"].loc[ndf.loc[~isinfork,"v0"],"seg"].values
+            isinfork = (graph["pp_info"].loc[ndf.v0,"PP"].isin(graph["forks"])).values
+            ndf.loc[isinfork,"seg"] = graph["pp_info"].loc[ndf.loc[isinfork,"v1"],"seg"].values
+            ndf.loc[~isinfork,"seg"] = graph["pp_info"].loc[ndf.loc[~isinfork,"v0"],"seg"].values
             
             return ndf
         else:
             return None
     
     
-    df = list(map(map_on_edges,range(tree["B"].shape[1])))
+    df = list(map(map_on_edges,range(graph["B"].shape[1])))
     df = pd.concat(df)
     df.sort_values("cell",inplace=True)
-    df.index=tree["cells_fitted"]
+    df.index=graph["cells_fitted"]
     
     df["edge"]=df.apply(lambda x: str(int(x[1]))+"|"+str(int(x[2])),axis=1)
 
@@ -178,7 +178,7 @@ def refine_pseudotime(
     """\
     Refine computed pseudotime.
     
-    Projection using principal tree can lead to compressed pseudotimes for the cells localised 
+    Projection using principal graph can lead to compressed pseudotimes for the cells localised 
     near the tips. To counteract this, diffusion based pseudotime is performed using Palantir [Setty19]_ on each
     segment separately.
     
@@ -229,23 +229,23 @@ def refine_pseudotime(
         delayed(palantir_on_seg)(
             s
         )
-        for s in tqdm(adata.uns["tree"]["pp_seg"].n.values.astype(str),file=sys.stdout)
+        for s in tqdm(adata.uns["graph"]["pp_seg"].n.values.astype(str),file=sys.stdout)
     )
 
     g=igraph.Graph(directed=True)
 
-    g.add_vertices(np.unique(adata.uns["tree"]["pp_seg"].loc[:,["from","to"]].values.flatten().astype(str)))
-    g.add_edges(adata.uns["tree"]["pp_seg"].loc[:,["from","to"]].values.astype(str))
+    g.add_vertices(np.unique(adata.uns["graph"]["pp_seg"].loc[:,["from","to"]].values.flatten().astype(str)))
+    g.add_edges(adata.uns["graph"]["pp_seg"].loc[:,["from","to"]].values.astype(str))
 
-    allpth=g.get_shortest_paths(str(adata.uns["tree"]["root"]),[tip for tip in g.vs["name"] if tip!=str(adata.uns["tree"]["root"])])
+    allpth=g.get_shortest_paths(str(adata.uns["graph"]["root"]),[tip for tip in g.vs["name"] if tip!=str(adata.uns["graph"]["root"])])
 
     for p in allpth:
         pth=np.array(g.vs["name"],dtype=int)[p]
         dt=0
         for i in range(len(pth)-1):
-            sel=adata.uns["tree"]["pp_seg"].loc[:,["from","to"]].apply(lambda x: np.all(x==pth[i:i+2]),axis=1).values
-            adata.obs.loc[adata.obs.seg==adata.uns["tree"]["pp_seg"].loc[sel,"n"].values[0],"t"]=(pseudotimes[np.argwhere(sel)[0][0]]*adata.uns["tree"]["pp_seg"].loc[sel,"d"].values[0]).values+dt
-            dt=dt+adata.uns["tree"]["pp_seg"].loc[sel,"d"].values[0]
+            sel=adata.uns["graph"]["pp_seg"].loc[:,["from","to"]].apply(lambda x: np.all(x==pth[i:i+2]),axis=1).values
+            adata.obs.loc[adata.obs.seg==adata.uns["graph"]["pp_seg"].loc[sel,"n"].values[0],"t"]=(pseudotimes[np.argwhere(sel)[0][0]]*adata.uns["graph"]["pp_seg"].loc[sel,"d"].values[0]).values+dt
+            dt=dt+adata.uns["graph"]["pp_seg"].loc[sel,"d"].values[0]
             
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(

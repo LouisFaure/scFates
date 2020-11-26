@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 from .. import logging as logg
 from .. import settings
+from .utils import getpath
 
 
 try:
@@ -120,25 +121,25 @@ def test_fork(
 
     genes = adata.var_names[adata.var.signi]
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
     uns_temp = adata.uns.copy()
     
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
-    g = igraph.Graph.Adjacency((tree["B"]>0).tolist(),mode="undirected")
+    g = igraph.Graph.Adjacency((graph["B"]>0).tolist(),mode="undirected")
     # Add edge weights and node labels.
-    g.es['weight'] = tree["B"][tree["B"].nonzero()]
+    g.es['weight'] = graph["B"][graph["B"].nonzero()]
 
     vpath = g.get_shortest_paths(root,leaves)
     interPP = list(set(vpath[0]) & set(vpath[1])) 
-    vpath = g.get_shortest_paths(tree["pp_info"].loc[interPP,:].time.idxmax(),leaves)
+    vpath = g.get_shortest_paths(graph["pp_info"].loc[interPP,:].time.idxmax(),leaves)
 
     fork_stat=list()
     upreg_stat=list()
@@ -150,7 +151,7 @@ def test_fork(
         df = adata.uns["pseudotime_list"][str(m)]
         def get_branches(i):
             x = vpath[i][1:]
-            segs=tree["pp_info"].loc[x,:].seg.unique()
+            segs=graph["pp_info"].loc[x,:].seg.unique()
             df_sub=df.loc[df.seg.isin(segs),:].copy(deep=True)
             df_sub.loc[:,"i"]=i
             return(df_sub)
@@ -160,7 +161,7 @@ def test_fork(
         if matw is None:
             brcells["w"]=1
         else:
-            brcells["w"] = matw[gene,:][:,tree["cells_fitted"]]
+            brcells["w"] = matw[gene,:][:,graph["cells_fitted"]]
 
         brcells.drop(["seg","edge"],axis=1,inplace=True)
         
@@ -351,12 +352,12 @@ def branch_specific(
     
     adata = adata.copy() if copy else adata
     
-    tree=adata.uns["tree"]
+    graph=adata.uns["graph"]
     
     uns_temp = adata.uns.copy()
     
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
@@ -457,14 +458,14 @@ def activation(adata: AnnData,
 
     """
     
-    tree = adata.uns["tree"]
+    graph = adata.uns["graph"]
     
     logg.info("testing activation", reset=True)
     
     uns_temp = adata.uns.copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    
@@ -477,14 +478,14 @@ def activation(adata: AnnData,
     
     for m in range(n_map):
         df = adata.uns["pseudotime_list"][str(m)]
-        edges = tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)  
 
         def get_df(feature):
             global rmgcv
-            subtree=getpath(img,root,tree["tips"],leave,tree,df).sort_values("t")
+            subtree=getpath(img,root,graph["tips"],leave,graph,df).sort_values("t")
             del subtree["branch"]
             # save parameters to dataframe
             subtree["deriv_cut"]=deriv_cut
@@ -535,7 +536,7 @@ def activation(adata: AnnData,
 
     fork = list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
     fork = np.array(img.vs["name"],dtype=int)[fork]
-    fork_t = adata.uns["tree"]["pp_info"].loc[fork,"time"].max()-pseudotime_offset
+    fork_t = adata.uns["graph"]["pp_info"].loc[fork,"time"].max()-pseudotime_offset
     
     stats["module"] = "early"
     stats.loc[stats["activation"]>fork_t,"module"]="late"
@@ -600,21 +601,3 @@ def get_activation(subtree):
     warnings.filters=wf
     
     return(act)
-
-
-def getpath(g,root,tips,tip,tree,df):
-    wf=warnings.filters.copy()
-    warnings.filterwarnings("ignore")
-    try:
-        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
-        segs = list()
-        for i in range(len(path)-1):
-            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
-                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=tree["pp_seg"].index[segs]
-        pth=df.loc[df.seg.astype(int).isin(segs),:].copy(deep=True)
-        pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filters=wf
-        return(pth)
-    except IndexError:
-        pass

@@ -22,6 +22,7 @@ from scipy import sparse
 
 from .. import logging as logg
 from .. import settings
+from .utils import getpath
 
 
 try:
@@ -113,7 +114,7 @@ def fit(
         significant features) and add fields to `adata`:
         
         `.layers['fitted']` 
-            fitted features on the tree for all mappings.
+            fitted features on the trajectory for all mappings.
     
     """
     
@@ -127,14 +128,14 @@ def fit(
     genes = adata.var_names[adata.var.signi]
     
     
-    tree = adata.uns["tree"]
-    tips = tree["tips"]
+    graph = adata.uns["graph"]
+    tips = graph["tips"]
     
     if leaves is not None:
         mlsc = adata.uns["milestones_colors"].copy()
         mlsc_temp = mlsc.copy()
         dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                       np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                       np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 
@@ -144,17 +145,17 @@ def fit(
         mlsc_temp=None
         
     if root is None:
-        root = tree["root"]
+        root = graph["root"]
         tips = tips[~np.isin(tips,root)] 
     root2=None
-    if "root2" in tree:
-        root2 = tree["root2"]
-        tips = tips[~np.isin(tips,tree["root2"])] 
+    if "root2" in graph:
+        root2 = graph["root2"]
+        tips = tips[~np.isin(tips,graph["root2"])] 
     
     if leaves is not None:
         tips=leaves
     
-    logg.info("fit features associated with the tree", reset=True, end="\n")
+    logg.info("fit features associated with the trajectory", reset=True, end="\n")
        
     stat_assoc=list()
     
@@ -163,14 +164,14 @@ def fit(
             df=adata.obs.copy()
         else:
             df=adata.uns["pseudotime_list"][str(m)]
-        edges=tree["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges=graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
         
-        temp = pd.concat(list(map(lambda tip: getpath(img,root,tips,tip,tree,df), tips)),axis=0)
+        temp = pd.concat(list(map(lambda tip: getpath(img,root,tips,tip,graph,df), tips)),axis=0)
         if root2 is not None:
-            temp = pd.concat([temp,pd.concat(list(map(lambda tip: getpath(img,root2,tips,tip,tree,df), tips)),axis=0)])
+            temp = pd.concat([temp,pd.concat(list(map(lambda tip: getpath(img,root2,tips,tip,graph,df), tips)),axis=0)])
         temp.drop(['edge','seg'],axis=1,inplace=True)
         temp.columns = ['t', 'branch']
         temp["gamma"] = gamma
@@ -223,28 +224,11 @@ def fit(
     
     logg.info("    finished (adata subsetted to keep only fitted features!)", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'fitted', fitted features on the tree for all mappings (adata.layers)"
+        "added\n" + "    'fitted', fitted features on the trajectory for all mappings (adata.layers)"
     )
     
     
     return adata if copy else None
-
-def getpath(g,root,tips,tip,tree,df):
-    wf=warnings.filters.copy()
-    warnings.filterwarnings("ignore")
-    try:
-        path=np.array(g.vs[:]["name"])[np.array(g.get_shortest_paths(str(root),str(tip)))][0]
-        segs = list()
-        for i in range(len(path)-1):
-            segs= segs + [np.argwhere((tree["pp_seg"][["from","to"]].astype(str).apply(lambda x: 
-                                                                                    all(x.values == path[[i,i+1]]),axis=1)).to_numpy())[0][0]]
-        segs=tree["pp_seg"].index[segs]
-        pth=df.loc[df.seg.astype(int).isin(segs),["t","seg","edge"]].copy()
-        pth["branch"]=str(root)+"_"+str(tip)
-        warnings.filters=wf
-        return(pth)
-    except IndexError:
-        pass
 
 def gt_fun(data):     
     sdf = data[0]

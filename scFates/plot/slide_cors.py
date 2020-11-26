@@ -18,7 +18,7 @@ def slide_cors(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None):
     
-    tree = adata.uns["tree"]  
+    graph = adata.uns["graph"]  
     
     uns_temp=adata.uns.copy()
     
@@ -27,7 +27,7 @@ def slide_cors(
         mlsc=list(map(rgb2hex,mlsc))
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(tree["pp_seg"][["from","to"]].values.flatten().astype(int))))
+                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
 
@@ -58,7 +58,7 @@ def slide_cors(
     fig, axs = plt.subplots(2,nwin,figsize=(nwin*3, 6))
 
     fig.subplots_adjust(hspace = .05, wspace=.05)
-    emb=adata[adata.uns["tree"]["cells_fitted"],:].obsm["X_"+basis]
+    emb=adata[adata.uns["graph"]["cells_fitted"],:].obsm["X_"+basis]
     
     for i in range(nwin):
         freq=freqs[i]

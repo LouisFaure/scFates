@@ -24,4 +24,6 @@ setup(name='scFates',
       packages=find_packages(),
       package_dir={'scFates': 'scFates'},
       install_requires=requirements,
+      include_package_data=True,
+      package_data={'': ['datasets/*.h5ad']},
       zip_safe=False)
