@@ -13,6 +13,7 @@ import igraph
 import warnings
 import itertools
 import elpigraph
+import math
 
 from ..plot.trajectory import trajectory as plot_trajectory
 from .. import logging as logg
@@ -124,6 +125,7 @@ def tree(
     ppt_lambda: Optional[Union[float, int]] = 1,
     ppt_nsteps: int = 50,
     ppt_err_cut: float = 5e-3,
+    ppt_gpu_tpb: int = 16,
     epg_lambda: Optional[Union[float, int]] = 0.01,
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
@@ -167,6 +169,8 @@ def tree(
         Number of steps for the optimisation process of simpleppt.
     ppt_err_cut
         Stop simpleppt algorithm if proximity of principal points between iterations less than defiend value.
+    ppt_gpu_tpb
+        Threads per block parameter for cuda computations
     epg_lambda
         Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20]_.
     epg_mu
@@ -221,7 +225,7 @@ def tree(
         tree_ppt(adata,M=Nodes,use_rep=use_rep,ndims_rep=ndims_rep,
                  init=init,sigma=ppt_sigma,lam=ppt_lambda,
                  nsteps=ppt_nsteps,err_cut=ppt_err_cut,
-                 device=device,seed=seed)
+                 device=device,gpu_tbp=ppt_gpu_tpb,seed=seed)
                  
     elif method == "epg":
         logg.hint(
@@ -250,6 +254,7 @@ def tree_ppt(
     nsteps: int = 50,
     err_cut: float = 5e-3,
     device: str = "cpu",
+    gpu_tbp: int = 16,
     seed: Optional[int] = None):
     
     
@@ -268,11 +273,14 @@ def tree_ppt(
         np.random.seed(seed)
     
     if device=="gpu":
+        import rmm 
+        rmm.reinitialize(managed_memory=True)
+        assert(rmm.is_initialized())
         import cupy as cp
         from cuml.metrics import pairwise_distances
-        from .utils import cor_mat_gpu
+        from .utils import process_R_gpu, norm_R_gpu, cor_mat_gpu, mst_gpu, matmul
         
-        X_gpu=cp.asarray(X_t)
+        X_gpu=cp.asarray(X_t,dtype=np.float64)
         W=cp.empty_like(X_gpu)
         W.fill(1)
 
@@ -287,23 +295,36 @@ def tree_ppt(
         iterator = tqdm(range(nsteps),file=sys.stdout,desc="    fitting")
         for i in iterator:
             R = pairwise_distances(X_gpu.T,F_mat_gpu.T)
-            R = (cp.exp(-R/sigma))
-            R = (R.T/R.sum(axis=1)).T
-            R[cp.isnan(R)]=0
-            d = pairwise_distances(F_mat_gpu.T)
+        
+            threadsperblock = (gpu_tbp, gpu_tbp)
+            blockspergrid_x = math.ceil(R.shape[0] / threadsperblock[0])
+            blockspergrid_y = math.ceil(R.shape[1] / threadsperblock[1])
+            blockspergrid = (blockspergrid_x, blockspergrid_y)
+            
+            process_R_gpu[blockspergrid, threadsperblock](R,sigma)
+            Rsum=R.sum(axis=1)
+            norm_R_gpu[blockspergrid, threadsperblock](R,Rsum)
 
-            csr = csr_matrix(np.triu(cp.asnumpy(d),k=-1))
-            Tcsr = minimum_spanning_tree(csr)
-            mat=Tcsr.toarray()
-            mat = mat + mat.T - np.diag(np.diag(mat))
-            B=cp.asarray((mat>0).astype(int))
+            d = pairwise_distances(F_mat_gpu.T)
+            mst = mst_gpu(d)
+            mat = mst + mst.T - cp.diag(cp.diag(mst.A))
+            B=((mat>0).astype(int))
 
             D = cp.identity(B.shape[0])*B.sum(axis=0)
             L = D-B
             M = L*lam + cp.identity(R.shape[1])*R.sum(axis=0)
             old_F = F_mat_gpu
 
-            F_mat_gpu=cp.linalg.solve(M.T,(cp.dot(X_gpu*W,R)).T).T
+            dotprod=cp.zeros((X_gpu.shape[0],R.shape[1]))
+            TPB = 16
+            threadsperblock = (gpu_tbp, gpu_tbp)
+            blockspergrid_x = math.ceil(dotprod.shape[0] / threadsperblock[0])
+            blockspergrid_y = math.ceil(dotprod.shape[1] / threadsperblock[1])
+            blockspergrid = (blockspergrid_x, blockspergrid_y)
+
+            matmul[blockspergrid, threadsperblock]((X_gpu*W),R,dotprod)
+
+            F_mat_gpu=cp.linalg.solve(M.T,dotprod.T).T
 
             err = cp.max(cp.sqrt((F_mat_gpu-old_F).sum(axis=0)**2)/cp.sqrt((F_mat_gpu**2).sum(axis=0)))
             if err < err_cut:
@@ -329,9 +350,9 @@ def tree_ppt(
             "euclidean"]
     else:
         from sklearn.metrics import pairwise_distances
-        from .utils import cor_mat_cpu
+        from .utils import process_R_cpu, norm_R_cpu, cor_mat_cpu
 
-        X_cpu=np.asarray(X_t)
+        X_cpu=np.asarray(X_t,dtype=np.float64)
         W=np.empty_like(X_cpu)
         W.fill(1)
 
@@ -345,17 +366,19 @@ def tree_ppt(
         err=100
 
         #while ((j <= nsteps) & (err > err_cut)):
-        iterator = tqdm(range(nsteps),file=sys.stdout,desc="    ")
+        iterator = tqdm(range(nsteps),file=sys.stdout,desc="    fitting")
         for i in iterator:
             R = pairwise_distances(X_cpu.T,F_mat_cpu.T)
-            R = (np.exp(-R/sigma))
-            R = (R.T/R.sum(axis=1)).T
-            R[np.isnan(R)]=0
+        
+            process_R_cpu(R,sigma)
+            Rsum=R.sum(axis=1)
+            norm_R_cpu(R,Rsum)
+
             d = pairwise_distances(F_mat_cpu.T)
 
             csr = csr_matrix(np.triu(d,k=-1))
             Tcsr = minimum_spanning_tree(csr)
-            mat=Tcsr.toarray()
+            mat = Tcsr.toarray()
             mat = mat + mat.T - np.diag(np.diag(mat))
             B=((mat>0).astype(int))
 
