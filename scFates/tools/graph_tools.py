@@ -14,6 +14,7 @@ import warnings
 import itertools
 import elpigraph
 import math
+from scipy import sparse
 
 from ..plot.trajectory import trajectory as plot_trajectory
 from .. import logging as logg
@@ -114,6 +115,7 @@ def curve(
     return adata if copy else None
 
 
+
 def tree(
     adata: AnnData,
     Nodes: int = None,
@@ -123,6 +125,7 @@ def tree(
     init: Optional[DataFrame] = None,
     ppt_sigma: Optional[Union[float, int]] = 0.1,
     ppt_lambda: Optional[Union[float, int]] = 1,
+    ppt_metric: str = 'euclidean',
     ppt_nsteps: int = 50,
     ppt_err_cut: float = 5e-3,
     ppt_gpu_tpb: int = 16,
@@ -165,12 +168,17 @@ def tree(
         Regularization parameter for simpleppt [Mao15]_.
     ppt_lambda
         Parameter for simpleppt, penalty for the tree length [Mao15]_.
+    ppt_metric
+        The metric to use to compute distances in high dimensional space. 
+        For compatible metrics, check the documentation of
+        sklearn.metrics.pairwise_distances if using cpu or
+        cuml.metrics.pairwise_distances if using gpu.
     ppt_nsteps
         Number of steps for the optimisation process of simpleppt.
     ppt_err_cut
         Stop simpleppt algorithm if proximity of principal points between iterations less than defiend value.
     ppt_gpu_tpb
-        Threads per block parameter for cuda computations
+        Threads per block parameter for cuda computations.
     epg_lambda
         Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20]_.
     epg_mu
@@ -220,10 +228,10 @@ def tree(
     if method == "ppt":
         logg.hint(
         "parameters used \n"
-        "    "+str(Nodes)+ " principal points, sigma = "+str(ppt_sigma)+", lambda = "+str(ppt_lambda)
+        "    "+str(Nodes)+ " principal points, sigma = "+str(ppt_sigma)+", lambda = "+str(ppt_lambda)+", metric = "+ppt_metric
         )
         tree_ppt(adata,M=Nodes,use_rep=use_rep,ndims_rep=ndims_rep,
-                 init=init,sigma=ppt_sigma,lam=ppt_lambda,
+                 init=init,sigma=ppt_sigma,lam=ppt_lambda,metric=ppt_metric,
                  nsteps=ppt_nsteps,err_cut=ppt_err_cut,
                  device=device,gpu_tbp=ppt_gpu_tpb,seed=seed)
                  
@@ -251,6 +259,7 @@ def tree_ppt(
     init: Optional[DataFrame] = None,
     sigma: Optional[Union[float, int]] = 0.1,
     lam: Optional[Union[float, int]] = 1,
+    metric: str = "euclidean",
     nsteps: int = 50,
     err_cut: float = 5e-3,
     device: str = "cpu",
@@ -258,15 +267,28 @@ def tree_ppt(
     seed: Optional[int] = None):
     
     
-    
-    if use_rep is None:
-        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
-        n_pcs = None if use_rep == "X" else n_pcs
-    elif use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
+    if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
         use_rep = f"X_{use_rep}"
     
-    X=DataFrame(adata.obsm[use_rep],index=adata.obs_names)
+    if (use_rep not in adata.layers.keys()) & (use_rep not in adata.obsm.keys()) & (use_rep != "X"):
+        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
+        n_pcs = None if use_rep == "X" else n_pcs
     
+
+    if use_rep == "X":
+        if sparse.issparse(adata.X):
+            X = DataFrame(adata.X.A,index=adata.obs_names)
+        else:
+            X = DataFrame(adata.X,index=adata.obs_names)
+    elif use_rep in adata.layers.keys():
+        if sparse.issparse(adata.layers[use_rep]):
+            X = DataFrame(adata.layers[use_rep].A,index=adata.obs_names)
+        else:
+            X = DataFrame(adata.layers[use_rep],index=adata.obs_names)
+    elif use_rep in adata.obsm.keys():
+        X=DataFrame(adata.obsm[use_rep],index=adata.obs_names)
+    
+        
     X_t=X.values.T
     
     if seed is not None:
@@ -294,7 +316,7 @@ def tree_ppt(
 
         iterator = tqdm(range(nsteps),file=sys.stdout,desc="    fitting")
         for i in iterator:
-            R = pairwise_distances(X_gpu.T,F_mat_gpu.T)
+            R = pairwise_distances(X_gpu.T,F_mat_gpu.T,metric=metric)
         
             threadsperblock = (gpu_tbp, gpu_tbp)
             blockspergrid_x = math.ceil(R.shape[0] / threadsperblock[0])
@@ -305,7 +327,7 @@ def tree_ppt(
             Rsum=R.sum(axis=1)
             norm_R_gpu[blockspergrid, threadsperblock](R,Rsum)
 
-            d = pairwise_distances(F_mat_gpu.T)
+            d = pairwise_distances(F_mat_gpu.T,metric=metric)
             mst = mst_gpu(d)
             mat = mst + mst.T - cp.diag(cp.diag(mst.A))
             B=((mat>0).astype(int))
@@ -344,6 +366,9 @@ def tree_ppt(
         g = igraph.Graph.Adjacency((B>0).tolist(),mode="undirected")
         tips = np.argwhere(np.array(g.degree())==1).flatten()
         forks = np.argwhere(np.array(g.degree())>2).flatten()
+        
+        if len(tips)>30:
+            logg.warn("    more than 30 tips detected!")
 
         r = [X.index.tolist(),cp.asnumpy(score),cp.asnumpy(F_mat_gpu),cp.asnumpy(R),
              (B),cp.asnumpy(L),cp.asnumpy(d),lam,sigma,nsteps,tips,forks,
@@ -368,13 +393,13 @@ def tree_ppt(
         #while ((j <= nsteps) & (err > err_cut)):
         iterator = tqdm(range(nsteps),file=sys.stdout,desc="    fitting")
         for i in iterator:
-            R = pairwise_distances(X_cpu.T,F_mat_cpu.T)
+            R = pairwise_distances(X_cpu.T,F_mat_cpu.T,metric=metric)
         
             process_R_cpu(R,sigma)
             Rsum=R.sum(axis=1)
             norm_R_cpu(R,Rsum)
 
-            d = pairwise_distances(F_mat_cpu.T)
+            d = pairwise_distances(F_mat_cpu.T,metric=metric)
 
             csr = csr_matrix(np.triu(d,k=-1))
             Tcsr = minimum_spanning_tree(csr)
@@ -449,13 +474,26 @@ def tree_epg(
     seed: Optional[int] = None):
     
 
-    if use_rep is None:
-        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
-        n_pcs = None if use_rep == "X" else n_pcs
-    elif use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
+    if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
         use_rep = f"X_{use_rep}"
     
-    X=DataFrame(adata.obsm[use_rep],index=adata.obs_names)
+    if (use_rep not in adata.layers.keys()) & (use_rep not in adata.obsm.keys()) & (use_rep != "X"):
+        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
+        n_pcs = None if use_rep == "X" else n_pcs
+    
+
+    if use_rep == "X":
+        if sparse.issparse(adata.X):
+            X = DataFrame(adata.X.A,index=adata.obs_names)
+        else:
+            X = DataFrame(adata.X,index=adata.obs_names)
+    elif use_rep in adata.layers.keys():
+        if sparse.issparse(adata.layers[use_rep]):
+            X = DataFrame(adata.layers[use_rep].A,index=adata.obs_names)
+        else:
+            X = DataFrame(adata.layers[use_rep],index=adata.obs_names)
+    elif use_rep in adata.obsm.keys():
+        X=DataFrame(adata.obsm[use_rep],index=adata.obs_names)
     
     X_t=X.values.T
     
@@ -548,13 +586,26 @@ def curve_epg(
     seed: Optional[int] = None):
     
 
-    if use_rep is None:
-        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
-        n_pcs = None if use_rep == "X" else n_pcs
-    elif use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
+    if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
         use_rep = f"X_{use_rep}"
     
-    X=DataFrame(adata.obsm[use_rep],index=adata.obs_names)
+    if (use_rep not in adata.layers.keys()) & (use_rep not in adata.obsm.keys()) & (use_rep != "X"):
+        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
+        n_pcs = None if use_rep == "X" else n_pcs
+    
+
+    if use_rep == "X":
+        if sparse.issparse(adata.X):
+            X = DataFrame(adata.X.A,index=adata.obs_names)
+        else:
+            X = DataFrame(adata.X,index=adata.obs_names)
+    elif use_rep in adata.layers.keys():
+        if sparse.issparse(adata.layers[use_rep]):
+            X = DataFrame(adata.layers[use_rep].A,index=adata.obs_names)
+        else:
+            X = DataFrame(adata.layers[use_rep],index=adata.obs_names)
+    elif use_rep in adata.obsm.keys():
+        X=DataFrame(adata.obsm[use_rep],index=adata.obs_names)
     
     X_t=X.values.T
     
