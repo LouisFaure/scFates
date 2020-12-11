@@ -144,11 +144,19 @@ def test_fork(
     fork_stat=list()
     upreg_stat=list()
     
+    
+    
+    
     for m in range(n_map):
         logg.info("    mapping: "+str(m))
         ## Diff expr between forks
         
         df = adata.uns["pseudotime_list"][str(m)]
+        edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        img = igraph.Graph()
+        img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_edges(edges)  
+        
         def get_branches(i):
             x = vpath[i][1:]
             segs=graph["pp_info"].loc[x,:].seg.unique()
@@ -195,21 +203,20 @@ def test_fork(
         logg.info("    test for upregulation for each leave vs root")
         leaves_stat=list()
         for leave in leaves:
-            vpath = g.get_shortest_paths(root,leave)
-            totest = get_branches(0)
+            subtree = getpath(img,root,graph["tips"],leave,graph,df).sort_values("t")
 
             if layer is None:
                 if sparse.issparse(adata.X):
-                    Xgenes = adata[totest.index,genes].X.A.T.tolist()
+                    Xgenes = adata[subtree.index,genes].X.A.T.tolist()
                 else:
-                    Xgenes = adata[totest.index,genes].X.T.tolist()
+                    Xgenes = adata[subtree.index,genes].X.T.tolist()
             else:
                 if sparse.issparse(adata.layers[layer]):
-                    Xgenes = adata[totest.index,genes].layers[layer].A.T.tolist()
+                    Xgenes = adata[subtree.index,genes].layers[layer].A.T.tolist()
                 else:
-                    Xgenes = adata[totest.index,genes].layers[layer].T.tolist()
+                    Xgenes = adata[subtree.index,genes].layers[layer].T.tolist()
 
-            data = list(zip([totest]*len(Xgenes),Xgenes))
+            data = list(zip([subtree]*len(Xgenes),Xgenes))
 
             stat = Parallel(n_jobs=n_jobs)(
                     delayed(test_upreg)(
