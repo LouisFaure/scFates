@@ -174,8 +174,9 @@ def test_fork(
         brcells.drop(["seg","edge"],axis=1,inplace=True)
         
         if rescale:
-            brcells.loc[brcells.i==0,"t"]=(brcells.loc[brcells.i==0].t-brcells.loc[brcells.i==0].t.min())/(brcells.loc[brcells.i==0].t.max()-brcells.loc[brcells.i==0].t.min())
-            brcells.loc[brcells.i==1,"t"]=(brcells.loc[brcells.i==1].t-brcells.loc[brcells.i==1].t.min())/(brcells.loc[brcells.i==1].t.max()-brcells.loc[brcells.i==1].t.min())
+            for i in brcells.i.unique():
+                brcells.loc[brcells.i==i,"t"]=(brcells.loc[brcells.i==i].t-brcells.loc[brcells.i==i].t.min())/(brcells.loc[brcells.i==i].t.max()-brcells.loc[brcells.i==i].t.min())
+
 
         if layer is None:
             if sparse.issparse(adata.X):
@@ -197,24 +198,28 @@ def test_fork(
                 for d in tqdm(range(len(data)),file=sys.stdout,desc="    differential expression")
             )
 
-        fork_stat = fork_stat + [stat]
+        fork_stat = fork_stat + [pd.DataFrame(stat,index=genes,columns=milestones+["de_p"])]
+        
+        topleave=fork_stat[m].iloc[:,:-1].idxmax(axis=1).apply(lambda mil: dct[mil])
         
         ## test for upregulation
         logg.info("    test for upregulation for each leave vs root")
         leaves_stat=list()
         for leave in leaves:
             subtree = getpath(img,root,graph["tips"],leave,graph,df).sort_values("t")
-
+            
+            topgenes = topleave[topleave==leave].index
+            
             if layer is None:
                 if sparse.issparse(adata.X):
-                    Xgenes = adata[subtree.index,genes].X.A.T.tolist()
+                    Xgenes = adata[subtree.index,topgenes].X.A.T.tolist()
                 else:
-                    Xgenes = adata[subtree.index,genes].X.T.tolist()
+                    Xgenes = adata[subtree.index,topgenes].X.T.tolist()
             else:
                 if sparse.issparse(adata.layers[layer]):
-                    Xgenes = adata[subtree.index,genes].layers[layer].A.T.tolist()
+                    Xgenes = adata[subtree.index,topgenes].layers[layer].A.T.tolist()
                 else:
-                    Xgenes = adata[subtree.index,genes].layers[layer].T.tolist()
+                    Xgenes = adata[subtree.index,topgenes].layers[layer].T.tolist()
 
             data = list(zip([subtree]*len(Xgenes),Xgenes))
 
@@ -224,34 +229,34 @@ def test_fork(
                     )
                     for d in tqdm(range(len(data)),file=sys.stdout,desc="    leave "+str(keys[vals==leave][0]))
                 )
-            stat=pd.DataFrame(stat,index=genes,columns=[str(keys[vals==leave][0])+"_A",str(keys[vals==leave][0])+"_p"])
+            stat=pd.DataFrame(stat,index=topgenes,columns=["up_A","up_p"])
             leaves_stat=leaves_stat+[stat]
             
-        upreg_stat=upreg_stat+[pd.concat(leaves_stat,axis=1)]
+        upreg_stat=upreg_stat+[pd.concat(leaves_stat).loc[genes]]
     
     
     # summarize fork statistics
-    fork_stat=list(map(lambda x: pd.DataFrame(x,index=genes,columns=["effect","p_val"]),fork_stat))
+    #fork_stat=list(map(lambda x: pd.DataFrame(x,index=genes,columns=["effect","p_val"]),fork_stat))
 
-    fdr_l=list(map(lambda x: pd.Series(multipletests(x.p_val,method="bonferroni")[1],
+    fdr_l=list(map(lambda x: pd.Series(multipletests(x.de_p,method="bonferroni")[1],
                                        index=x.index,name="fdr"),fork_stat))
 
-    st_l=list(map(lambda x: pd.Series((x.p_val<5e-2).values*1,
+    st_l=list(map(lambda x: pd.Series((x.de_p<5e-2).values*1,
                   index=x.index,name="signi_p"),fork_stat))
     stf_l=list(map(lambda x: pd.Series((x<5e-2).values*1,
                   index=x.index,name="signi_fdr"),fdr_l))
 
     fork_stat=list(map(lambda w,x,y,z: pd.concat([w,x,y,z],axis=1),fork_stat,fdr_l,st_l,stf_l))
 
-    effect=pd.concat(list(map(lambda x: x.effect,fork_stat)),axis=1).median(axis=1)
-    p_val=pd.concat(list(map(lambda x: x.p_val,fork_stat)),axis=1).median(axis=1)
+    effect=list(map(lambda i: pd.concat(list(map(lambda x: x.iloc[:,i],fork_stat)),axis=1).median(axis=1),range(len(milestones))))
+    p_val=pd.concat(list(map(lambda x: x.de_p,fork_stat)),axis=1).median(axis=1)
     fdr=pd.concat(list(map(lambda x: x.fdr,fork_stat)),axis=1).median(axis=1)
     signi_p=pd.concat(list(map(lambda x: x.signi_p,fork_stat)),axis=1).mean(axis=1)
     signi_fdr=pd.concat(list(map(lambda x: x.signi_fdr,fork_stat)),axis=1).mean(axis=1)
 
     
     colnames=fork_stat[0].columns
-    fork_stat=pd.concat([effect,p_val,fdr,signi_p,signi_fdr],axis=1)
+    fork_stat=pd.concat(effect+[p_val,fdr,signi_p,signi_fdr],axis=1)
     fork_stat.columns=colnames
     
     # summarize upregulation stats
@@ -260,7 +265,7 @@ def test_fork(
                                   pd.concat(list(map(lambda x: 
                                                      x.iloc[:,i]
                                                      ,upreg_stat)),axis=1).median(axis=1),
-                                  range(4))),axis=1)
+                                  range(2))),axis=1)
     upreg_stat.columns=colnames
     
     
@@ -268,14 +273,14 @@ def test_fork(
     adata.uns=uns_temp
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
+    name=root_milestone+"->"+"<>".join(milestones)
     
     #adata.uns[name]["fork"] = summary_stat
     
     adata.uns[name] = {"fork":summary_stat}
     logg.hint(
         "added \n"
-        "    '"+name+"/fork', DataFrame with fork test results (adata.uns)")
+        "    .uns['"+name+"']['fork'], DataFrame with fork test results.")
 
     return adata if copy else None
 
@@ -298,8 +303,10 @@ def gt_fun(data):
                       data=sdf,weights=sdf["w"])
         return rmgcv.summary_gam(m)[3][1]
 
-    g = sdf.groupby("i")
-    return [g.apply(lambda x: np.mean(x.exp)).diff(periods=-1)[0],gamfit(sdf)]
+    Amps = sdf.groupby("i").apply(lambda x: np.mean(x.exp))
+    return (Amps-Amps.max()).tolist()+[gamfit(sdf)]
+
+
 
 
 def test_upreg(data):
@@ -316,11 +323,10 @@ def branch_specific(
     adata: AnnData,
     root_milestone,
     milestones,
-    effect_b1: float = None,
-    effect_b2: float = None,
+    effect: float = None,
     stf_cut: float = 0.7,
-    pd_a: float = 0,
-    pd_p: float = 5e-2,
+    up_A: float = 0,
+    up_p: float = 5e-2,
     copy: bool = False,
     ):
     
@@ -335,15 +341,13 @@ def branch_specific(
         tip defining progenitor branch.
     milestones
         tips defining the progenies branches.
-    effect_b1
-        expression differences to call gene as differentially upregulated at branch 1.
-    effect_b2
-        expression differences to call gene as differentially upregulated at branch 2.
+    effect
+        minimum expression differences to call gene as differentially upregulated.
     stf_cut
         fraction of projections when gene passed fdr < 0.05.
-    pd_a
+    up_A
         minimum expression increase at derivative compared to progenitor branches to call gene as branch-specific.
-    pd_p
+    up_p
         p-value of expression changes of derivative compared to progenitor branches to call gene as branch-specific.
     copy
         Return a copy instead of writing to adata.
@@ -359,54 +363,26 @@ def branch_specific(
     
     adata = adata.copy() if copy else adata
     
-    graph=adata.uns["graph"]
-    
     uns_temp = adata.uns.copy()
     
-    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
-    keys = np.array(list(dct.keys()))
-    vals = np.array(list(dct.values()))
-                   
-    leaves=list(map(lambda leave: dct[leave],milestones))
-    root=dct[root_milestone]
+    name=root_milestone+"->"+"<>".join(milestones)
     
-    name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
-    stats = adata.uns[name]["fork"]
+    df=adata.uns[name]['fork']
     
-    stats["branch"] = "none" 
+    df=df[(df.up_A>up_A) & (df.up_p<up_p) & (df.signi_fdr>stf_cut)]
+    df=df[((df.iloc[:,:3]+effect)>0).sum(axis=1)==1]
+    df["branch"]=df.iloc[:,:3].idxmax(axis=1)
     
-    idx_a=stats.apply(lambda x: (x.effect > effect_b1) &
-                                        (x[5]>pd_a) & (x[6]<pd_p) & (x.signi_fdr >stf_cut),
-                                         axis=1)
-    
-    idx_a=idx_a[idx_a].index
-    
-    logg.info("    "+str(len(idx_a))+" features found to be specific to leave "+str(keys[vals==leaves[0]][0]))
-    
-    
-
-    idx_b=stats.apply(lambda x: (x.effect < -effect_b2) &
-                                            (x[7]>pd_a) & (x[8]<pd_p) & (x.signi_fdr >stf_cut),
-                                             axis=1)
-    
-    idx_b=idx_b[idx_b].index
-    
-    logg.info("    "+str(len(idx_b))+" features found to be specific to leave "+str(keys[vals==leaves[1]][0]))
-
-    stats.loc[idx_a,"branch"] = str(keys[vals==leaves[0]][0])
-    stats.loc[idx_b,"branch"] = str(keys[vals==leaves[1]][0])
-    
-    stats = stats.loc[stats.branch!="none",:]
+    logg.info("    "+"branch specific features: "+", ".join([": ".join(st) for st in list(zip(df.value_counts("branch").index,df.value_counts("branch").values.astype(str)))]))
     
     adata.uns=uns_temp
     
-    adata.uns[name]["fork"] = stats
+    adata.uns[name]["fork"] = df
     
     logg.info("    finished", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "updated \n"
-        "    '"+name+"/fork', DataFrame updated with additionnal 'branch' column (adata.uns)")
+        "    .uns['"+name+"']['fork'], DataFrame updated with additionnal 'branch' column.")
 
     return adata if copy else None
 
@@ -479,16 +455,20 @@ def activation(adata: AnnData,
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
-    name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
-    
+    name=root_milestone+"->"+"<>".join(milestones)
     stats = adata.uns[name]["fork"]
+    
+    edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+    img = igraph.Graph()
+    img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
+    img.add_edges(edges)  
+
+    allact = []
+    
     
     for m in range(n_map):
         df = adata.uns["pseudotime_list"][str(m)]
-        edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
-        img = igraph.Graph()
-        img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
-        img.add_edges(edges)  
+        
 
         def get_df(feature):
             global rmgcv
@@ -514,36 +494,30 @@ def activation(adata: AnnData,
             warnings.filters=wf
             return subtree
         
-        genes1 = stats.index[stats["branch"]==str(keys[vals==leaves[0]][0])]
-        leave = leaves[0]
-        dfs=list(map(get_df,genes1))
-
+        acti = pd.Series(0,index = stats.index)
         
-        acts1 = Parallel(n_jobs=n_jobs)(
-            delayed(get_activation)(
-                dfs[d]
+        for i in range(len(leaves)):
+            genes = stats.index[stats["branch"]==str(keys[vals==leaves[i]][0])]
+            leave = leaves[i]
+            dfs=list(map(get_df,genes))
+            acti.loc[genes] = Parallel(n_jobs=n_jobs)(
+                delayed(get_activation)(
+                    dfs[d]
+                )
+                for d in tqdm(range(len(dfs)),file=sys.stdout,desc="    leave "+str(keys[vals==leave][0]))
             )
-            for d in tqdm(range(len(dfs)),file=sys.stdout,desc="    leave "+str(keys[vals==leave][0]))
-        )
-
-        genes2=stats.index[stats["branch"]==str(keys[vals==leaves[1]][0])]
-        leave=leaves[1]
-        dfs=list(map(get_df,genes2))
+            
         
-        acts2 = Parallel(n_jobs=n_jobs)(
-            delayed(get_activation)(
-                dfs[d]
-            )
-            for d in tqdm(range(len(dfs)),file=sys.stdout,desc="    leave "+str(keys[vals==leave][0]))
-        )
+        allact = allact + [acti]
+        
+    
+    stats["activation"] = pd.concat(allact,axis=1).median(axis=1).values
 
-    stats["activation"] = 0
-    stats.loc[genes1,"activation"] = acts1
-    stats.loc[genes2,"activation"] = acts2
-
-    fork = list(set(img.get_shortest_paths(str(root),str(leaves[0]))[0]).intersection(img.get_shortest_paths(str(root),str(leaves[1]))[0]))
-    fork = np.array(img.vs["name"],dtype=int)[fork]
-    fork_t = adata.uns["graph"]["pp_info"].loc[fork,"time"].max()-pseudotime_offset
+    common_seg = list(set.intersection(*list(map(lambda l: set(img.get_shortest_paths(str(root),str(l))[0]),leaves))))
+    common_seg = np.array(img.vs["name"],dtype=int)[common_seg]
+    fork_t = adata.uns["graph"]["pp_info"].loc[common_seg,"time"].max()-pseudotime_offset
+    
+    logg.info("    threshold pseudotime is: "+str(fork_t))
     
     stats["module"] = "early"
     stats.loc[stats["activation"]>fork_t,"module"]="late"
@@ -552,18 +526,16 @@ def activation(adata: AnnData,
     
     adata.uns[name]["fork"] = stats
     
-    c_early = np.sum((stats.branch==str(keys[vals==leaves[0]][0])) & (stats.module=="early"))
-    c_late = np.sum((stats.branch==str(keys[vals==leaves[0]][0])) & (stats.module=="late"))
-    logg.info("    "+str(c_early)+" early and "+str(c_late)+" late features specific to leave "+str(keys[vals==leaves[0]][0]))
+    for l in leaves:
+        c_early = np.sum((stats.branch==str(keys[vals==l][0])) & (stats.module=="early"))
+        c_late = np.sum((stats.branch==str(keys[vals==l][0])) & (stats.module=="late"))
+        logg.info("    "+str(c_early)+" early and "+str(c_late)+" late features specific to leave "+str(keys[vals==l][0]))
    
-    c_early = np.sum((stats.branch==str(keys[vals==leaves[1]][0])) & (stats.module=="early"))
-    c_late = np.sum((stats.branch==str(keys[vals==leaves[1]][0])) & (stats.module=="late"))
-    logg.info("    "+str(c_early)+" early and "+str(c_late)+" late features specific to leave "+str(keys[vals==leaves[1]][0]))
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "updated \n"
-        "    '"+name+"/fork', DataFrame updated with additionnal 'activation' and 'module' columns (adata.uns)")
+        "    .uns['"+name+"']['fork'], DataFrame updated with additionnal 'activation' and 'module' columns.")
     
     return adata if copy else None
 
