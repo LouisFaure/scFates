@@ -254,7 +254,7 @@ def trajectory_pseudotime(
     ax.add_collection(lc)
 
     ax.scatter(proj[graph["tips"],0],proj[graph["tips"],1],zorder=105,
-               c=sm.to_rgba(v["pp_info"].time.loc[graph["tips"]]),s=140*scale_path)
+               c=sm.to_rgba(graph["pp_info"].time.loc[graph["tips"]]),s=140*scale_path)
             
     savefig_or_show('pseudotime', show=show, save=save)
     

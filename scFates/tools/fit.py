@@ -172,8 +172,7 @@ def fit(
         temp = pd.concat(list(map(lambda tip: getpath(img,root,tips,tip,graph,df), tips)),axis=0)
         if root2 is not None:
             temp = pd.concat([temp,pd.concat(list(map(lambda tip: getpath(img,root2,tips,tip,graph,df), tips)),axis=0)])
-        temp.drop(['edge','seg'],axis=1,inplace=True)
-        temp.columns = ['t', 'branch']
+        temp = temp[['t','branch']]
         temp["gamma"] = gamma
         #temp = temp[~temp.index.duplicated(keep='first')]
         if layer is None:

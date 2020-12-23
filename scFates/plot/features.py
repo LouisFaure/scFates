@@ -184,6 +184,9 @@ def cluster(
                 f.write("%s\n" % item)
     
     savefig_or_show('cluster', show=show, save=save)
+    
+    if show:
+        return hm
 
     
 def trends(
@@ -371,6 +374,7 @@ def single_trend(
     colormap: str = "RdBu_r",
     colorexp = None,
     figsize = (10,5.5),
+    show_title = True,
     emb_back = None,
     size_cells = None,
     highlight = False,
@@ -381,7 +385,8 @@ def single_trend(
     save: Union[str, bool, None] = None):
   
     fig, (ax1, ax2) = plt.subplots(1, 2,figsize=figsize,constrained_layout=True)
-    fig.suptitle(feature)
+    if show_title:
+        fig.suptitle(feature)
     
     color_key = "seg_colors"
     if color_key not in adata.uns:
@@ -458,3 +463,6 @@ def single_trend(
     plt.tight_layout()
     
     savefig_or_show('single_trend', show=show, save=save)    
+    
+    if show is False:
+        return (ax1,ax2)

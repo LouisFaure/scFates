@@ -57,12 +57,9 @@ def cluster(
     adata = data.copy() if copy else adata
     
     if device == "gpu":
-        import grapheno
-        import cudf
+        from . import grapheno_modified
         logg.info('    clustering using grapheno')
-        clusters = grapheno.cluster(cudf.DataFrame(adata.layers["fitted"],
-                                        index=adata.obs_names,
-                                        columns=adata.var_names).T,
+        clusters = grapheno_modified.cluster(adata.layers["fitted"].T,
                          metric=metric,n_neighbors=knn)[0].get()
         
     elif device =="cpu":
