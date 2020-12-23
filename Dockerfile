@@ -1,4 +1,4 @@
-FROM rapidsai/rapidsai-nightly:0.17-cuda11.0-runtime-ubuntu18.04-py3.8
+FROM rapidsai/rapidsai:0.17-cuda11.0-runtime-ubuntu18.04
 
 SHELL ["conda", "run", "-n", "rapids", "/bin/bash", "-c"]
 
