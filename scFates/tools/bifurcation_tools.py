@@ -370,8 +370,8 @@ def branch_specific(
     df=adata.uns[name]['fork']
     
     df=df[(df.up_A>up_A) & (df.up_p<up_p) & (df.signi_fdr>stf_cut)]
-    df=df[((df.iloc[:,:3]+effect)>0).sum(axis=1)==1]
-    df["branch"]=df.iloc[:,:3].idxmax(axis=1)
+    df=df[((df.iloc[:,:len(milestones)]+effect)>0).sum(axis=1)==1]
+    df["branch"]=df.iloc[:,:len(milestones)].idxmax(axis=1)
     
     logg.info("    "+"branch specific features: "+", ".join([": ".join(st) for st in list(zip(df.value_counts("branch").index,df.value_counts("branch").values.astype(str)))]))
     

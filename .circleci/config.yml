@@ -1,0 +1,26 @@
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@1.0.2
+
+jobs:
+  scfatesenv:
+    docker:
+      - image: louisfaure/scfates:env-ready
+    steps:
+      - checkout
+      - run:
+          command: |
+            pip install coverage
+            pip install .
+            coverage run -m pytest scFates/tests/
+            coverage report -m
+            coverage xml
+      - codecov/upload:
+            file: ./coverage.xml
+            token: 77169eda-e862-4980-bd44-2a5d3f5e2c2c
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - scfatesenv

@@ -34,17 +34,7 @@ the latest version of rapids framework is required (at least 8.17) it is recomma
 .. raw:: html
 
     <iframe
-  src="_static/carbon.now.sh/index.html?bg=rgba%28252%2C252%2C252%2C1%29&t=seti&wt=none&l=application%2Fx-sh&ds=true&dsyoff=5px&dsblur=12px&wc=true&wa=true&pv=20px&ph=56px&ln=false&fl=1&fm=Hack&fs=15px&lh=133%25&si=false&es=2x&wm=false&code=conda%2520create%2520-n%2520rapids-0.17%2520-c%2520rapidsai-nightly%2520-c%2520nvidia%2520-c%2520%255C%2520%250A%2509conda-forge%2520-c%2520defaults%2520rapids%253D0.17%2520python%253D3.7%2520cudatoolkit%253D11.0"
-  frameborder="0" scrolling="no" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';" style="width: 100%; border:0; transform: scale(1); overflow:hidden;"
-  sandbox="allow-scripts allow-same-origin">
-  </iframe>  
-
-Grapheno is required for gpu accelerated feature clustering:
-
-.. raw:: html
-
-  <iframe
-  src="_static/carbon.now.sh/index.html?bg=rgba%28252%2C252%2C252%2C1%29&t=seti&wt=none&l=application%2Fx-sh&ds=true&dsyoff=5px&dsblur=12px&wc=true&wa=true&pv=20px&ph=56px&ln=false&fl=1&fm=Hack&fs=15px&lh=133%25&si=false&es=2x&wm=false&code=pip%2520install%2520grapheno"
+  src="_static/carbon.now.sh/index.html?bg=rgba%28252%2C252%2C252%2C1%29&t=seti&wt=none&l=application%2Fx-sh&ds=true&dsyoff=5px&dsblur=12px&wc=true&wa=true&pv=20px&ph=56px&ln=false&fl=1&fm=Hack&fs=15px&lh=133%25&si=false&es=2x&wm=false&code=conda%2520create%2520-n%2520rapids-0.17%2520-c%2520rapidsai%2520-c%2520nvidia%2520-c%2520conda-forge%2520-c%2520defaults%2520rapids%253D0.17%2520python%253D3.7%2520cudatoolkit%253D11.0"
   frameborder="0" scrolling="no" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';" style="width: 100%; border:0; transform: scale(1); overflow:hidden;"
   sandbox="allow-scripts allow-same-origin">
   </iframe>  

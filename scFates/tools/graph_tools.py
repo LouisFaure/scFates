@@ -291,8 +291,8 @@ def tree_ppt(
         
     X_t=X.values.T
     
-    if seed is not None:
-        np.random.seed(seed)
+    #if seed is not None:
+    #    np.random.seed(seed)
     
     if device=="gpu":
         import rmm 
@@ -308,6 +308,8 @@ def tree_ppt(
 
 
         if init is None:
+            if seed is not None:
+                np.random.seed(seed)
             F_mat_gpu=X_gpu[:,np.random.choice(X.shape[0], size=M, replace=False)]
         else:
             F_mat_gpu=cp.asarray(init.T)
@@ -382,6 +384,8 @@ def tree_ppt(
         W.fill(1)
 
         if init is None:
+            if seed is not None:
+                np.random.seed(seed)
             F_mat_cpu=X_cpu[:,np.random.choice(X.shape[0], size=M, replace=False)]
         else:
             F_mat_cpu=np.asarray(init.T)

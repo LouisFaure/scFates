@@ -65,7 +65,9 @@ def slide_cells(
     
     uns_temp = adata.uns.copy()
     
-    mlsc = adata.uns["milestones_colors"].copy()
+    # weird fix to avoid loss of milestone colors...
+    if 'milestones_colors' in adata.uns:
+        mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
@@ -221,7 +223,9 @@ def slide_cors(
     
     uns_temp = adata.uns.copy()
     
-    mlsc = adata.uns["milestones_colors"].copy()
+    # weird fix to avoid loss of milestone colors...
+    if 'milestones_colors' in adata.uns:
+        mlsc = adata.uns["milestones_colors"].copy()
         
     dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                    np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))

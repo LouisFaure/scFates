@@ -1,4 +1,6 @@
 [![Documentation Status](https://readthedocs.org/projects/scfates/badge/?version=latest)](https://scfates.readthedocs.io/en/latest/?badge=latest)
+[![CircleCI](https://circleci.com/gh/LouisFaure/scFates.svg?style=shield)](https://circleci.com/gh/LouisFaure/scFates)
+[![codecov](https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg)](https://codecov.io/gh/LouisFaure/scFates)
 
 Description
 ===========

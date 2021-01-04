@@ -44,6 +44,9 @@ def milestones(adata,
     layout=img.layout_reingold_tilford(root=list(map(lambda root: np.argwhere(np.array(img.vs["label"])==root)[0][0],roots)))
 
     if color is None:
+        if "milestones_colors" not in adata.uns:
+            from . import palette_tools
+            palette_tools._set_default_colors_for_categorical_obs(adata,"milestones")
         img.vs["color"] = adata.uns["milestones_colors"]
     else:
         if cmap is None:

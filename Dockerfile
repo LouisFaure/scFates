@@ -4,7 +4,7 @@ SHELL ["conda", "run", "-n", "rapids", "/bin/bash", "-c"]
 
 WORKDIR rapids/
 
-RUN apt-get update && apt-get install -y --no-install-recommends cmake gcc python3-dev build-essential r-cran-mgcv
+RUN apt-get update && apt-get install -y --no-install-recommends eog cmake gcc python3-dev build-essential r-cran-mgcv
 
 ARG CACHEBUST=1
 
