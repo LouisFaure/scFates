@@ -7,3 +7,8 @@ omit =
 exclude_lines =
     if device=="gpu":
     if copy:
+    if device == "gpu":
+    def mst_gpu
+    def cor_mat_gpu
+    def norm_R_gpu
+    def process_R_gpu

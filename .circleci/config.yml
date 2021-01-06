@@ -11,8 +11,7 @@ jobs:
       - checkout
       - run:
           command: |
-            pip install coverage
-            pip install .
+            pip install . coverage mock
             coverage run -m pytest scFates/tests/
             coverage report -m
             coverage xml

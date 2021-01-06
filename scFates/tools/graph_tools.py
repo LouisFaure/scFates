@@ -982,8 +982,8 @@ def roots(
                                                                           all(x.values == pathtorev[[i+1,i]]),axis=1)]
         
             pp_seg.loc[segtorev,["from","to"]]=pp_seg.loc[segtorev][["to","from"]].values
-            pp_seg["from"]=pp_seg["from"].astype(int).astype(str)
-            pp_seg["to"]=pp_seg["to"].astype(int).astype(str)
+            pp_seg["from"]=pp_seg["from"].astype(int)
+            pp_seg["to"]=pp_seg["to"].astype(int)
 
     pptoinvert=np.unique(np.concatenate(g.get_shortest_paths(root2,toinvert)))
     reverted_dist=shortest_path(csr,directed=False, indices=root2)+np.abs(np.diff(shortest_path(csr,directed=False, indices=roots)[:,meeting]))[0]

@@ -97,12 +97,6 @@ def trajectory(
     if emb_back is not None:
         ax.scatter(emb_back[:,0],emb_back[:,1],s=2,color="lightgrey",alpha=alpha_cells)
     
-    if color_cells is not None:
-        if adata.obs[color_cells].dtype.name == "str":
-            adata.obs[color_cells]=adata.obs[color_cells].astype("category")
-        if adata.obs[color_cells].dtype.name == "category":
-            if adata.uns[color_cells+"_colors"] is not None:
-                palette = adata.uns[color_cells+"_colors"]
     
     ax.scatter(emb[:,0],emb[:,1],s=2,color="grey",alpha=alpha_cells)
     
@@ -131,10 +125,6 @@ def trajectory(
     
     ax.scatter(proj[:,0],proj[:,1],s=size_nodes,c="k")
     
-    if col_traj==True:
-        for seg in np.unique(r["pp_info"]["seg"]):
-            subproj=proj[r["pp_info"]["seg"]==seg,:]
-            ax.scatter(subproj[:,0],subproj[:,1],zorder=2)
             
     bbox = dict(facecolor='white', alpha=0.6, edgecolor="white", pad=0.1)
     
@@ -325,16 +315,18 @@ def trajectory_3d(
     if color is not None:
         if adata.obs[color].dtype.name == "str":
             adata.obs[color]=adata.obs[color].astype("category")
+        
+        if color+"_colors" not in adata.uns:
+            from . import palette_tools
+            palette_tools._set_default_colors_for_categorical_obs(adata,color)
+            
         if adata.obs[color].dtype.name == "category":
-            if adata.uns[color+"_colors"] is not None:
-                palette = adata.uns[color+"_colors"]
-                pal_dict=dict(zip(adata.obs["leiden"].cat.categories,adata.uns["leiden_colors"]))
-                trace1=list(map(lambda x: scatter3d(emb_f[adata.obs[color]==x,:],pal_dict[x],cell_cex,x), 
-                                list(pal_dict.keys())))
+            palette = adata.uns[color+"_colors"]
+            pal_dict=dict(zip(adata.obs[color].cat.categories,adata.uns[color+"_colors"]))
+            trace1=list(map(lambda x: scatter3d(emb_f[adata.obs[color]==x,:],pal_dict[x],cell_cex,x), 
+                            list(pal_dict.keys())))
                 
-            else:
-                trace1=list(map(lambda x: scatter3d(emb_f[adata.obs[color]==x,:],None,cell_cex,x), 
-                                np.unique(adata.obs[color]).tolist()))
+            
             
         else:
             if cmap is None:

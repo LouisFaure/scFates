@@ -98,3 +98,10 @@ def getpath(g,root,tips,tip,tree,df):
         return(pth)
     except IndexError:
         pass
+
+def palantir_on_seg(adata,seg,ms_data):
+    import palantir
+    adata_sub=adata[adata.obs.seg==seg,]
+    pr=palantir.core.run_palantir(ms_data.loc[adata_sub.obs_names,:],adata_sub.obs.t.idxmin())
+    return pr.pseudotime
+    

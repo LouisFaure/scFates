@@ -201,6 +201,8 @@ def refine_pseudotime(
         `.obs['t_old']`
             previously assigned pseudotime.
     """
+    import palantir
+    from .utils import palantir_on_seg
     
     adata = adata.copy() if copy else adata
     
@@ -208,40 +210,53 @@ def refine_pseudotime(
     
     logg.info("refining pseudotime using palantir on each segment of the tree", reset=True)
     
-    def palantir_on_seg(seg,ms_data=ms_data):
-        import palantir
-        adata_sub=adata[adata.obs.seg==seg,]
-        
-        if use_rep is not None:
-            dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata_sub.obsm["X_"+use_rep],
-                                                                  index=adata_sub.obs_names))
-            ms_data=palantir.utils.determine_multiscale_space(dm_res)
-        elif ms_data is not None:
-            ms_data=pd.DataFrame(adata_sub.obsm["X_"+ms_data],index=adata_sub.obs_names)
-        else:
-            dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata_sub.X,
-                                                                  index=adata_sub.obs_names))
-            ms_data=palantir.utils.determine_multiscale_space(dm_res)
-        pr=palantir.core.run_palantir(ms_data,adata_sub.obs.t.idxmin())
-        return pr.pseudotime
+    if use_rep is not None:
+        dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata.obsm["X_"+use_rep],
+                                                              index=adata.obs_names))
+        ms_data=palantir.utils.determine_multiscale_space(dm_res)
+    elif ms_data is not None:
+        ms_data=pd.DataFrame(adata.obsm["X_"+ms_data],index=adata.obs_names)
+    else:
+        dm_res=palantir.utils.run_diffusion_maps(pd.DataFrame(adata.X,
+                                                              index=adata.obs_names))
+        ms_data=palantir.utils.determine_multiscale_space(dm_res)
+    
 
     pseudotimes = Parallel(n_jobs=n_jobs)(
         delayed(palantir_on_seg)(
-            s
+            adata,seg=s,ms_data=ms_data
         )
         for s in tqdm(adata.uns["graph"]["pp_seg"].n.values.astype(str),file=sys.stdout)
     )
 
     g=igraph.Graph(directed=True)
-
     g.add_vertices(np.unique(adata.uns["graph"]["pp_seg"].loc[:,["from","to"]].values.flatten().astype(str)))
     g.add_edges(adata.uns["graph"]["pp_seg"].loc[:,["from","to"]].values.astype(str))
 
-    allpth=g.get_shortest_paths(str(adata.uns["graph"]["root"]),[tip for tip in g.vs["name"] if tip!=str(adata.uns["graph"]["root"])])
+    roots=[adata.uns["graph"]["root"]]+[adata.uns["graph"]["root2"] if "root2" in adata.uns["graph"] else None]
+    root=adata.uns["graph"]["tips"][np.isin(adata.uns["graph"]["tips"],roots)]
+    tips=adata.uns["graph"]["tips"][~np.isin(adata.uns["graph"]["tips"],roots)]
+    
+    dt=0
+    if "meeting" in adata.uns["graph"]:
+        path_to_meet=list(map(lambda r: g.get_shortest_paths(str(r),str(adata.uns["graph"]["meeting"]))[0],root))
+        for p in path_to_meet:
+            pth=np.array(g.vs["name"],dtype=int)[p]
+            for i in range(len(pth)-1):
+                sel=adata.uns["graph"]["pp_seg"].loc[:,["from","to"]].apply(lambda x: np.all(x==pth[i:i+2]),axis=1).values
+                adata.obs.loc[adata.obs.seg.isin(adata.obs.seg.cat.categories[sel]),"t"]=(pseudotimes[np.argwhere(sel)[0][0]]*adata.uns["graph"]["pp_seg"].loc[sel,"d"].values[0]).values
+            dt_temp=adata.uns["graph"]["pp_seg"].loc[sel,"d"].values[0]
+            dt = dt_temp if dt_temp > dt else dt
+
+        allpth=g.get_shortest_paths(str(adata.uns["graph"]["meeting"]),[str(t) for t in tips])
+        dt_prev=dt
+    else:
+        allpth=g.get_shortest_paths(str(root[0]),[str(t) for t in tips])
+        dt_prev=0
 
     for p in allpth:
         pth=np.array(g.vs["name"],dtype=int)[p]
-        dt=0
+        dt=dt_prev
         for i in range(len(pth)-1):
             sel=adata.uns["graph"]["pp_seg"].loc[:,["from","to"]].apply(lambda x: np.all(x==pth[i:i+2]),axis=1).values
             adata.obs.loc[adata.obs.seg==adata.uns["graph"]["pp_seg"].loc[sel,"n"].values[0],"t"]=(pseudotimes[np.argwhere(sel)[0][0]]*adata.uns["graph"]["pp_seg"].loc[sel,"d"].values[0]).values+dt
