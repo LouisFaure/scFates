@@ -147,7 +147,7 @@ def test_association(
             list of fitted features on the tree for all mappings.
     """
     
-    adata = data.copy() if copy else adata
+    adata = adata.copy() if copy else adata
     
     if "pseudotime_list" not in adata.uns:
         raise ValueError(
@@ -156,10 +156,13 @@ def test_association(
     
     graph = adata.uns["graph"]
     
-    
+    mlsc_temp = None
     if leaves is not None:
-        mlsc = adata.uns["milestones_colors"].copy()
-        mlsc_temp = mlsc.copy()
+        # weird hack to keep milestones colors saved
+        if "milestones_colors" in adata.uns:
+            mlsc = adata.uns["milestones_colors"].copy()
+            mlsc_temp = mlsc.copy()
+       
         dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                        np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
@@ -167,8 +170,6 @@ def test_association(
 
         leaves=list(map(lambda leave: dct[leave],leaves))
         root=dct[root]
-    else:
-        mlsc_temp=None
     
     if reapply_filters & ("stat_assoc_list" in adata.uns):
         stat_assoc_l = list(adata.uns["stat_assoc_list"].values())

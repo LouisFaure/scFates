@@ -40,6 +40,7 @@ def test_pipeline():
     scf.tl.root(adata,80)
     pp_info_time=adata.uns["graph"]["pp_info"]["time"][:5].values
 
+    scf.tl.pseudotime(adata_2,n_map=2)
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
     
@@ -51,6 +52,8 @@ def test_pipeline():
 
     scf.pl.trajectory_pseudotime(adata,emb_back=adata.obsm["X_umap"],arrows=True)
     scf.pl.milestones(adata)
+    
+    df = scf.tl.getpath(adata,root_milestone='80',milestones=['19'])
     
     adata.obsm["X_umap3d"]=np.concatenate([adata.obsm["X_umap"],adata.obsm["X_umap"][:,0].reshape(-1,1)],axis=1)
     scf.pl.trajectory_3d(adata)
@@ -69,11 +72,17 @@ def test_pipeline():
     scf.tl.fit(adata)
     fitted=adata.layers["fitted"][0,:5]
     
+    scf.tl.test_association(adata_2,root='80',leaves=['19'])
+    scf.tl.fit(adata_2,root='80',leaves=['19'])
+    
     scf.tl.cluster(adata,knn=3)
     
     scf.pl.single_trend(adata,feature=adata.var_names[0])
     scf.pl.trends(adata,features=adata.var_names)
     scf.pl.cluster(adata,features=adata.var_names)
+    
+    scf.pl.cluster(adata,features=adata.var_names,root_milestone='80',milestones=['19'])
+    scf.pl.trends(adata,features=adata.var_names,root_milestone='80',milestones=['19'])
 
     scf.tl.test_fork(adata,layer="scaled",root_milestone='80',milestones=['25','19'],n_jobs=2)
     scf.tl.test_fork(adata,root_milestone='80',milestones=['25','19'],n_jobs=2)
@@ -88,7 +97,8 @@ def test_pipeline():
     scf.tl.activation(adata,root_milestone='80',milestones=['25','19'],n_jobs=1)
     activation = adata.uns['80->25<>19']['fork'].activation.values
     
-    scf.pl.modules(adata,root_milestone='80',milestones=['25','19'])
+    scf.pl.modules(adata,root_milestone='80',milestones=['25','19'], highlight = True)
+    scf.pl.modules(adata,root_milestone='80',milestones=['25','19'], mode="3d")
 
     scf.tl.slide_cells(adata,root_milestone='80',milestones=['25','19'],win=200)
     cell_freq_sum = adata.uns['80->25<>19']["cell_freq"][0].sum()
@@ -109,13 +119,14 @@ def test_pipeline():
     assert np.allclose(F_PC1_ppt_cpu, [-14.80722458, -11.65633904,  -3.38224082,  -9.81132852, -10.80313121], rtol=1e-2)
     assert np.allclose(pp_info_time,[18.80301214, 12.79578319,  0.64553512,  9.62211211, 12.26296244], rtol=1e-2)
     assert np.allclose(obs_t,[18.80780351, 18.83173969, 18.81651117, 18.83505737, 18.82784781], rtol=1e-2)
-    assert np.allclose(A,[0.01314437, 0.17722123, 0.10112712, 0.13290306, 0.07464307], rtol=1e-2)
+    assert df.shape[0]==877
+    assert np.allclose(A,[0.01329398, 0.17759706, 0.1007363 , 0.14490752, 0.07136825], rtol=1e-2)
     assert nsigni == 5
-    assert np.allclose(fitted, [0.44284819, 0.6871638 , 0.24426343, 0.1606288 , 0.79425829], rtol=1e-2)
+    assert np.allclose(fitted, [0.44351696, 0.68493632, 0.24545846, 0.16027536, 0.79252075], rtol=1e-2)
     assert signi_fdr_nonscaled == 0
     assert signi_fdr_rescaled == 5
     assert np.all(branch_spe == ['19','19','25'])
     assert np.allclose(activation, [3.95669504, 3.95669504, 0.6351621 ], rtol=1e-2)
     assert np.allclose(cell_freq_sum, 187.5316, rtol=1e-2)
     assert np.allclose(corAB, [-0.25072212, -0.2963759, -0.46956663, -0.15842558, -0.01394084], rtol=1e-2)
-    assert np.allclose(syncAB,[-0.33549704, -0.32510258, -0.3371059 , -0.34848035, -0.35617703], rtol=1e-2)
+    assert np.allclose(syncAB,[-0.33520381, -0.32288241, -0.33093774, -0.33303708, -0.35310308], rtol=1e-2)

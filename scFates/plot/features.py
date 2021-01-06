@@ -119,8 +119,12 @@ def cluster(
         img = igraph.Graph()
         img.add_vertices(np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
-        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["graph"]["tips"],leaves[0],adata.uns["graph"],df).index,
-                       getpath(img,root,adata.uns["graph"]["tips"],leaves[1],adata.uns["graph"],df).index]))
+        
+        cells=np.unique(np.concatenate(list(map(lambda leave: 
+                                                getpath(img,root,
+                                                        adata.uns["graph"]["tips"],
+                                                        leave,adata.uns["graph"],df).index,
+                                                leaves))))
 
         col_colors=col_colors[col_colors.index.isin(cells)]
         fitted_sorted=fitted_sorted.loc[:,fitted_sorted.columns.isin(cells)]
@@ -230,8 +234,11 @@ def trends(
         img = igraph.Graph()
         img.add_vertices(np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
         img.add_edges(edges)
-        cells=np.unique(np.concatenate([getpath(img,root,adata.uns["graph"]["tips"],leaves[0],adata.uns["graph"],df).index,
-                       getpath(img,root,adata.uns["graph"]["tips"],leaves[1],adata.uns["graph"],df).index]))
+        cells=np.unique(np.concatenate(list(map(lambda leave: 
+                                                getpath(img,root,
+                                                        adata.uns["graph"]["tips"],
+                                                        leave,adata.uns["graph"],df).index,
+                                                leaves))))
 
         adata=adata[cells]
         

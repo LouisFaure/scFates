@@ -131,9 +131,12 @@ def fit(
     graph = adata.uns["graph"]
     tips = graph["tips"]
     
+    mlsc_temp = None
     if leaves is not None:
-        mlsc = adata.uns["milestones_colors"].copy()
-        mlsc_temp = mlsc.copy()
+        # weird hack to keep milestones colors saved
+        if "milestones_colors" in adata.uns:
+            mlsc = adata.uns["milestones_colors"].copy()
+            mlsc_temp = mlsc.copy()
         dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
                        np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
         keys = np.array(list(dct.keys()))
@@ -141,8 +144,7 @@ def fit(
 
         leaves=list(map(lambda leave: dct[leave],leaves))
         root=dct[root]
-    else:
-        mlsc_temp=None
+
         
     if root is None:
         root = graph["root"]

@@ -98,7 +98,7 @@ def pseudotime(
     adata.uns["pseudotime_list"]=dictionary
     
     if n_map > 1:
-        adata.obs["t_sd"]=pd.concat(list(map(lambda x: pd.Series(x["_t"]),
+        adata.obs["t_sd"]=pd.concat(list(map(lambda x: pd.Series(x["t"]),
                            list(adata.uns["pseudotime_list"].values()))),axis=1).apply(np.std,axis=1).values
 
    
