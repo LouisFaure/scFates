@@ -13,6 +13,9 @@ def slide_cors(
     adata: AnnData,
     root_milestone,
     milestones,
+    genesetA = None,
+    genesetB = None,
+    col = None,
     basis: str = "umap",
     win_keep: Union[None,list] = None,
     show: Optional[bool] = None,
@@ -34,15 +37,20 @@ def slide_cors(
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
-    name=str(keys[vals==root][0])+"->"+str(keys[vals==leaves[0]][0])+"<>"+str(keys[vals==leaves[1]][0])
-    
-    bif = adata.uns[name]["fork"]
+    name=root_milestone+"->"+"<>".join(milestones)
     freqs = adata.uns[name]["cell_freq"]
     nwin = len(freqs)
-    genesetA=bif.index[(bif["branch"]==milestones[0]).values & (bif["module"]=="early").values]
-    genesetB=bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
-    corA=adata.uns[name]["corAB"].loc[milestones[0]].copy()
-    corB=adata.uns[name]["corAB"].loc[milestones[1]].copy()
+    
+    if len(milestones)==2:
+        bif = adata.uns[name]["fork"]
+        genesetA=bif.index[(bif["branch"]==milestones[0]).values & (bif["module"]=="early").values]
+        genesetB=bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
+        corA=adata.uns[name]["corAB"].loc[milestones[0]].copy()
+        corB=adata.uns[name]["corAB"].loc[milestones[1]].copy()
+    elif len(milestones)==1:
+        corA=adata.uns[name]["corAB"].loc["A"].copy()
+        corB=adata.uns[name]["corAB"].loc["B"].copy()
+    
     groupsA=np.ones(corA.shape[0])
     groupsA[corA.index.isin(genesetB)]=2  
     groupsB=np.ones(corA.shape[0])
@@ -68,7 +76,8 @@ def slide_cors(
         axs[0,i].set_xticks([]) 
         axs[0,i].set_yticks([]) 
     
-    c_mil=np.array(mlsc)[np.argwhere(adata.obs.milestones.cat.categories.isin(milestones))].flatten()    
+    c_mil = np.array(mlsc)[np.argwhere(adata.obs.milestones.cat.categories.isin(milestones))].flatten() if len(milestones)==2 else ["tab:blue", "tab:red"]
+    c_mil = col if col is not None else c_mil
     genesets=[genesetA,genesetB]
     for i in range(nwin):
         for j in range(2):

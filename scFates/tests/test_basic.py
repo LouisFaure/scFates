@@ -102,11 +102,16 @@ def test_pipeline():
 
     scf.tl.slide_cells(adata,root_milestone='80',milestones=['25','19'],win=200)
     cell_freq_sum = adata.uns['80->25<>19']["cell_freq"][0].sum()
+    
+    scf.tl.slide_cells(adata,root_milestone='80',milestones=['25'],win=200)
 
     scf.tl.slide_cors(adata,root_milestone='80',milestones=['25','19'])
     corAB = adata.uns['80->25<>19']['corAB'].loc["19"].iloc[0,:5].values
     
+    scf.tl.slide_cors(adata,root_milestone='80',milestones=['25'],genesetA=adata.var_names[[0,1]],genesetB=adata.var_names[[2,3]])
+    
     scf.pl.slide_cors(adata,root_milestone='80',milestones=['25','19'])
+    scf.pl.slide_cors(adata,root_milestone='80',milestones=['25'],genesetA=adata.var_names[[0,1]],genesetB=adata.var_names[[2,3]])
     
     scf.tl.synchro_path(adata,root_milestone='80',milestones=['25','19'],w=500,step=30,loess_span=0.5)
     scf.pl.synchro_path(adata,root_milestone='80',milestones=['25','19'],loess_span=0.5)

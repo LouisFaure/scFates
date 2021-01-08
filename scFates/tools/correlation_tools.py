@@ -1,4 +1,4 @@
-from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
+from typing import Union, Optional, List
 
 import numpy as np
 import pandas as pd
@@ -93,19 +93,30 @@ def slide_cells(
     img.add_edges(edges)
 
     paths = list(map(lambda l: getsegs(img,root,l,graph),leaves))
-    
-    
-    seg_progenies = list(set.intersection(*[set(path) for path in paths]))
-    seg_branch1 = list(set.difference(set(paths[0]),set(seg_progenies)))
-    seg_branch2 = list(set.difference(set(paths[1]),set(seg_progenies)))
     pp_probs = graph["R"].sum(axis=0)
-    pps = graph["pp_info"].PP[graph["pp_info"].seg.isin(np.array(seg_progenies+seg_branch1+seg_branch2).astype(str))].index
 
-    seg_branch1 = [str(seg) for seg in seg_branch1]
-    seg_branch2 = [str(seg) for seg in seg_branch2]
-    seg_progenies = [str(seg) for seg in seg_progenies]
+    if len(milestones)==2:
+        seg_progenies = list(set.intersection(*[set(path) for path in paths]))
+        seg_branch1 = list(set.difference(set(paths[0]),set(seg_progenies)))
+        seg_branch2 = list(set.difference(set(paths[1]),set(seg_progenies)))
+        
+        pps = graph["pp_info"].PP[graph["pp_info"].seg.isin(np.array(seg_progenies+seg_branch1+seg_branch2).astype(str))].index
 
-    def region_extract(pt_cur,segs_cur):
+        seg_branch1 = [str(seg) for seg in seg_branch1]
+        seg_branch2 = [str(seg) for seg in seg_branch2]
+        seg_progenies = [str(seg) for seg in seg_progenies]
+        segs_cur=np.unique(np.array(seg_progenies+seg_branch1+seg_branch2).flatten().astype(str))
+
+    elif len(milestones)==1:
+        paths=[str(p[0]) for p in paths]
+
+        pps = graph["pp_info"].seg.isin(paths).index
+
+        seg_progenies = list(set.intersection(*[set(path) for path in paths]))
+        seg_progenies = [str(seg) for seg in seg_progenies]
+        segs_cur = seg_progenies
+
+    def region_extract(pt_cur,segs_cur,nbranch):
         freq = list()
 
         pp_next = pps[(graph["pp_info"].loc[pps,"time"].values >= pt_cur) & 
@@ -134,45 +145,52 @@ def slide_cells(
             pt_cur = graph["pp_info"].loc[pps_region,"time"].max()
 
 
+            if nbranch == 1:
+                if (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_progenies))==0):
+                    res = region_extract(pt_cur,segs_cur,nbranch)
+                    return freq+res
 
-            if (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_progenies))==0):
-                res = region_extract(pt_cur,segs_cur)
-                return freq+res
+            if nbranch == 2:
+                if (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_progenies))==0):
+                    res = region_extract(pt_cur,segs_cur,nbranch)
+                    return freq+res
+                
+                elif (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_branch1))==0):
+                    res = region_extract(pt_cur,segs_cur,nbranch)
+                    return freq+res
 
-            elif (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_branch1))==0):
-                res = region_extract(pt_cur,segs_cur)
-                return freq+res
+                elif (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_branch2))==0):
 
-            elif (sum(~graph["pp_info"].loc[pps_region,:].seg.isin(seg_branch2))==0):
-
-                res = region_extract(pt_cur,segs_cur)
-                return freq+res
+                    res = region_extract(pt_cur,segs_cur,nbranch)
+                    return freq+res
 
 
-            elif (~(sum(~graph["pp_info"].loc[pps_region,:].seg.isin([str(seg) for seg in seg_progenies]))==0)):
-                pt_cur1 = graph["pp_info"].loc[pps_region,"time"][graph["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch1])].max()
-                segs_cur1 = seg_branch1
-                pt_cur2 = graph["pp_info"].loc[pps_region,"time"][graph["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch2])].max()
-                segs_cur2 =seg_branch2
-                res1 = region_extract(pt_cur1,segs_cur1)
-                res2 = region_extract(pt_cur2,segs_cur2)
-                return freq+res1+res2
+                elif (~(sum(~graph["pp_info"].loc[pps_region,:].seg.isin([str(seg) for seg in seg_progenies]))==0)):
+                    pt_cur1 = graph["pp_info"].loc[pps_region,"time"][graph["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch1])].max()
+                    segs_cur1 = seg_branch1
+                    pt_cur2 = graph["pp_info"].loc[pps_region,"time"][graph["pp_info"].loc[pps_region,"seg"].isin([str(seg) for seg in seg_branch2])].max()
+                    segs_cur2 =seg_branch2
+                    res1 = region_extract(pt_cur1,segs_cur1,nbranch)
+                    res2 = region_extract(pt_cur2,segs_cur2,nbranch)
+                    return freq+res1+res2
             
     pt_cur = graph["pp_info"].loc[pps,"time"].min()
-    segs_cur=np.unique(np.array(seg_progenies+seg_branch1+seg_branch2).flatten().astype(str))
-    
-    freq=region_extract(pt_cur,segs_cur)
-    name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
+
+    freq=region_extract(pt_cur,segs_cur,len(milestones))
+    name=root_milestone+"->"+"<>".join(milestones)
     
     adata.uns=uns_temp
     
     freqs=list(map(lambda f: pd.Series(f,index=adata.uns["graph"]["cells_fitted"]),freq))
     
     if ext is False:
-        adata.uns[name]["cell_freq"]=freqs
+        if len(milestones)==2:
+            adata.uns[name]["cell_freq"]=freqs
+        elif len(milestones)==1:
+            adata.uns[name]={"cell_freq":freqs}
         logg.hint(
             "added \n"
-            "    '"+name+"/cell_freq', probability assignment of cells on "+str(len(freq))+" non intersecting windows (adata.uns)")
+            "    .uns['"+name+"']['cell_freq'], probability assignment of cells on "+str(len(freq))+" non intersecting windows.")
     
     if copy:
         return adata
@@ -182,11 +200,12 @@ def slide_cells(
         None
 
 
-
 def slide_cors(
     adata: AnnData,
     root_milestone,
-    milestones,
+    milestones: List,
+    genesetA = None,
+    genesetB = None,
     layer: Optional[str] = None,
     copy: bool = False
     ):
@@ -235,14 +254,22 @@ def slide_cors(
     leaves=list(map(lambda leave: dct[leave],milestones))
     root=dct[root_milestone]
     
-    name=root_milestone+"->"+milestones[0]+"<>"+milestones[1]
+    name=root_milestone+"->"+"<>".join(milestones)
     
-    bif = adata.uns[name]["fork"]
+    if (genesetA is None or genesetB is None) and len(milestones)==1:
+        raise ValueError(
+            "You need two list of genes when a non-bifurcating trajectory is analysed!"
+        )
+    
+    if genesetA is None or genesetB is None: 
+        bif = adata.uns[name]["fork"]
     freqs= adata.uns[name]["cell_freq"]
     nwin = len(freqs)
     
-    genesetA = bif.index[(bif["branch"]==milestones[0]).values & (bif["module"]=="early").values]
-    genesetB = bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
+    if genesetA is None:
+        genesetA = bif.index[(bif["branch"]==milestones[0]).values & (bif["module"]=="early").values]
+    if genesetB is None:
+        genesetB = bif.index[(bif["branch"]==milestones[1]).values & (bif["module"]=="early").values]
     genesets = np.concatenate([genesetA,genesetB])
     
     if layer is None:
@@ -272,7 +299,9 @@ def slide_cors(
     gather = partial(gather_cor, geneset=genesetB)
     corB=pd.concat(list(map(gather,range(nwin))),axis=1)
     
-    corAB=pd.concat([corA,corB], keys=milestones) 
+    groups = ["A","B"] if len(milestones)==1 else milestones
+    
+    corAB=pd.concat([corA,corB], keys=groups) 
     corAB.columns=[str(c) for c in corAB.columns]
     
     adata.uns=uns_temp
@@ -280,7 +309,7 @@ def slide_cors(
     
     logg.hint(
         "added \n"
-        "    '"+name+"/corAB', gene-gene correlation modules (adata.uns)")
+        "    .uns['"+name+"']['corAB'], gene-gene correlation modules.")
     
     return adata if copy else None
 
@@ -506,7 +535,7 @@ def synchro_path(
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
-        "    '"+name+"/synchro', mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules (adata.uns)\n"
-        "    'inter_cor "+name+"', loess fit of inter-module mean local gene-gene correlations prior to bifurcation (adata.obs)")
+        "    .uns['"+name+"']['syncho'], mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.\n"
+        "    .obs['inter_cor "+name+"'], loess fit of inter-module mean local gene-gene correlations prior to bifurcation.")
     
     return adata if copy else None

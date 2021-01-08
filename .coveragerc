@@ -12,3 +12,9 @@ exclude_lines =
     def cor_mat_gpu
     def norm_R_gpu
     def process_R_gpu
+    def norm_R_cpu
+    def matmul
+    def process_R_cpu
+    def palantir_on_seg
+    except Exception as e:
+    def cdist_numba
