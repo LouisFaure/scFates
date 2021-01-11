@@ -49,11 +49,14 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.githubpages",
+    "sphinxext.opengraph",
     "sphinx_autodoc_typehints",
     'readthedocs_ext.readthedocs',
     "nbsphinx"
 ]
 
+ogp_site_url = "https://scfates.readthedocs.io/"
+ogp_image = "https://scfates.readthedocs.io/en/latest/_images/scFates_logo_dark.png"
 
 # Generate the API documentation when building
 autosummary_generate = True
