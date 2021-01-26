@@ -37,8 +37,7 @@ def modules(
     
     uns_temp=adata.uns.copy()
     
-    dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
-                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    dct = graph["milestones"]
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
                    

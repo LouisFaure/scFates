@@ -21,8 +21,7 @@ def milestones(adata,
     branches = np.argwhere(np.array(g.degree())>2).flatten()
 
 
-    dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                   np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
+    dct = graph["milestones"]
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
 

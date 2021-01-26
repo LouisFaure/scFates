@@ -107,8 +107,7 @@ def cluster(
     
     
     if root_milestone is not None:
-        dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
-                   np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
+        dct = graph["milestones"]
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 
@@ -222,8 +221,7 @@ def trends(
     
     if root_milestone is not None:
         adata = adata.copy()
-        dct = dict(zip(adata.copy().obs.milestones.cat.categories.tolist(),
-                   np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(int))))
+        dct = graph["milestones"]
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 

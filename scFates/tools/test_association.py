@@ -163,8 +163,7 @@ def test_association(
             mlsc = adata.uns["milestones_colors"].copy()
             mlsc_temp = mlsc.copy()
        
-        dct = dict(zip(adata.obs.milestones.cat.categories.tolist(),
-                       np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(int))))
+        dct = graph["milestones"]
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 

@@ -110,6 +110,9 @@ def pseudotime(
     adata.obs["milestones"]=milestones
     adata.obs.milestones=adata.obs.milestones.astype(int).astype("str").astype("category")
     
+    adata.uns["graph"]["milestones"] = dict(zip(adata.obs.milestones.cat.categories,
+                                                adata.obs.milestones.cat.categories.astype(int)))
+    
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added\n" + "    'edge', assigned edge (adata.obs)\n"
@@ -269,3 +272,18 @@ def refine_pseudotime(
     )
     
     return adata if copy else None
+
+
+def rename_milestones(adata, 
+                      new, 
+                      copy: bool = False):
+    
+    adata = adata.copy() if copy else adata
+    
+    adata.uns["graph"]["milestones"] = dict(zip(new,
+                                                list(adata.uns["graph"]["milestones"].values())))
+    
+    adata.obs.milestones = adata.obs.milestones.cat.rename_categories(new)
+    
+    return adata if copy else None
+

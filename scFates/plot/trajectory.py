@@ -222,7 +222,7 @@ def trajectory_pseudotime(
     seg=graph["pp_seg"].loc[:,["from","to"]].values.tolist()
     for s in seg:
         if arrows:
-            path=np.array(g.get_shortest_paths(int(s[0]),int(s[1]))[0])        
+            path=np.array(g.get_shortest_paths(s[0],s[1])[0])        
             coord=proj[path,]
             out=np.empty(len(path)-1)
             cdist_numba(coord,out)

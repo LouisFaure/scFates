@@ -855,6 +855,9 @@ def root(
     pp_seg["n"]=pp_seg["n"].astype(int).astype(str)
     pp_seg["n"]=pp_seg["n"].astype(int).astype(str)
     
+    pp_seg["from"]=pp_seg["from"].astype(int)
+    pp_seg["to"]=pp_seg["to"].astype(int)
+    
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
     pp_info["seg"]=pp_info["seg"].astype(int).astype(str)
     
