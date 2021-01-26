@@ -201,6 +201,7 @@ def trends(
     milestones = None,
     show_milsetones: bool = True,
     cell_size = 20,
+    fontsize = 10,
     order = True,
     ordering = "max",
     ord_thre = .7,
@@ -308,7 +309,7 @@ def trends(
         mil_cmap=pd.concat(list(map(milestones_prog,seg_order)))
         
         fig, (ax,ax1,ax2) = plt.subplots(ncols=1,nrows=3,figsize=figsize,gridspec_kw={'height_ratios':[1,1,figsize[1]*2]})
-        sns.heatmap(pd.DataFrame(range(fitted_sorted.shape[1])).T,robust=False,
+        sns.heatmap(pd.DataFrame(range(fitted_sorted.shape[1])).T,robust=False,rasterized=True,
                  cmap=mil_cmap[fitted_sorted.columns].values.tolist(),
                  xticklabels=False,yticklabels=False,cbar=False,ax=ax1)
     
@@ -319,8 +320,10 @@ def trends(
     
     fig.subplots_adjust(hspace=0)
     
-    sns.heatmap(fitted_sorted,robust=True,cmap=colormap,xticklabels=False,yticklabels=False,ax=ax2,cbar=False)
-    sns.heatmap(pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,robust=True,cmap=pseudo_colormap,xticklabels=False,yticklabels=False,cbar=False,ax=ax,vmax=adata.obs.t.max())    
+    sns.heatmap(fitted_sorted,robust=True,cmap=colormap,rasterized=True,
+                xticklabels=False,yticklabels=False,ax=ax2,cbar=False)
+    sns.heatmap(pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,robust=True,rasterized=True,
+                cmap=pseudo_colormap,xticklabels=False,yticklabels=False,cbar=False,ax=ax,vmax=adata.obs.t.max())    
     
     
     def add_frames(axis,vert):
@@ -349,7 +352,7 @@ def trends(
     
     texts = []
     for x, y, s in zip(xs, ys, highlight_features):
-        texts.append(ax2.text(x, y, s))
+        texts.append(ax2.text(x, y, s, fontsize=fontsize))
 
     patch = patches.Rectangle((0, 0), fitted_sorted.shape[1]+fitted_sorted.shape[1]/6, fitted_sorted.shape[0], alpha=0) # We add a rectangle to make sure the labels don't move to the right    
     ax.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
