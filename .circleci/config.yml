@@ -11,7 +11,7 @@ jobs:
       - checkout
       - run:
           command: |
-            pip install . coverage mock
+            pip install . coverage mock git+https://github.com/j-bac/elpigraph-python.git
             coverage run -m pytest scFates/tests/
             coverage report -m
             coverage xml

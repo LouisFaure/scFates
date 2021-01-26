@@ -39,6 +39,8 @@ def cluster(
     save: Union[str, bool, None] = None,
     save_genes: Optional[bool] = None):
     
+    graph = adata.uns["graph"]
+    
     fitted = pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names).T.copy(deep=True)
     g = adata.obs.groupby('seg')
     seg_order=g.apply(lambda x: np.mean(x.t)).sort_values().index.tolist()
@@ -218,7 +220,7 @@ def trends(
     save: Union[str, bool, None] = None,
     save_genes: Optional[bool] = None):
     
-    
+    graph = adata.uns["graph"]
     
     if root_milestone is not None:
         adata = adata.copy()
