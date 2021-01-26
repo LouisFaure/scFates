@@ -102,6 +102,7 @@ html_theme_options = {'titles_only': True,'logo_only': True,
 html_show_sphinx = False
 html_logo = '_static/scFates_Logo.svg'
 html_static_path = ["_static"]
+html_extra_path = ["_extra"]
 
 def setup(app):
     app.add_css_file("custom.css")
