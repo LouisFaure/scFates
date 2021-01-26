@@ -32,7 +32,16 @@ Analysis key steps
    api
    references
    
-   
+|Doc Badge| |CircleCI Badge| |codecov Badge|
+
+
+.. image:: _static/scFates_logo_dark.png
+   :width: 1%
+
+.. |Doc Badge| image:: https://readthedocs.org/projects/scfates/badge/?version=latest
+.. |CircleCI Badge| image:: https://circleci.com/gh/LouisFaure/scFates.svg?style=shield
+.. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg   
+
 .. _scanpy: https://scanpy.readthedocs.io/
 .. _crestree: https://github.com/hms-dbmi/crestree
 .. _ElPiGraph: https://github.com/j-bac/elpigraph-python/
