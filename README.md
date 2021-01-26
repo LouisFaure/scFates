@@ -51,7 +51,14 @@ or::
     git clone https://github.com/LouisFaure/scFates
     pip install -e scFates
     
-    
+  
+## Python dependencies
+
+scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data. 
+Elpigraph needs to be installed from its github repository with the following command:: 
+
+	pip install git+https://github.com/j-bac/elpigraph-python.git
+
 ## R dependencies
 
 scFates rely on the R package *mgcv* to perform testing and fitting of the features on the peudotime
