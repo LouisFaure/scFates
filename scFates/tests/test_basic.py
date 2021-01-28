@@ -52,6 +52,7 @@ def test_pipeline():
 
     scf.pl.trajectory_pseudotime(adata,emb_back=adata.obsm["X_umap"],arrows=True)
     scf.pl.milestones(adata)
+    scf.pl.milestones(adata,color="t")
     
     df = scf.tl.getpath(adata,root_milestone='80',milestones=['19'])
     
@@ -79,10 +80,14 @@ def test_pipeline():
     
     scf.tl.cluster(adata,knn=3)
     
-    scf.pl.single_trend(adata,feature=adata.var_names[0])
-    scf.pl.trends(adata,features=adata.var_names)
-    scf.pl.trends(adata,features=adata.var_names,show_milestones=False,plot_emb=False)
-    scf.pl.trends(adata,features=adata.var_names,root_milestone='80',milestones=['19'])
+    scf.pl.trends(adata,features=adata.var_names,save_genes="genes.tsv",emb_back=adata.obsm["X_umap"])
+    scf.pl.trends(adata,features=adata.var_names,show_milestones=False,plot_emb=False,ordering="quantile")
+    del adata.uns["milestones_colors"]
+    scf.pl.trends(adata,features=adata.var_names,root_milestone='80',milestones=['19'],ordering="pearson",show=False)
+    
+    scf.pl.single_trend(adata,feature=adata.var_names[0],colorexp="k")
+    del adata.uns["seg_colors"]
+    scf.pl.single_trend(adata,layer="scaled",feature=adata.var_names[0],emb_back=adata.obsm["X_umap"],show=False)
 
     scf.tl.test_fork(adata,layer="scaled",root_milestone='80',milestones=['25','19'],n_jobs=2)
     scf.tl.test_fork(adata,root_milestone='80',milestones=['25','19'],n_jobs=2)

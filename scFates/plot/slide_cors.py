@@ -25,6 +25,10 @@ def slide_cors(
     
     uns_temp=adata.uns.copy()
     
+    if  "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"])==1:
+        from . import palette_tools
+        palette_tools._set_default_colors_for_categorical_obs(adata,"milestones")
+    
     mlsc = np.array(adata.uns["milestones_colors"].copy())
     if mlsc.dtype == "float":
         mlsc=list(map(rgb2hex,mlsc))

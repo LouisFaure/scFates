@@ -48,6 +48,11 @@ def modules(
     
     
     stats = adata.uns[name]["fork"]
+
+    if  "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"])==1:
+        from . import palette_tools
+        palette_tools._set_default_colors_for_categorical_obs(adata,"milestones")
+    
     mlsc = adata.uns["milestones_colors"].copy()
     mls = adata.obs.milestones.cat.categories.tolist()
     dct = dict(zip(mls,mlsc))
