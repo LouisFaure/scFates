@@ -75,13 +75,13 @@ def test_pipeline():
     scf.tl.test_association(adata_2,root='80',leaves=['19'])
     scf.tl.fit(adata_2,root='80',leaves=['19'])
     
+    scf.tl.rename_milestones(adata_2,["A","B","C","D"])
+    
     scf.tl.cluster(adata,knn=3)
     
     scf.pl.single_trend(adata,feature=adata.var_names[0])
     scf.pl.trends(adata,features=adata.var_names)
-    scf.pl.cluster(adata,features=adata.var_names)
-    
-    scf.pl.cluster(adata,features=adata.var_names,root_milestone='80',milestones=['19'])
+    scf.pl.trends(adata,features=adata.var_names,show_milestones=False,plot_emb=False)
     scf.pl.trends(adata,features=adata.var_names,root_milestone='80',milestones=['19'])
 
     scf.tl.test_fork(adata,layer="scaled",root_milestone='80',milestones=['25','19'],n_jobs=2)

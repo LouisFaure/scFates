@@ -1,5 +1,5 @@
 from .trajectory import trajectory, trajectory_pseudotime, trajectory_3d
-from .features import cluster, trends, single_trend
+from .features import trends, single_trend
 from .test_association import test_association
 from .modules import modules
 from .milestones import milestones

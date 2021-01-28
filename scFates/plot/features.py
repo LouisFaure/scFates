@@ -19,180 +19,6 @@ from scanpy.plotting._utils import savefig_or_show
 
 from .. import logging as logg
 from ..tools.utils import getpath
-
-def cluster(
-    adata: AnnData,
-    clu = None,
-    features = None,
-    combi=True,
-    root_milestone = None,
-    milestones = None,
-    cell_size=20,
-    quant_ord=.7,
-    figsize: tuple = (20,12),
-    basis: str = "umap",
-    colormap: str = "RdBu_r",
-    emb_back = None,
-    filter_complex=True,
-    highlight=False,
-    show: Optional[bool] = None,
-    save: Union[str, bool, None] = None,
-    save_genes: Optional[bool] = None):
-    
-    graph = adata.uns["graph"]
-    
-    fitted = pd.DataFrame(adata.layers["fitted"],index=adata.obs_names,columns=adata.var_names).T.copy(deep=True)
-    g = adata.obs.groupby('seg')
-    seg_order=g.apply(lambda x: np.mean(x.t)).sort_values().index.tolist()
-    cell_order=np.concatenate(list(map(lambda x: adata.obs.t[adata.obs.seg==x].sort_values().index,seg_order)))
-    fitted=fitted.loc[:,cell_order]
-    fitted=fitted.apply(lambda x: (x-x.mean())/x.std(),axis=1)
-    #fitted.values=sc.pp.scale(fitted.values)
-    
-    
-    seg=adata.obs["seg"].copy(deep=True)
-    
-    
-    color_key = "seg_colors"
-    if color_key not in adata.uns or len(adata.uns[color_key]):
-        from . import palette_tools
-        palette_tools._set_default_colors_for_categorical_obs(adata,"seg")
-    pal=dict(zip(adata.obs["seg"].cat.categories,adata.uns[color_key]))
-
-    segs = seg.astype(str).map(pal)
-    segs.name = "segs"
-
-
-    # Get the color map by name:
-    cm = plt.get_cmap('viridis')
-
-    pseudotime = cm(adata.obs.t[cell_order]/adata.obs.t[cell_order].max())
-
-    pseudotime = list(map(to_hex,pseudotime.tolist()))
-
-    col_colors=pd.concat([segs,pd.Series(pseudotime,name="pseudotime",index=cell_order)],axis=1,sort=False)
-    
-    
-    def get_in_clus_order(c):
-        test=fitted.loc[clusters.index[clusters==c],:]
-        start_cell=adata.obs_names[adata.obs.t==adata.obs.loc[test.idxmax(axis=1).values,"t"].sort_values().iloc[0]]
-        early_feature=test.index[test.idxmax(axis=1).isin(start_cell)][0]
-
-        ix = test.T.corr(method="pearson").sort_values(early_feature, ascending=False).index
-        return ix
-        
-
-    if clu is not None:
-        clusters = adata.var["fit_clusters"]
-        fitted=fitted.loc[clusters.index[clusters==clu],:]
-        fitted_sorted = fitted.loc[get_in_clus_order(clu), :]
-    else:
-        fitted=fitted.loc[features,:]
-        varia=list(map(lambda x: adata.obs.t[cell_order][fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].var(),features))
-
-        z = np.abs(stats.zscore(varia))
-        torem = np.argwhere(z > 3)
-
-        if len(torem)>0:
-            torem=torem[0]
-            logg.info("found "+str(len(torem))+" complex fitted features")
-            logg.hint( "added\n" + "    'complex' column in (adata.var)")
-            adata.var["complex"]=False
-            adata.var.complex.iloc[torem]=True
-            features=adata.var_names[~adata.var["complex"]]
-        
-        fitted = fitted.loc[features,:]
-        list(map(lambda x: adata.obs.t[fitted.loc[x,:].values>np.quantile(fitted.loc[x,:].values,q=quant_ord)].mean(),features))
-        ix = fitted.apply(lambda x: adata.obs.t[x>np.quantile(x,q=quant_ord)].mean(),axis=1).sort_values().index
-        fitted_sorted = fitted.loc[ix, :]
-
-    
-    
-    if root_milestone is not None:
-        dct = graph["milestones"]
-        keys = np.array(list(dct.keys()))
-        vals = np.array(list(dct.values()))
-
-        leaves = list(map(lambda leave: dct[leave],milestones))
-        root = dct[root_milestone]
-        df = adata.obs.copy(deep=True)
-        edges=adata.uns["graph"]["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
-        img = igraph.Graph()
-        img.add_vertices(np.unique(adata.uns["graph"]["pp_seg"][["from","to"]].values.flatten().astype(str)))
-        img.add_edges(edges)
-        
-        cells=np.unique(np.concatenate(list(map(lambda leave: 
-                                                getpath(img,root,
-                                                        adata.uns["graph"]["tips"],
-                                                        leave,adata.uns["graph"],df).index,
-                                                leaves))))
-
-        col_colors=col_colors[col_colors.index.isin(cells)]
-        fitted_sorted=fitted_sorted.loc[:,fitted_sorted.columns.isin(cells)]
-        
-    else:
-        cells=None
-    
-    
-
-    hm=sns.clustermap(fitted_sorted,figsize=figsize,dendrogram_ratio=0, colors_ratio=0.03,robust=True,cmap=colormap,
-                row_cluster=False,col_cluster=False,col_colors=col_colors,cbar_pos=None,xticklabels=False)
-    if combi:
-        hm.gs.update(left=0.526)
-        gs2 = GridSpec(1,1, left=0.05,right=0.50)
-        ax2 = hm.fig.add_subplot(gs2[0])
-        
-        if emb_back is not None:
-            ax2.scatter(emb_back[:,0],emb_back[:,1],s=cell_size,color="lightgrey",edgecolor="none")
-        
-        if cells is not None:
-            ax2.scatter(adata.obsm["X_"+basis][~adata.obs_names.isin(cells),0],
-                        adata.obsm["X_"+basis][~adata.obs_names.isin(cells),1],
-                        c="lightgrey",s=cell_size,edgecolor="none")
-            if highlight:
-                ax2.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
-                            adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
-                            c="black",s=cell_size*2,edgecolor="none")
-            ax2.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
-                        adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
-                        s=cell_size,edgecolor="none",
-                        c=fitted.mean(axis=0)[adata[adata.obs_names.isin(cells),:].obs_names],cmap=colormap)
-        else:
-            cells = adata.obs_names
-            if highlight:
-                ax2.scatter(adata.obsm["X_"+basis][:,0],
-                            adata.obsm["X_"+basis][:,1],c="k",s=cell_size*2,edgecolor="none")
-            ax2.scatter(adata.obsm["X_"+basis][:,0],
-                        adata.obsm["X_"+basis][:,1],
-                        s=cell_size,edgecolor="none",
-                        c=fitted.mean(axis=0)[adata[adata.obs_names.isin(cells),:].obs_names],cmap=colormap)
-        ax2.grid(False)
-        x0,x1 = ax2.get_xlim()
-        y0,y1 = ax2.get_ylim()
-        ax2.set_aspect(abs(x1-x0)/abs(y1-y0))
-        ax2.tick_params(
-            axis='both',          # changes apply to the x-axis
-            which='both',      # both major and minor ticks are affected
-            bottom=False,      # ticks along the bottom edge are off
-            top=False,         # ticks along the top edge are off
-            labelbottom=False,
-            left=False,
-            labelleft=False) # labels along the bottom edge are off
-        ax2.set_xlabel(basis+"1",fontsize=18)
-        ax2.set_ylabel(basis+"2",fontsize=18)
-        for axis in ['top','bottom','left','right']:
-            ax2.spines[axis].set_linewidth(2)
-    
-    if save_genes is not None:
-        with open(save_genes, 'w') as f:
-            for item in fitted_sorted.index:
-                f.write("%s\n" % item)
-    
-    savefig_or_show('cluster', show=show, save=save)
-    
-    if show:
-        return hm
-
     
 def trends(
     adata: AnnData,
@@ -201,16 +27,19 @@ def trends(
     n_features: int = 10,
     root_milestone = None,
     milestones = None,
-    show_milsetones: bool = True,
+    show_milestones: bool = True,
+    plot_emb: bool = True,
     cell_size = 20,
-    fontsize = 10,
+    cells = None,
+    highlight = True,
+    fontsize = 11,
     order = True,
-    ordering = "max",
+    ordering = "pearson",
     ord_thre = .7,
-    filter_complex=True,
+    filter_complex=False,
     complex_thre = .7,
     complex_z = 3,
-    figsize: tuple = (8,8),
+    fig_heigth = 4,
     frame: Union[float,None] = 2,
     basis: str = "umap",
     colormap: str = "RdBu_r",
@@ -287,7 +116,7 @@ def trends(
         fitted_sorted = fitted
     
     
-    if show_milsetones:
+    if show_milestones:
         color_key = "milestones_colors"
         if color_key not in adata.uns or len(adata.uns[color_key])==1:
             from . import palette_tools
@@ -310,24 +139,41 @@ def trends(
 
         mil_cmap=pd.concat(list(map(milestones_prog,seg_order)))
         
-        fig, (ax,ax1,ax2) = plt.subplots(ncols=1,nrows=3,figsize=figsize,gridspec_kw={'height_ratios':[1,1,figsize[1]*2]})
+
+    
+    fig, f_axs = plt.subplots(ncols=2, nrows=20,figsize=(fig_heigth*(1+1*plot_emb),fig_heigth),
+                         gridspec_kw={'width_ratios':[1*plot_emb,1]})
+    gs = f_axs[2, 1].get_gridspec()
+
+    # remove the underlying axes
+    start = 2 if show_milestones else 1
+    for ax in f_axs[start:, -1]:
+        ax.remove()
+    axheatmap = fig.add_subplot(gs[start:, -1])
+
+
+    gs = f_axs[0, 0].get_gridspec()
+    # remove the underlying axes
+    for ax in f_axs[:, 0]:
+        ax.remove()
+
+    if show_milestones:
+        axmil = f_axs[0,1]
         sns.heatmap(pd.DataFrame(range(fitted_sorted.shape[1])).T,robust=False,rasterized=True,
-                 cmap=mil_cmap[fitted_sorted.columns].values.tolist(),
-                 xticklabels=False,yticklabels=False,cbar=False,ax=ax1)
-    
-    
-    
+                     cmap=mil_cmap[fitted_sorted.columns].values.tolist(),
+                     xticklabels=False,yticklabels=False,cbar=False,ax=axmil)
+        axpsdt = f_axs[1,1]
+
     else:
-        fig, (ax,ax2) = plt.subplots(ncols=1,nrows=2,figsize=figsize,gridspec_kw={'height_ratios':[1,figsize[1]*2]})
-    
-    fig.subplots_adjust(hspace=0)
-    
-    sns.heatmap(fitted_sorted,robust=True,cmap=colormap,rasterized=True,
-                xticklabels=False,yticklabels=False,ax=ax2,cbar=False)
+        axpsdt = f_axs[0,1]
+
+
     sns.heatmap(pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,robust=True,rasterized=True,
-                cmap=pseudo_colormap,xticklabels=False,yticklabels=False,cbar=False,ax=ax,vmax=adata.obs.t.max())    
-    
-    
+                    cmap=pseudo_colormap,xticklabels=False,yticklabels=False,cbar=False,ax=axpsdt,vmax=adata.obs.t.max())
+
+    sns.heatmap(fitted_sorted,robust=True,cmap=colormap,rasterized=True,
+                    xticklabels=False,yticklabels=False,ax=axheatmap,cbar=False)
+
     def add_frames(axis,vert):
         rect = patches.Rectangle((0,0),len(fitted_sorted.columns),vert,linewidth=1,edgecolor='k',facecolor='none')
         # Add the patch to the Axes
@@ -340,32 +186,85 @@ def trends(
             axis.add_patch(rect)
         return axis
 
-    ax=add_frames(ax,1)
-    if show_milsetones:
-        ax1=add_frames(ax1,1)
-    ax2=add_frames(ax2,fitted_sorted.shape[0])
-        
+    axpsdt = add_frames(axpsdt,1)
+
+    if show_milestones:
+        axmil = add_frames(axmil,1)
+
+    axheatmap=add_frames(axheatmap,fitted_sorted.shape[0])
 
 
     if highlight_features is None:
         highlight_features = adata.var.A[features].sort_values(ascending=False)[:n_features].index
     xs=np.repeat(fitted_sorted.shape[1],len(highlight_features))  
     ys=np.array(list(map(lambda g: np.argwhere(fitted_sorted.index==g)[0][0],highlight_features)))+0.5
-    
+
     texts = []
     for x, y, s in zip(xs, ys, highlight_features):
-        texts.append(ax2.text(x, y, s, fontsize=fontsize))
+        texts.append(axheatmap.text(x, y, s, fontsize=fontsize))
 
     patch = patches.Rectangle((0, 0), fitted_sorted.shape[1]+fitted_sorted.shape[1]/6, fitted_sorted.shape[0], alpha=0) # We add a rectangle to make sure the labels don't move to the right    
-    ax.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
-    if show_milsetones:
-        ax1.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
-    ax2.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
-    ax2.add_patch(patch)
-    ax2.hlines(fitted_sorted.shape[0],0,fitted_sorted.shape[1], color="k", clip_on=True) 
-    
-    adjust_text(texts,add_objects=[patch],arrowprops=dict(arrowstyle='-', color='k'),va="center",ha="left",autoalign=False,
-        force_text=(0.05, 0.25), force_points=(0.05, 0.25),only_move={"points":"x", "text":"y", "objects":"x"})
+    axpsdt.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
+    if show_milestones:
+        axmil.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
+    axheatmap.set_xlim((0,fitted_sorted.shape[1]+fitted_sorted.shape[1]/3))
+    axheatmap.add_patch(patch)
+    axheatmap.hlines(fitted_sorted.shape[0],0,fitted_sorted.shape[1], color="k", clip_on=True) 
+
+    plt.tight_layout(h_pad=0,w_pad=0.05)
+
+    adjust_text(texts,ax=axheatmap,add_objects=[patch],va="center",ha="left",autoalign=False,
+        expand_text =(1.05,1.15), lim=5000,only_move={"points":"x", "text":"y", "objects":"x"},
+            precision=0.001, expand_points=(1.01, 1.05))
+
+    for i in range(len(xs)):
+        xx=[xs[i]+1,fitted_sorted.shape[1]+fitted_sorted.shape[1]/6]
+        yy=[ys[i],texts[i].get_position()[1]]
+        axheatmap.plot(xx, yy,color="k",linewidth=0.75)
+
+
+    if plot_emb:
+        axemb = fig.add_subplot(gs[:, 0])
+        if emb_back is not None:
+            axemb.scatter(emb_back[:,0],emb_back[:,1],s=cell_size,color="lightgrey",edgecolor="none")
+
+        if cells is not None:
+            axemb.scatter(adata.obsm["X_"+basis][~adata.obs_names.isin(cells),0],
+                        adata.obsm["X_"+basis][~adata.obs_names.isin(cells),1],
+                        c="lightgrey",s=cell_size,edgecolor="none")
+            if highlight:
+                axemb.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
+                            adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
+                            c="black",s=cell_size*2,edgecolor="none")
+            axemb.scatter(adata.obsm["X_"+basis][adata.obs_names.isin(cells),0],
+                        adata.obsm["X_"+basis][adata.obs_names.isin(cells),1],
+                        s=cell_size,edgecolor="none",
+                        c=fitted.mean(axis=0)[adata[adata.obs_names.isin(cells),:].obs_names],cmap=colormap)
+        else:
+            cells = adata.obs_names
+            if highlight:
+                axemb.scatter(adata.obsm["X_"+basis][:,0],
+                            adata.obsm["X_"+basis][:,1],c="k",s=cell_size*2,edgecolor="none")
+            axemb.scatter(adata.obsm["X_"+basis][:,0],
+                        adata.obsm["X_"+basis][:,1],
+                        s=cell_size,edgecolor="none",
+                        c=fitted.mean(axis=0)[adata[adata.obs_names.isin(cells),:].obs_names],cmap=colormap)
+        axemb.grid(False)
+        x0,x1 = axemb.get_xlim()
+        y0,y1 = axemb.get_ylim()
+        axemb.set_aspect(abs(x1-x0)/abs(y1-y0))
+        axemb.tick_params(
+            axis='both',          # changes apply to the x-axis
+            which='both',      # both major and minor ticks are affected
+            bottom=False,      # ticks along the bottom edge are off
+            top=False,         # ticks along the top edge are off
+            labelbottom=False,
+            left=False,
+            labelleft=False) # labels along the bottom edge are off
+        axemb.set_xlabel(basis+"1",fontsize=18)
+        axemb.set_ylabel(basis+"2",fontsize=18)
+        for axis in ['top','bottom','left','right']:
+            axemb.spines[axis].set_linewidth(1)
     
     if save_genes is not None:
         with open(save_genes, 'w') as f:

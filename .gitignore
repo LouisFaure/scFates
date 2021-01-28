@@ -129,5 +129,4 @@ dmypy.json
 .pyre/
 
 _build
-_static
 _templates
