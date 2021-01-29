@@ -88,16 +88,16 @@ def test_association(
 
     """\
     Determine a set of genes significantly associated with the trajectory.
-    
 
-    Feature expression is modeled as a function of pseudotime in a branch-specific manner, 
-    using cubic spline regression :math:`g_{i} \\sim\ t_{i}` for each branch independently. 
-    This tree-dependent model is then compared with an unconstrained model :math:`g_{i} \\sim\ 1` 
-    using F-test. 
-    
-    The models are fit using *mgcv* R package. 
-    
-    Benjamini-Hochberg correction is used to adjust for multiple hypothesis testing. 
+
+    Feature expression is modeled as a function of pseudotime in a branch-specific manner,
+    using cubic spline regression :math:`g_{i} \\sim\ t_{i}` for each branch independently.
+    This tree-dependent model is then compared with an unconstrained model :math:`g_{i} \\sim\ 1`
+    using F-test.
+
+    The models are fit using *mgcv* R package.
+
+    Benjamini-Hochberg correction is used to adjust for multiple hypothesis testing.
 
 
     Parameters
@@ -132,17 +132,17 @@ def test_association(
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
-        `.var['p_val']` 
+
+        `.var['p_val']`
             p-values from statistical test.
-        `.var['fdr']` 
+        `.var['fdr']`
             corrected values from multiple testing.
-        `.var['st']` 
+        `.var['st']`
             proportion of mapping in which feature is significant.
-        `.var['A']` 
+        `.var['A']`
             amplitue of change of tested feature.
         '.var['signi']`
-            feature is significantly changing along pseuodtime 
+            feature is significantly changing along pseuodtime
         `.uns['stat_assoc_list']`
             list of fitted features on the tree for all mappings.
     """

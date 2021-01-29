@@ -45,7 +45,7 @@ def trajectory(
 
     """\
     Project trajectory onto embedding.
-    
+
     Parameters
     ----------
     adata
@@ -70,11 +70,11 @@ def trajectory(
         show the plot.
     save
         save the plot.
-    
+
     Returns
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes`
-    
+
     """
 
     if "graph" not in adata.uns:

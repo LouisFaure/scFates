@@ -11,7 +11,7 @@ ARG CACHEBUST=1
 RUN pip install git+https://github.com/LouisFaure/scFates && git clone https://github.com/LouisFaure/scFates && mv scFates/docs/notebooks/* . && rm -r scFates/
 
 CMD ["/bin/bash"]
-            
+
 ENTRYPOINT ["/usr/bin/tini","--","/opt/docker/bin/entrypoint"]
 
 EXPOSE 8888

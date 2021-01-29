@@ -39,17 +39,17 @@ def curve(
 ):
     """\
     Generate a principal curve.
-    
-    Learn a curved representation on any space, composed of nodes, approximating the 
-    position of the cells on a given space such as gene expression, pca, diffusion maps, ... 
+
+    Learn a curved representation on any space, composed of nodes, approximating the
+    position of the cells on a given space such as gene expression, pca, diffusion maps, ...
     Uses ElpiGraph algorithm.
-    
+
     Parameters
     ----------
     adata
         Annotated data matrix.
     Nodes
-        Number of nodes composing the principial tree, use a range of 10 to 100 for 
+        Number of nodes composing the principial tree, use a range of 10 to 100 for
         ElPiGraph approach and 100 to 2000 for PPT approach.
     use_rep
         Choose the space to be learned by the principal tree.
@@ -64,10 +64,10 @@ def curve(
     epg_trimmingradius
         Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
     epg_initnodes
-        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes 
+        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
         in the initial step
     device
-        Run either mehtod on `cpu` or on `gpu`  
+        Run either mehtod on `cpu` or on `gpu`
     plot
         Plot the resulting tree.
     basis
@@ -80,7 +80,7 @@ def curve(
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.uns['epg']`
             dictionnary containing information from elastic principal curve
         `.uns['graph']['B']`
@@ -159,27 +159,27 @@ def tree(
 ):
     """\
     Generate a principal tree.
-    
-    Learn a simplified representation on any space, compsed of nodes, approximating the 
+
+    Learn a simplified representation on any space, compsed of nodes, approximating the
     position of the cells on a given space such as gene expression, pca, diffusion maps, ...
-    If `method=='ppt'`, uses simpleppt implementation from [Soldatov19]_.  
+    If `method=='ppt'`, uses simpleppt implementation from [Soldatov19]_.
     If `method=='epg'`, uses Elastic Principal Graph approach from [Albergante20]_.
-    
+
     Parameters
     ----------
     adata
         Annotated data matrix.
     Nodes
-        Number of nodes composing the principial tree, use a range of 10 to 100 for 
+        Number of nodes composing the principial tree, use a range of 10 to 100 for
         ElPiGraph approach and 100 to 2000 for PPT approach.
     use_rep
         Choose the space to be learned by the principal tree.
     ndims_rep
         Number of dimensions to use for the inference.
     method
-        If `ppt`, uses simpleppt approach, `ppt_lambda` and `ppt_sigma` are the 
+        If `ppt`, uses simpleppt approach, `ppt_lambda` and `ppt_sigma` are the
         parameters controlling the algorithm. If `epg`, uses ComputeElasticPrincipalTree
-        function from elpigraph python package, `epg_lambda` `epg_mu` and `epg_trimmingradius` 
+        function from elpigraph python package, `epg_lambda` `epg_mu` and `epg_trimmingradius`
         are the parameters controlling the algorithm.
     init
         Initialise the point positions.
@@ -188,7 +188,7 @@ def tree(
     ppt_lambda
         Parameter for simpleppt, penalty for the tree length [Mao15]_.
     ppt_metric
-        The metric to use to compute distances in high dimensional space. 
+        The metric to use to compute distances in high dimensional space.
         For compatible metrics, check the documentation of
         sklearn.metrics.pairwise_distances if using cpu or
         cuml.metrics.pairwise_distances if using gpu.
@@ -205,10 +205,10 @@ def tree(
     epg_trimmingradius
         Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
     epg_initnodes
-        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes 
+        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
         in the initial step
     device
-        Run either mehtod on `cpu` or on `gpu`  
+        Run either mehtod on `cpu` or on `gpu`
     plot
         Plot the resulting tree.
     basis
@@ -221,8 +221,8 @@ def tree(
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
-        `.uns['ppt']` 
+
+        `.uns['ppt']`
             dictionnary containing information from simpelppt tree if method='ppt'
         `.uns['epg']`
             dictionnary containing information from elastic principal tree if method='epg'
@@ -859,7 +859,7 @@ def cleanup(
 ):
     """\
     Remove spurious branches from the tree.
-    
+
     Parameters
     ----------
     adata
@@ -874,7 +874,7 @@ def cleanup(
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.uns['graph']['B']`
             subsetted adjacency matrix of the principal points.
         `.uns['graph']['R']`
@@ -972,7 +972,7 @@ def cleanup(
 def root(adata: AnnData, root: int, copy: bool = False):
     """\
     Define the root of the trajectory.
-    
+
     Parameters
     ----------
     adata
@@ -985,7 +985,7 @@ def root(adata: AnnData, root: int, copy: bool = False):
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.uns['graph']['root']`
             selected root.
         `.uns['graph']['pp_info']`
@@ -1076,7 +1076,7 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
 
     """\
     Define 2 roots of the tree.
-    
+
     Parameters
     ----------
     adata
@@ -1089,7 +1089,7 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.uns['graph']['root']`
             farthest root selected.
         `.uns['graph']['root2']`

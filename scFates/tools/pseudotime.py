@@ -14,9 +14,9 @@ from .. import settings
 def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = False):
     """\
     Compute pseudotime.
-    
+
     Projects cells onto the tree, and uses distance from the root as a pseudotime value.
-    
+
     Parameters
     ----------
     adata
@@ -31,7 +31,7 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.obs['edge']`
             assigned edge.
         `.obs['t']`
@@ -225,11 +225,11 @@ def refine_pseudotime(
 
     """\
     Refine computed pseudotime.
-    
-    Projection using principal graph can lead to compressed pseudotimes for the cells localised 
+
+    Projection using principal graph can lead to compressed pseudotimes for the cells localised
     near the tips. To counteract this, diffusion based pseudotime is performed using Palantir [Setty19]_ on each
     segment separately.
-    
+
     Parameters
     ----------
     adata
@@ -238,12 +238,12 @@ def refine_pseudotime(
         Number of cpu processes (max is the number of segments).
     copy
         Return a copy instead of writing to adata.
-        
+
     Returns
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.obs['t']`
             updated assigned pseudotimes value.
         `.obs['t_old']`

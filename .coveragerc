@@ -1,6 +1,6 @@
 [run]
 branch = True
-omit = 
+omit =
     scFates/plot/palette_tools.py
     scFates/logging.py
 [report]

@@ -49,16 +49,16 @@ def slide_cells(
         Return a copy instead of writing to adata.
     ext
         Output the list externally instead of writting to anndata
-        
+
     Returns
     -------
     adata : anndata.AnnData
         if `copy=True` it returns subsetted or else subset (keeping only
         significant features) and add fields to `adata`:
-        
+
         `.uns['root_milestone->milestoneA<>milestoneB']['cell_freq']`
             List of np.array containing probability assignment of cells on non intersecting windows.
-    
+
     """
 
     adata = adata.copy() if copy else adata
@@ -304,16 +304,16 @@ def slide_cors(
         adata layer from which to compute the correlations.
     copy
         Return a copy instead of writing to adata.
-        
+
     Returns
     -------
     adata : anndata.AnnData
         if `copy=True` it returns subsetted or else subset (keeping only
         significant features) and add fields to `adata`:
-        
+
         `.uns['root_milestone->milestoneA<>milestoneB']['corAB']`
             Dataframe containing gene-gene correlation modules.
-    
+
     """
 
     adata = adata.copy() if copy else adata
@@ -443,18 +443,18 @@ def synchro_path(
         fraction of points to take in account for loess fit
     copy
         Return a copy instead of writing to adata.
-        
+
     Returns
     -------
     adata : anndata.AnnData
         if `copy=True` it returns subsetted or else subset (keeping only
         significant features) and add fields to `adata`:
-        
+
         `.uns['root_milestone->milestoneA<>milestoneB']['synchro']`
             Dataframe containing mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.
         `.obs['intercor root_milestone->milestoneA<>milestoneB']`
             loess fit of inter-module mean local gene-gene correlations prior to bifurcation
-    
+
     """
 
     adata = adata.copy() if copy else adata

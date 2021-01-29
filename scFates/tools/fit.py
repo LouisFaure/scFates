@@ -85,11 +85,11 @@ def fit(
 
     """\
     Model feature expression levels as a function of tree positions.
-    
-    The models are fit using *mgcv* R package. Note that since adata can currently only keep the 
+
+    The models are fit using *mgcv* R package. Note that since adata can currently only keep the
     same dimensions for each of its layers, the dataset is subsetted to keep only significant
     feratures.
-    
+
 
     Parameters
     ----------
@@ -111,14 +111,14 @@ def fit(
         Return a copy instead of writing to adata.
     Returns
     -------
-    
+
     adata : anndata.AnnData
         if `copy=True` it returns subsetted or else subset (keeping only
         significant features) and add fields to `adata`:
-        
-        `.layers['fitted']` 
+
+        `.layers['fitted']`
             fitted features on the trajectory for all mappings.
-    
+
     """
 
     adata = adata.copy() if copy else adata

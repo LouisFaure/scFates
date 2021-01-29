@@ -22,11 +22,11 @@ def cluster(
 
     """\
     Cluster feature trends.
-    
-    The models are fit using *mgcv* R package. Note that since adata can currently only keep the 
+
+    The models are fit using *mgcv* R package. Note that since adata can currently only keep the
     same dimensions for each of its layers, the dataset is subsetted to keep only significant
     feratures.
-    
+
 
     Parameters
     ----------
@@ -44,14 +44,14 @@ def cluster(
         Return a copy instead of writing to adata.
     Returns
     -------
-    
+
     adata : anndata.AnnData
         if `copy=True` it returns subsetted or else subset (keeping only
         significant features) and add fields to `adata`:
-        
-        `.var['fit_clusters']` 
+
+        `.var['fit_clusters']`
             cluster assignments for features.
-    
+
     """
 
     adata = data.copy() if copy else adata

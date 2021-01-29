@@ -14,9 +14,9 @@ from scanpy import read
 def morarach20() -> AnnData:
     """\
     10X sequencing from the developping (E15.5) enteric nervous system, it
-    includes Schwann Cell precursors and two neuronal population generated 
-    via a bifurcation. 
-    
+    includes Schwann Cell precursors and two neuronal population generated
+    via a bifurcation.
+
     Returns
     -------
     Annotated data matrix.
@@ -31,9 +31,9 @@ def morarach20() -> AnnData:
 def test_adata() -> AnnData:
     """\
     10X sequencing from the developping (E15.5) enteric nervous system, it
-    includes Schwann Cell precursors and two neuronal population generated 
-    via a bifurcation. 
-    
+    includes Schwann Cell precursors and two neuronal population generated
+    via a bifurcation.
+
     Returns
     -------
     Annotated data matrix.

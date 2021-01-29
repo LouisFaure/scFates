@@ -50,12 +50,12 @@ or::
 
     git clone https://github.com/LouisFaure/scFates
     pip install -e scFates
-    
-  
+
+
 ## Python dependencies
 
-scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data. 
-Elpigraph needs to be installed from its github repository with the following command:: 
+scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data.
+Elpigraph needs to be installed from its github repository with the following command::
 
 	pip install git+https://github.com/j-bac/elpigraph-python.git
 
@@ -68,13 +68,13 @@ tree. Package is installed in an R session with the following command::
 
 ## GPU dependencies (optional)
 
-If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, for that you will need 
+If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, for that you will need
 [Rapids 0.17](https://rapids.ai/) installed.
-    
+
 ## Docker container
 
-scFates can be run on a [Docker container](https://hub.docker.com/repository/docker/louisfaure/scfates) based on Rapids 0.17 container, 
+scFates can be run on a [Docker container](https://hub.docker.com/repository/docker/louisfaure/scfates) based on Rapids 0.17 container,
 which provide a gpu enabled environment with Jupyter Lab. Use the following command::
 
     docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-        louisfaure/scfates:tagname        
+        louisfaure/scfates:tagname

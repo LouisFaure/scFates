@@ -20,9 +20,9 @@ Tree inference
     tl.cleanup
     tl.root
     tl.roots
-    
+
 Pseudotime analysis
-------------------- 
+-------------------
 
 .. autosummary::
     :toctree: .
@@ -32,7 +32,7 @@ Pseudotime analysis
     tl.test_association
     tl.fit
     tl.cluster
-    
+
 Bifurcation analysis
 --------------------
 
@@ -44,7 +44,7 @@ Bifurcation analysis
     tl.test_fork
     tl.branch_specific
     tl.activation
-    
+
 **Correlation analysis**
 
 .. autosummary::
@@ -59,5 +59,5 @@ Plot
 
 .. autosummary::
     :toctree: .
-    
+
     pl.tree

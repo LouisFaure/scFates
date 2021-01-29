@@ -84,10 +84,10 @@ def test_fork(
 
     """\
     Test for branch differential gene expression, and differential upregulation after bifurcation point.
-    
+
     First, differential gene expression between two branches is performed. Then,
-    the feature are tested to intify the ones with higher average expression 
-    in one of the derivative branches compared to the progenitor branch. 
+    the feature are tested to intify the ones with higher average expression
+    in one of the derivative branches compared to the progenitor branch.
 
 
     Parameters
@@ -112,7 +112,7 @@ def test_fork(
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.uns['root_milestone->milestoneA<>milestoneB']['fork']`
             DataFrame with fork test results.
 
@@ -404,7 +404,7 @@ def branch_specific(
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.uns['root_milestone->milestoneA<>milestoneB']['fork']['branch']`
             assigned branch.
 
@@ -469,9 +469,9 @@ def activation(
 
     """\
     Identify pseudotime of activation of branc-specififc features.
-    
+
     This aims in classifying the genes according to their their activation timing
-    compared to the pseudotime of the bifurcation. Any feature activated before the 
+    compared to the pseudotime of the bifurcation. Any feature activated before the
     bifurcation is considered as 'early', others are considered 'late'.
 
     Parameters
@@ -496,12 +496,12 @@ def activation(
         number of cpu processes used to perform the test.
     copy
         Return a copy instead of writing to adata.
-        
+
     Returns
     -------
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
-        
+
         `.uns['root_milestone->milestoneA<>milestoneB']['fork']['module']`
             classify feature as 'early' or 'late'.
         `.uns['root_milestone->milestoneA<>milestoneB']['fork']['activation']`

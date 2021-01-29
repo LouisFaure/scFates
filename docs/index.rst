@@ -3,8 +3,8 @@ scFates - a suite for advanced pseudotime analysis
 
 **scFates** is a scalable suite for tree inference and advanced pseudotime analysis.
 
-It initially is a translation from crestree_, a R package developed for the analysis of neural crest fates during 
-murine embryonic development (`Soldatov et al., Science, 2019 <https://doi.org/10.1126/science.aas9536>`_), and used 
+It initially is a translation from crestree_, a R package developed for the analysis of neural crest fates during
+murine embryonic development (`Soldatov et al., Science, 2019 <https://doi.org/10.1126/science.aas9536>`_), and used
 in another study of neural crest derived sensory neurons (`Faure et al., Nature Communications, 2020 <https://doi.org/10.1038/s41467-020-17929-4>`_).
 
 The initial R version included a tree inference approach inspired from SimplePPT, this version now adds the choice of using ElPiGraph_,
@@ -31,7 +31,7 @@ Analysis key steps
    notebooks/Advanced_bifurcation_analysis
    api
    references
-   
+
 |Doc Badge| |CircleCI Badge| |codecov Badge|
 
 
@@ -40,7 +40,7 @@ Analysis key steps
 
 .. |Doc Badge| image:: https://readthedocs.org/projects/scfates/badge/?version=latest
 .. |CircleCI Badge| image:: https://circleci.com/gh/LouisFaure/scFates.svg?style=shield
-.. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg   
+.. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg
 
 .. _scanpy: https://scanpy.readthedocs.io/
 .. _crestree: https://github.com/hms-dbmi/crestree
