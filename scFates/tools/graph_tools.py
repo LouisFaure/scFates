@@ -454,10 +454,10 @@ def tree_ppt(
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
-        "    'ppt', dictionnary containing inferred tree (adata.uns)\n"
-        "    'graph/B', adjacency matrix of the principal points (adata.uns)\n"
-        "    'graph/R', soft assignment of cells to principal point in representation space (adata.uns)\n"
-        "    'graph/F', coordinates of principal points in representation space (adata.uns)"
+        "    .uns['ppt'], dictionnary containing inferred tree.\n"
+        "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
+        "    .uns['graph']['R'] soft assignment of cells to principal point in representation space.\n"
+        "    .uns['graph']['F'] coordinates of principal points in representation space."
     )
     
     return adata
@@ -567,10 +567,10 @@ def tree_epg(
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
-        "    'epg', dictionnary containing inferred elastic tree generated from elpigraph (adata.uns)\n"
-        "    'graph/B', adjacency matrix of the principal points (adata.uns)\n"
-        "    'graph/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
-        "    'graph/F', coordinates of principal points in representation space (adata.uns)"
+        "    .uns['epg'] dictionnary containing inferred elastic tree generated from elpigraph.\n"
+        "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
+        "    .uns['graph']['R'] soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space.\n"
+        "    .uns['graph']['F'] coordinates of principal points in representation space."
     )
     
     return adata
@@ -679,10 +679,10 @@ def curve_epg(
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
-        "    'epg', dictionnary containing inferred elastic tree generated from elpigraph (adata.uns)\n"
-        "    'graph/B', adjacency matrix of the principal points (adata.uns)\n"
-        "    'graph/R', soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space (adata.uns)\n"
-        "    'graph/F', coordinates of principal points in representation space (adata.uns)"
+        "    .uns['epg'] dictionnary containing inferred elastic curve generated from elpigraph.\n"
+        "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
+        "    .uns['graph']['R'] soft assignment (automatic sigma="+str(auto_sigma)+") of cells to principal point in representation space.\n"
+        "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
     
     return adata
@@ -869,9 +869,10 @@ def root(
     
     logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'graph/root', selected root (adata.uns)\n"
-        "    'graph/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
-        "    'graph/pp_seg', segments network information (adata.uns)"
+        "added\n" + 
+        "    .uns['graph']['root'] selected root."
+        "    .uns['graph']['pp_info'] for each PP, its distance vs root and segment assignment.\n"
+        "    .uns['graph']['pp_seg'] segments network information."
     )
     
     return adata if copy else None
@@ -1005,11 +1006,11 @@ def roots(
     logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added\n" + "    "+str(root)+" is the farthest root\n"
-        "    'graph/root', farthest root selected (adata.uns)\n"
-        "    'graph/root2', 2nd root selected (adata.uns)\n"
-        "    'graph/meeting', meeting point on the tree (adata.uns)\n"
-        "    'graph/pp_info', for each PP, its distance vs root and segment assignment (adata.uns)\n"
-        "    'graph/pp_seg', segments network information (adata.uns)"
+        "    .uns['graph']['root'] farthest root selected (adata.uns)\n"
+        "    .uns['graph']['root2'] 2nd root selected (adata.uns)\n"
+        "    .uns['graph']['meeting'] meeting point on the tree (adata.uns)\n"
+        "    .uns['graph']['pp_info'] for each PP, its distance vs root and segment assignment (adata.uns)\n"
+        "    .uns['graph']['pp_seg'] segments network information )"
     )
     
     return adata if copy else None

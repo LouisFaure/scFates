@@ -115,11 +115,12 @@ def pseudotime(
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'edge', assigned edge (adata.obs)\n"
-        "    't', pseudotime value (adata.obs)\n"
-        "    'seg', segment of the tree where the cell is assigned to (adata.obs)\n"
-        "    'milestones', milestones assigned to (adata.obs)\n"
-        "    'pseudotime_list', list of cell projection from all mappings (adata.uns)"
+        "added\n"
+        "    .obs['edge'] assigned edge.\n"
+        "    .obs['t'] pseudotime value.\n"
+        "    .obs['seg'] segment of the tree assigned.\n"
+        "    .obs['milestones'] milestone assigned.\n"
+        "    .uns['pseudotime_list'] list of cell projection from all mappings."
     )
     
     return adata if copy else None
@@ -267,8 +268,8 @@ def refine_pseudotime(
             
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "updated\n" + "    't' with palantir pseudotime values (adata.obs)\n"
-        "added\n" +"    't_old', previous pseudotime data (adata.obs)"
+        "updated\n" + "    .obs['t'] palantir refined pseudotime values.\n"
+        "added\n" +"    .obs['t_old'] previous pseudotime data."
     )
     
     return adata if copy else None

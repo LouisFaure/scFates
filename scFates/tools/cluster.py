@@ -71,7 +71,8 @@ def cluster(
     
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'fit_clusters', cluster assignments for features (adata.var)"
+        "added\n"
+        "    .var['fit_clusters'], cluster assignments for features."
     )
     
     return adata if copy else None

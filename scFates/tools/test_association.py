@@ -233,12 +233,13 @@ def test_association(
     logg.info("    found "+str(sum(adata.var["signi"]))+ " significant features",
               time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'p_val' values from statistical test (adata.var)\n"
-        "    'fdr' corrected values from multiple testing (adata.var)\n"
-        "    'st' proportion of mapping in which feature is significant (adata.var)\n"
-        "    'A' amplitue of change of tested feature (adata.var)\n"
-        "    'signi' feature is significantly changing along pseuodtime (adata.var)\n"
-        "    'stat_assoc_list', list of fitted features on the graph for all mappings (adata.uns)"
+        "added\n"
+        "    .var['p_val'] values from statistical test.\n"
+        "    .var['fdr'] corrected values from multiple testing.\n"
+        "    .var['st'] proportion of mapping in which feature is significant.\n"
+        "    .var['A'] amplitue of change of tested feature.\n"
+        "    .var['signi'] feature is significantly changing along pseudotime.\n"
+        "    .uns['stat_assoc_list'] list of fitted features on the graph for all mappings."
     )
     
     if plot:

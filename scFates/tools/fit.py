@@ -224,7 +224,8 @@ def fit(
     
     logg.info("    finished (adata subsetted to keep only fitted features!)", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    'fitted', fitted features on the trajectory for all mappings (adata.layers)"
+        "added\n"
+        "    .layers['fitted'], fitted features on the trajectory for all mappings."
     )
     
     
