@@ -6,7 +6,7 @@ scFates has been tested with python 3.7, it is recommended to use a Miniconda_ e
 PyPI
 ----
 
-Currently, scFates can only be installed from GitHub_ using:
+Currently, scFates can only be installed from GitHub_ using::
 
 .. raw:: html
 
