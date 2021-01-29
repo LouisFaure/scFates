@@ -1,4 +1,5 @@
 import os
+
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -31,7 +32,8 @@ try:
     from rpy2.robjects import pandas2ri, Formula
     from rpy2.robjects.packages import importr
     import rpy2.rinterface
-    pandas2ri.activate()  
+
+    pandas2ri.activate()
 except Exception as e:
     warnings.warn(
         'Cannot compute gene expression trends without installing rpy2. \
@@ -40,7 +42,7 @@ except Exception as e:
     print(e.__doc__)
     print(e.message)
 
-        
+
 if not shutil.which("R"):
     warnings.warn(
         "R installation is necessary for computing gene expression trends. \
@@ -48,7 +50,7 @@ if not shutil.which("R"):
     )
 
 try:
-    rstats = importr("stats")    
+    rstats = importr("stats")
 except Exception as e:
     warnings.warn(
         "R installation is necessary for computing gene expression trends. \
@@ -56,9 +58,9 @@ except Exception as e:
     )
     print(e.__doc__)
     print(e.message)
-    
+
 try:
-    rmgcv = importr("mgcv")  
+    rmgcv = importr("mgcv")
 except Exception as e:
     warnings.warn(
         'R package "mgcv" is necessary for computing gene expression trends. \
@@ -66,9 +68,6 @@ except Exception as e:
     )
     print(e.__doc__)
     print(e.message)
-
-
-
 
 
 def test_association(
@@ -81,11 +80,12 @@ def test_association(
     st_cut: float = 0.8,
     reapply_filters: bool = False,
     plot: bool = False,
-    root = None,
-    leaves = None,
+    root=None,
+    leaves=None,
     copy: bool = False,
-    layer: Optional[str] = None):
-    
+    layer: Optional[str] = None,
+):
+
     """\
     Determine a set of genes significantly associated with the trajectory.
     
@@ -146,92 +146,114 @@ def test_association(
         `.uns['stat_assoc_list']`
             list of fitted features on the tree for all mappings.
     """
-    
+
     adata = adata.copy() if copy else adata
-    
+
     if "pseudotime_list" not in adata.uns:
         raise ValueError(
             "You need to run `tl.pseudotime` before testing for association."
         )
-    
+
     graph = adata.uns["graph"]
-    
+
     mlsc_temp = None
     if leaves is not None:
         # weird hack to keep milestones colors saved
         if "milestones_colors" in adata.uns:
             mlsc = adata.uns["milestones_colors"].copy()
             mlsc_temp = mlsc.copy()
-       
+
         dct = graph["milestones"]
         keys = np.array(list(dct.keys()))
         vals = np.array(list(dct.values()))
 
-        leaves=list(map(lambda leave: dct[leave],leaves))
-        root=dct[root]
-    
+        leaves = list(map(lambda leave: dct[leave], leaves))
+        root = dct[root]
+
     if reapply_filters & ("stat_assoc_list" in adata.uns):
         stat_assoc_l = list(adata.uns["stat_assoc_list"].values())
-        #stat_assoc_l = list(map(lambda x: pd.DataFrame(x,index=x["features"]),stat_assoc_l))
-        adata = apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut)
-        
-        logg.info("reapplied filters, "+str(sum(adata.var["signi"]))+ " significant features")
-        
+        # stat_assoc_l = list(map(lambda x: pd.DataFrame(x,index=x["features"]),stat_assoc_l))
+        adata = apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut)
+
+        logg.info(
+            "reapplied filters, "
+            + str(sum(adata.var["signi"]))
+            + " significant features"
+        )
+
         if plot:
             plot_test_association(adata)
-            
+
         return adata if copy else None
-    
-    
+
     genes = adata.var_names
     if root is None:
         cells = graph["cells_fitted"]
     else:
         df = adata.obs.copy()
-        edges = graph["pp_seg"][["from","to"]].astype(str).apply(tuple,axis=1).values
+        edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
-        img.add_vertices(np.unique(graph["pp_seg"][["from","to"]].values.flatten().astype(str)))
+        img.add_vertices(
+            np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
+        )
         img.add_edges(edges)
-        
-        cells = np.unique(np.concatenate(list(map(lambda leave:
-                                          getpath(img,root,graph["tips"],leave,graph,df).index,leaves))))
-    
+
+        cells = np.unique(
+            np.concatenate(
+                list(
+                    map(
+                        lambda leave: getpath(
+                            img, root, graph["tips"], leave, graph, df
+                        ).index,
+                        leaves,
+                    )
+                )
+            )
+        )
+
     if layer is None:
         if sparse.issparse(adata.X):
-            Xgenes = adata[cells,genes].X.A.T.tolist()
+            Xgenes = adata[cells, genes].X.A.T.tolist()
         else:
-            Xgenes = adata[cells,genes].X.T.tolist()
+            Xgenes = adata[cells, genes].X.T.tolist()
     else:
         if sparse.issparse(adata.layers[layer]):
-            Xgenes = adata[cells,genes].layers[layer].A.T.tolist()
+            Xgenes = adata[cells, genes].layers[layer].A.T.tolist()
         else:
-            Xgenes = adata[cells,genes].layers[layer].T.tolist()
-        
-     
-    logg.info("test features for association with the trajectory", reset=True, end="\n")
-       
-    stat_assoc_l=list()
-    
-    for m in range(n_map):
-        data = list(zip([adata.uns["pseudotime_list"][str(m)].loc[cells,:]]*len(Xgenes),Xgenes))
-        
-        stat = Parallel(n_jobs=n_jobs)(
-            delayed(gt_fun)(
-                data[d]
-            )
-            for d in tqdm(range(len(data)),file=sys.stdout,desc="    mapping "+str(m))
-        )
-        stat = pd.DataFrame(stat,index=genes,columns=["p_val","A"])
-        stat["fdr"] = multipletests(stat.p_val,method="bonferroni")[1]                  
-        stat_assoc_l = stat_assoc_l + [stat]
-        
-    adata = apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut)
-    
-    if mlsc_temp is not None:
-        adata.uns["milestones_colors"]=mlsc_temp
+            Xgenes = adata[cells, genes].layers[layer].T.tolist()
 
-    logg.info("    found "+str(sum(adata.var["signi"]))+ " significant features",
-              time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.info("test features for association with the trajectory", reset=True, end="\n")
+
+    stat_assoc_l = list()
+
+    for m in range(n_map):
+        data = list(
+            zip(
+                [adata.uns["pseudotime_list"][str(m)].loc[cells, :]] * len(Xgenes),
+                Xgenes,
+            )
+        )
+
+        stat = Parallel(n_jobs=n_jobs)(
+            delayed(gt_fun)(data[d])
+            for d in tqdm(
+                range(len(data)), file=sys.stdout, desc="    mapping " + str(m)
+            )
+        )
+        stat = pd.DataFrame(stat, index=genes, columns=["p_val", "A"])
+        stat["fdr"] = multipletests(stat.p_val, method="bonferroni")[1]
+        stat_assoc_l = stat_assoc_l + [stat]
+
+    adata = apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut)
+
+    if mlsc_temp is not None:
+        adata.uns["milestones_colors"] = mlsc_temp
+
+    logg.info(
+        "    found " + str(sum(adata.var["signi"])) + " significant features",
+        time=True,
+        end=" " if settings.verbosity > 2 else "\n",
+    )
     logg.hint(
         "added\n"
         "    .var['p_val'] values from statistical test.\n"
@@ -241,73 +263,87 @@ def test_association(
         "    .var['signi'] feature is significantly changing along pseudotime.\n"
         "    .uns['stat_assoc_list'] list of fitted features on the graph for all mappings."
     )
-    
+
     if plot:
         plot_test_association(adata)
-    
+
     return adata if copy else None
 
-def gt_fun(data):     
+
+def gt_fun(data):
     sdf = data[0]
     sdf["exp"] = data[1]
-    
+
     global rmgcv
     global rstats
-    
+
     def gamfit(s):
-        m = rmgcv.gam(Formula("exp~s(t,k=5)"),data=sdf.loc[sdf["seg"]==s,:])
-        return dict({"d":m[5][0],"df":m[42][0],"p":rmgcv.predict_gam(m)})
+        m = rmgcv.gam(Formula("exp~s(t,k=5)"), data=sdf.loc[sdf["seg"] == s, :])
+        return dict({"d": m[5][0], "df": m[42][0], "p": rmgcv.predict_gam(m)})
 
-    mdl=list(map(gamfit,sdf.seg.unique()))
-    mdf=pd.concat(list(map(lambda x: pd.DataFrame([x["d"],x["df"]]),mdl)),axis=1).T
-    mdf.columns=["d","df"]
+    mdl = list(map(gamfit, sdf.seg.unique()))
+    mdf = pd.concat(list(map(lambda x: pd.DataFrame([x["d"], x["df"]]), mdl)), axis=1).T
+    mdf.columns = ["d", "df"]
 
-    odf = sum(mdf["df"])-mdf.shape[0]
-    m0 = rmgcv.gam(Formula("exp~1"),data=sdf)
-    if sum(mdf["d"])==0:
+    odf = sum(mdf["df"]) - mdf.shape[0]
+    m0 = rmgcv.gam(Formula("exp~1"), data=sdf)
+    if sum(mdf["d"]) == 0:
         fstat = 0
     else:
-        fstat = (m0[5][0] - sum(mdf["d"])) / (m0[42][0]-odf) / (sum(mdf["d"])/odf)
+        fstat = (m0[5][0] - sum(mdf["d"])) / (m0[42][0] - odf) / (sum(mdf["d"]) / odf)
 
     df_res0 = m0[42][0]
-    df_res_odf = df_res0-odf
-    pval = rstats.pf(fstat,df_res_odf,odf,lower_tail=False)[0]
-    pr = np.concatenate(list(map(lambda x: x["p"],mdl)))
-    
-    return [pval,max(pr)-min(pr)]
+    df_res_odf = df_res0 - odf
+    pval = rstats.pf(fstat, df_res_odf, odf, lower_tail=False)[0]
+    pr = np.concatenate(list(map(lambda x: x["p"], mdl)))
+
+    return [pval, max(pr) - min(pr)]
 
 
-def apply_filters(adata,stat_assoc_l,fdr_cut,A_cut,st_cut):
+def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut):
     n_map = len(stat_assoc_l)
-    if n_map>1:
-        stat_assoc = pd.DataFrame({"p_val":pd.concat(list(map(lambda x: 
-                                                    x["p_val"],stat_assoc_l)),axis=1).median(axis=1),
-                      "A":pd.concat(list(map(lambda x: x["A"],stat_assoc_l)),axis=1).median(axis=1),
-                      "fdr":pd.concat(list(map(lambda x: x["fdr"],stat_assoc_l)),axis=1).median(axis=1),
-                     "st": pd.concat(list(map(lambda x: (x.fdr<fdr_cut) & (x.A>A_cut),
-                                              stat_assoc_l)),axis=1).sum(axis=1)/n_map})
+    if n_map > 1:
+        stat_assoc = pd.DataFrame(
+            {
+                "p_val": pd.concat(
+                    list(map(lambda x: x["p_val"], stat_assoc_l)), axis=1
+                ).median(axis=1),
+                "A": pd.concat(
+                    list(map(lambda x: x["A"], stat_assoc_l)), axis=1
+                ).median(axis=1),
+                "fdr": pd.concat(
+                    list(map(lambda x: x["fdr"], stat_assoc_l)), axis=1
+                ).median(axis=1),
+                "st": pd.concat(
+                    list(
+                        map(lambda x: (x.fdr < fdr_cut) & (x.A > A_cut), stat_assoc_l)
+                    ),
+                    axis=1,
+                ).sum(axis=1)
+                / n_map,
+            }
+        )
     else:
-        stat_assoc=stat_assoc_l[0]
-        stat_assoc["st"] = ((stat_assoc.fdr<fdr_cut) & (stat_assoc.A>A_cut))*1
-     
-    
-    # saving results 
-    stat_assoc["signi"]=stat_assoc["st"]>st_cut   
-      
+        stat_assoc = stat_assoc_l[0]
+        stat_assoc["st"] = ((stat_assoc.fdr < fdr_cut) & (stat_assoc.A > A_cut)) * 1
+
+    # saving results
+    stat_assoc["signi"] = stat_assoc["st"] > st_cut
+
     if set(stat_assoc.columns.tolist()).issubset(adata.var.columns):
         adata.var[stat_assoc.columns] = stat_assoc
     else:
-        adata.var = pd.concat([adata.var,stat_assoc],axis=1)
-    
+        adata.var = pd.concat([adata.var, stat_assoc], axis=1)
+
     # save all tests for each mapping
     names = np.arange(len(stat_assoc_l)).astype(str).tolist()
-    #todict=list(map(lambda x: x.to_dict(),stat_assoc_l))
-    
-    #todict=list(map(lambda x: dict(zip(["features"]+x.columns.tolist(),
+    # todict=list(map(lambda x: x.to_dict(),stat_assoc_l))
+
+    # todict=list(map(lambda x: dict(zip(["features"]+x.columns.tolist(),
     #                                   [x.index.tolist()]+x.to_numpy().T.tolist())),
     #                stat_assoc_l))
-    
+
     dictionary = dict(zip(names, stat_assoc_l))
-    adata.uns["stat_assoc_list"]=dictionary
-    
+    adata.uns["stat_assoc_list"] = dictionary
+
     return adata

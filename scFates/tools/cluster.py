@@ -11,15 +11,15 @@ from .. import settings
 import phenograph
 
 
-    
 def cluster(
     adata: AnnData,
     knn: int = 10,
     metric: str = "euclidean",
     device: str = "cpu",
     copy: bool = False,
-    n_jobs: int = 1): 
-    
+    n_jobs: int = 1,
+):
+
     """\
     Cluster feature trends.
     
@@ -53,27 +53,26 @@ def cluster(
             cluster assignments for features.
     
     """
-    
+
     adata = data.copy() if copy else adata
-    
+
     if device == "gpu":
         from . import grapheno_modified
-        logg.info('    clustering using grapheno')
-        clusters = grapheno_modified.cluster(adata.layers["fitted"].T,
-                         metric=metric,n_neighbors=knn)[0].get()
-        
-    elif device =="cpu":
-        logg.info('    clustering using phenograph')
-        clusters = phenograph.cluster(adata.layers["fitted"].T,
-                         primary_metric=metric,k=knn,n_jobs=n_jobs)[0]
-        
+
+        logg.info("    clustering using grapheno")
+        clusters = grapheno_modified.cluster(
+            adata.layers["fitted"].T, metric=metric, n_neighbors=knn
+        )[0].get()
+
+    elif device == "cpu":
+        logg.info("    clustering using phenograph")
+        clusters = phenograph.cluster(
+            adata.layers["fitted"].T, primary_metric=metric, k=knn, n_jobs=n_jobs
+        )[0]
+
     adata.var["fit_clusters"] = clusters
-    
+
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint(
-        "added\n"
-        "    .var['fit_clusters'], cluster assignments for features."
-    )
-    
+    logg.hint("added\n" "    .var['fit_clusters'], cluster assignments for features.")
+
     return adata if copy else None
-    

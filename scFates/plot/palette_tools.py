@@ -5,8 +5,11 @@ from cycler import Cycler, cycler
 from matplotlib import rcParams, ticker, gridspec, axes
 from . import palettes
 
+
 def _set_colors_for_categorical_obs(
-    adata, value_to_plot, palette: Union[str, Sequence[str], Cycler],
+    adata,
+    value_to_plot,
+    palette: Union[str, Sequence[str], Cycler],
 ):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
@@ -66,13 +69,13 @@ def _set_colors_for_categorical_obs(
                 "matplotlib colormap string (eg. Set2), a  list of color names "
                 "or a cycler with a 'color' key."
             )
-        if 'color' not in palette.keys:
+        if "color" not in palette.keys:
             raise ValueError("Please set the palette key 'color'.")
 
         cc = palette()
-        colors_list = [to_hex(next(cc)['color']) for x in range(len(categories))]
+        colors_list = [to_hex(next(cc)["color"]) for x in range(len(categories))]
 
-    adata.uns[value_to_plot + '_colors'] = colors_list
+    adata.uns[value_to_plot + "_colors"] = colors_list
 
 
 def _set_default_colors_for_categorical_obs(adata, value_to_plot):
@@ -93,9 +96,9 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     length = len(categories)
 
     # check if default matplotlib palette has enough colors
-    if len(rcParams['axes.prop_cycle'].by_key()['color']) >= length:
-        cc = rcParams['axes.prop_cycle']()
-        palette = [next(cc)['color'] for _ in range(length)]
+    if len(rcParams["axes.prop_cycle"].by_key()["color"]) >= length:
+        cc = rcParams["axes.prop_cycle"]()
+        palette = [next(cc)["color"] for _ in range(length)]
 
     else:
         if length <= 20:
@@ -105,13 +108,13 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
         elif length <= len(palettes.default_102):  # 103 colors
             palette = palettes.default_102
         else:
-            palette = ['grey' for _ in range(length)]
+            palette = ["grey" for _ in range(length)]
             logg.info(
-                f'the obs value {value_to_plot!r} has more than 103 categories. Uniform '
+                f"the obs value {value_to_plot!r} has more than 103 categories. Uniform "
                 "'grey' color will be used for all categories."
             )
 
-    adata.uns[value_to_plot + '_colors'] = palette[:length]
+    adata.uns[value_to_plot + "_colors"] = palette[:length]
 
 
 def add_colors_for_categorical_sample_annotation(

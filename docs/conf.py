@@ -7,14 +7,32 @@ from datetime import datetime
 from typing import Optional, Union, Mapping
 import mock
 
-MOCK_MODULES = ['scanpy','rpy2','joblib','tqdm','scikit-misc','numba','seaborn',
-               'statsmodels','plotly','adjustText',
-               'statsmodels.stats.multitest','statsmodels.formula.api',
-               'igraph','statsmodels.stats.weightstats',
-               'skmisc.loess','statsmodels.stats.multitest','rpy2.robjects',
-               'rpy2.robjects.packages', 'rpy2.rinterface','scanpy.plotting._utils',
-               'plotly.express','plotly.graph_objects',
-               'elpigraph','phenograph']
+MOCK_MODULES = [
+    "scanpy",
+    "rpy2",
+    "joblib",
+    "tqdm",
+    "scikit-misc",
+    "numba",
+    "seaborn",
+    "statsmodels",
+    "plotly",
+    "adjustText",
+    "statsmodels.stats.multitest",
+    "statsmodels.formula.api",
+    "igraph",
+    "statsmodels.stats.weightstats",
+    "skmisc.loess",
+    "statsmodels.stats.multitest",
+    "rpy2.robjects",
+    "rpy2.robjects.packages",
+    "rpy2.rinterface",
+    "scanpy.plotting._utils",
+    "plotly.express",
+    "plotly.graph_objects",
+    "elpigraph",
+    "phenograph",
+]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
@@ -30,7 +48,6 @@ sys.path.insert(0, f"{HERE.parent}")
 
 
 import scFates
- 
 
 
 logger = logging.getLogger(__name__)
@@ -51,8 +68,8 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinxext.opengraph",
     "sphinx_autodoc_typehints",
-    'readthedocs_ext.readthedocs',
-    "nbsphinx"
+    "readthedocs_ext.readthedocs",
+    "nbsphinx",
 ]
 
 ogp_site_url = "https://scfates.readthedocs.io/"
@@ -87,22 +104,25 @@ pygments_style = "sphinx"
 todo_include_todos = False
 
 
-
 # -- Options for HTML output ----------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
-html_theme_options = {'titles_only': True,'logo_only': True,
-                           # Toc options
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False}
+html_theme_options = {
+    "titles_only": True,
+    "logo_only": True,
+    # Toc options
+    "collapse_navigation": True,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
+}
 
 html_show_sphinx = False
-html_logo = '_static/scFates_Logo.svg'
+html_logo = "_static/scFates_Logo.svg"
 html_static_path = ["_static"]
 html_extra_path = ["_extra"]
+
 
 def setup(app):
     app.add_css_file("custom.css")

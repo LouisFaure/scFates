@@ -10,6 +10,7 @@ HERE = Path(__file__).parent
 
 from scanpy import read
 
+
 def morarach20() -> AnnData:
     """\
     10X sequencing from the developping (E15.5) enteric nervous system, it
@@ -21,12 +22,12 @@ def morarach20() -> AnnData:
     Annotated data matrix.
     """
 
-    filename = HERE / 'morarach20.h5ad'
+    filename = HERE / "morarach20.h5ad"
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(filename)
-    
-    
+
+
 def test_adata() -> AnnData:
     """\
     10X sequencing from the developping (E15.5) enteric nervous system, it
@@ -38,7 +39,7 @@ def test_adata() -> AnnData:
     Annotated data matrix.
     """
 
-    filename = HERE / 'test.h5ad'
+    filename = HERE / "test.h5ad"
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
         return read(filename)

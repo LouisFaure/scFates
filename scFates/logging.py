@@ -171,4 +171,3 @@ def timeout(func, args=(), timeout_duration=2, default=None, **kwargs):
     it.start()
     it.join(timeout_duration)
     return it.result
-
