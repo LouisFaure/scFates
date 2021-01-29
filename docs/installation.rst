@@ -6,7 +6,7 @@ scFates has been tested with python 3.7, it is recommended to use a Miniconda_ e
 PyPI
 ----
 
-Currently, scFates can only be installed from GitHub_ using::
+Currently, scFates can only be installed from GitHub_ using:
 
 .. raw:: html
 
@@ -21,7 +21,7 @@ Python dependencies
 --------------
 
 scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data.
-Elpigraph needs to be installed from its github repository with the following command::
+Elpigraph needs to be installed from its github repository with the following command:
 
 .. raw:: html
 
