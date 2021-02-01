@@ -153,6 +153,8 @@ def graph(
 def trajectory(
     adata: AnnData,
     basis: str = "umap",
+    root_milestone=None,
+    milestones=None,
     color_seg="t",
     cmap_seg: str = "viridis",
     color_cells=None,
@@ -175,41 +177,79 @@ def trajectory(
 
     graph = adata.uns["graph"]
 
+    dct = graph["milestones"]
+
     emb = adata.obsm[f"X_{basis}"]
     emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
     R = graph["R"]
 
-    proj = (np.dot(emb_f.T, R) / R.sum(axis=0)).T
+    nodes = graph["pp_info"].index
+    proj = pd.DataFrame((np.dot(emb_f.T, R) / R.sum(axis=0)).T, index=nodes)
 
     B = graph["B"]
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+    g.vs[:]["name"] = [v.index for v in g.vs]
+
+    tips = graph["tips"]
+
+    if root_milestone is not None:
+        nodes = g.get_all_shortest_paths(
+            dct[root_milestone], [dct[m] for m in milestones]
+        )
+        nodes = np.unique(np.concatenate(nodes))
+        tips = graph["tips"][np.isin(graph["tips"], nodes)]
+        proj = proj.loc[nodes, :]
+        g.delete_vertices(graph["pp_info"].index[~graph["pp_info"].index.isin(nodes)])
+        if ax is None:
+            ax = sc.pl.scatter(adata, show=False, color="whitesmoke", basis="umap")
+        else:
+            sc.pl.scatter(adata, show=False, ax=ax, color="whitesmoke", basis="umap")
+
+    c_edges = np.array([e.split("|") for e in adata.obs.edge], dtype=int)
+    cells = [any(np.isin(c_e, nodes)) for c_e in c_edges]
 
     if ax is None:
         if basis == "umap":
             ax = sc.pl.umap(
-                adata, show=False, color=color_cells, cmap=cmap_cells, **kwargs
+                adata[cells], show=False, color=color_cells, cmap=cmap_cells, **kwargs
             )
         elif basis == "tsne":
             ax = sc.pl.tsne(
-                adata, show=False, color=color_cells, cmap=cmap_cells, **kwargs
+                adata[cells], show=False, color=color_cells, cmap=cmap_cells, **kwargs
             )
         else:
             ax = sc.pl.scatter(
-                adata, show=False, color=color_cells, cmap=cmap_cells, **kwargs
+                adata[cells], show=False, color=color_cells, cmap=cmap_cells, **kwargs
             )
 
     else:
         if basis == "umap":
             sc.pl.umap(
-                adata, show=False, ax=ax, color=color_cells, cmap=cmap_cells, **kwargs
+                adata[cells],
+                show=False,
+                ax=ax,
+                color=color_cells,
+                cmap=cmap_cells,
+                **kwargs,
             )
         elif basis == "tsne":
             sc.pl.tsne(
-                adata, show=False, ax=ax, color=color_cells, cmap=cmap_cells, **kwargs
+                adata[cells],
+                show=False,
+                ax=ax,
+                color=color_cells,
+                cmap=cmap_cells,
+                **kwargs,
             )
         else:
             sc.pl.scatter(
-                adata, show=False, ax=ax, color=color_cells, cmap=cmap_cells, **kwargs
+                adata[cells],
+                show=False,
+                ax=ax,
+                color=color_cells,
+                cmap=cmap_cells,
+                **kwargs,
             )
 
     if show_colorbar == False:
@@ -219,12 +259,11 @@ def trajectory(
             np.argwhere(["colorbar" in a.get_label() for a in fig.get_axes()])[0][0]
         ].remove()
 
-    al = np.array(
-        igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected").get_edgelist()
-    )
-    segs = al.tolist()
-    vertices = proj.tolist()
-    lines = [[tuple(vertices[j]) for j in i] for i in segs]
+    al = np.array(g.get_edgelist())
+
+    edges = [g.vs[e.tolist()]["name"] for e in al]
+
+    lines = [[tuple(proj.loc[j]) for j in i] for i in edges]
 
     vals = pd.Series(
         _get_color_values(adata, color_seg, layer=layer)[0], index=adata.obs_names
@@ -236,14 +275,14 @@ def trajectory(
 
     seg_val = pd.Series(
         [
-            vals[adata[(sorted_edges == s).sum(axis=1) == 2].obs_names].values.mean()
-            for s in segs
+            vals[adata[(sorted_edges == e).sum(axis=1) == 2].obs_names].values.mean()
+            for e in edges
         ]
     )
 
-    emptysegs = seg_val.index[[np.isnan(sv) for sv in seg_val]]
-    for i in emptysegs:
-        empty = graph["pp_info"].loc[segs[i], :].sort_values("time")
+    emptyedges = seg_val.index[[np.isnan(sv) for sv in seg_val]]
+    for i in emptyedges:
+        empty = graph["pp_info"].loc[edges[i], :].sort_values("time")
         boundcells = empty.apply(
             lambda n: (adata[(adata.obs.seg == n.seg)].obs.t - n.time).abs().idxmin(),
             axis=1,
@@ -264,7 +303,7 @@ def trajectory(
     if arrows:
         for s in seg:
             path = np.array(g.get_shortest_paths(s[0], s[1])[0])
-            coord = proj[
+            coord = proj.loc[
                 path,
             ]
             out = np.empty(len(path) - 1)
@@ -273,10 +312,10 @@ def trajectory(
             if mid + arrow_offset > (len(path) - 1):
                 arrow_offset = len(path) - 1 - mid
             ax.quiver(
-                proj[path[mid], 0],
-                proj[path[mid], 1],
-                proj[path[mid + arrow_offset], 0] - proj[path[mid], 0],
-                proj[path[mid + arrow_offset], 1] - proj[path[mid], 1],
+                proj.loc[path[mid], 0],
+                proj.loc[path[mid], 1],
+                proj.loc[path[mid + arrow_offset], 0] - proj.loc[path[mid], 0],
+                proj.loc[path[mid + arrow_offset], 1] - proj.loc[path[mid], 1],
                 headwidth=15 * scale_path,
                 headaxislength=10 * scale_path,
                 headlength=10 * scale_path,
@@ -291,10 +330,10 @@ def trajectory(
                 == 1
             ].mean()
             ax.quiver(
-                proj[path[mid], 0],
-                proj[path[mid], 1],
-                proj[path[mid + arrow_offset], 0] - proj[path[mid], 0],
-                proj[path[mid + arrow_offset], 1] - proj[path[mid], 1],
+                proj.loc[path[mid], 0],
+                proj.loc[path[mid], 1],
+                proj.loc[path[mid + arrow_offset], 0] - proj.loc[path[mid], 0],
+                proj.loc[path[mid + arrow_offset], 1] - proj.loc[path[mid], 1],
                 headwidth=12 * scale_path,
                 headaxislength=10 * scale_path,
                 headlength=10 * scale_path,
@@ -310,8 +349,8 @@ def trajectory(
         zorder=104,
     )
     ax.scatter(
-        proj[graph["tips"], 0],
-        proj[graph["tips"], 1],
+        proj.loc[tips, 0],
+        proj.loc[tips, 1],
         zorder=103,
         c="k",
         s=200 * scale_path,
@@ -319,7 +358,7 @@ def trajectory(
     ax.add_collection(lc)
 
     tip_val = []
-    for tip in graph["tips"]:
+    for tip in tips:
         sel = (
             np.array(list(map(lambda e: e.split("|"), adata.obs.edge)), dtype=int)
             == tip
@@ -327,8 +366,8 @@ def trajectory(
         tip_val = tip_val + [vals.loc[adata.obs_names[sel]].mean()]
 
     ax.scatter(
-        proj[graph["tips"], 0],
-        proj[graph["tips"], 1],
+        proj.loc[tips, 0],
+        proj.loc[tips, 1],
         zorder=105,
         c=sm.to_rgba(tip_val),
         s=140 * scale_path,
