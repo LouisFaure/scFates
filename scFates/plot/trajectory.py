@@ -2,10 +2,8 @@ import numpy as np
 import pandas as pd
 import igraph
 from anndata import AnnData
-import matplotlib.pyplot as plt
 import matplotlib.collections
 from typing import Union, Optional
-import plotly.express as px
 import plotly.graph_objects as go
 import scanpy as sc
 
@@ -33,11 +31,8 @@ def custom_new_gc(self):
 def graph(
     adata: AnnData,
     basis: str = "umap",
-    emb_back: Union[np.ndarray, None] = None,
     size_nodes: float = None,
-    col_traj: bool = False,
     color_cells: Union[str, None] = None,
-    alpha_cells: float = 1,
     tips: bool = True,
     forks: bool = True,
     ax=None,
@@ -160,13 +155,10 @@ def graph(
 def trajectory(
     adata: AnnData,
     basis: str = "umap",
-    emb_back=None,
     color_seg="t",
     cmap_seg: str = "viridis",
     color_cells=None,
     cmap_cells=None,
-    size_cells=None,
-    alpha_cells: float = 1,
     scale_path: float = 1,
     layer=None,
     arrows: bool = False,
@@ -258,7 +250,6 @@ def trajectory(
     ax.add_collection(lc)
 
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-    paths = g.get_shortest_paths(graph["root"], graph["tips"])
     seg = graph["pp_seg"].loc[:, ["from", "to"]].values.tolist()
 
     if arrows:
@@ -368,7 +359,6 @@ def trajectory_3d(
     cell_cex: int = 2,
     figsize: tuple = (900, 900),
     cmap=None,
-    palette=None,
 ):
 
     r = adata.uns["graph"]

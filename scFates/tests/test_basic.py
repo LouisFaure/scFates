@@ -57,7 +57,7 @@ def test_pipeline():
     # scf.tl.tree(adata,Nodes=100,use_rep="pca",method="ppt",device="gpu",ppt_sigma=1,ppt_lambda=10000,seed=1)
     # F_PC1_ppt_gpu = adata.uns['graph']['F'][0,:5]
 
-    scf.pl.trajectory(adata, emb_back=adata.obsm["X_umap"])
+    scf.pl.graph(adata)
 
     adata_2 = scf.tl.roots(
         adata, roots=[80, 25], meeting=adata.uns["graph"]["forks"][0], copy=True
@@ -75,7 +75,7 @@ def test_pipeline():
 
     obs_t = adata.obs.t[:5].values
 
-    scf.pl.trajectory_pseudotime(adata, emb_back=adata.obsm["X_umap"], arrows=True)
+    scf.pl.trajectory(adata, arrows=True)
     scf.pl.milestones(adata)
     scf.pl.milestones(adata, color="t")
 
@@ -106,16 +106,11 @@ def test_pipeline():
 
     scf.tl.cluster(adata, knn=3)
 
+    scf.pl.trends(adata, features=adata.var_names, save_genes="genes.tsv")
     scf.pl.trends(
         adata,
         features=adata.var_names,
-        save_genes="genes.tsv",
-        emb_back=adata.obsm["X_umap"],
-    )
-    scf.pl.trends(
-        adata,
-        features=adata.var_names,
-        show_milestones=False,
+        annot="milestones",
         plot_emb=False,
         ordering="quantile",
     )
@@ -123,6 +118,7 @@ def test_pipeline():
     scf.pl.trends(
         adata,
         features=adata.var_names,
+        annot="seg",
         root_milestone="80",
         milestones=["19"],
         ordering="pearson",
@@ -135,7 +131,6 @@ def test_pipeline():
         adata,
         layer="scaled",
         feature=adata.var_names[0],
-        emb_back=adata.obsm["X_umap"],
         show=False,
     )
 

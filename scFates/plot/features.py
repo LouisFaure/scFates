@@ -10,6 +10,7 @@ from scipy import stats
 from adjustText import adjust_text
 from matplotlib import patches
 from scipy import sparse
+import warnings
 
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
@@ -95,6 +96,11 @@ def trends(
         )
 
         adata = adata[cells]
+        if plot_emb:
+            plot_emb = False
+            warnings.warn(
+                "For now plotting a subset of the trajectory breaks the embedding side. This will be fixed soon!"
+            )
 
     if features is None:
         features = adata.var_names
