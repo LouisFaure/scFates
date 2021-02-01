@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import scanpy as sc
 
 from scanpy.plotting._utils import savefig_or_show
+from scanpy.plotting._tools.scatterplots import _get_color_values
 import types
 from matplotlib.backend_bases import GraphicsContextBase, RendererBase
 
@@ -29,7 +30,7 @@ def custom_new_gc(self):
     return GC()
 
 
-def trajectory(
+def graph(
     adata: AnnData,
     basis: str = "umap",
     emb_back: Union[np.ndarray, None] = None,
@@ -39,8 +40,10 @@ def trajectory(
     alpha_cells: float = 1,
     tips: bool = True,
     forks: bool = True,
+    ax=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    **kwargs,
 ):
 
     """\
@@ -66,10 +69,14 @@ def trajectory(
         display tip ids.
     forks
         display fork ids.
+    ax
+        Add plot to existing ax
     show
         show the plot.
     save
         save the plot.
+    kwargs
+        arguments to pass to sc.pl.scatter/sc.pl.tsne/sc.pl.umap
 
     Returns
     -------
@@ -95,32 +102,21 @@ def trajectory(
 
     B = graph["B"]
 
-    fig = plt.figure()
-    ax = plt.subplot()
+    if ax is None:
+        if basis == "umap":
+            ax = sc.pl.umap(adata, show=False, **kwargs)
+        elif basis == "tsne":
+            ax = sc.pl.tsne(adata, show=False, **kwargs)
+        else:
+            ax = sc.pl.scatter(adata, show=False, **kwargs)
 
-    if emb_back is not None:
-        ax.scatter(
-            emb_back[:, 0], emb_back[:, 1], s=2, color="lightgrey", alpha=alpha_cells
-        )
-
-    ax.scatter(emb[:, 0], emb[:, 1], s=2, color="grey", alpha=alpha_cells)
-
-    ax.grid(False)
-    x0, x1 = ax.get_xlim()
-    y0, y1 = ax.get_ylim()
-    ax.set_aspect(abs(x1 - x0) / abs(y1 - y0))
-    ax.tick_params(
-        axis="both",  # changes apply to the x-axis
-        which="both",  # both major and minor ticks are affected
-        bottom=False,  # ticks along the bottom edge are off
-        top=False,  # ticks along the top edge are off
-        labelbottom=False,
-        left=False,
-        labelleft=False,
-    )  # labels along the bottom edge are off
-
-    ax.set_xlabel(basis + "1")
-    ax.set_ylabel(basis + "2")
+    else:
+        if basis == "umap":
+            sc.pl.umap(adata, show=False, ax=ax, **kwargs)
+        elif basis == "tsne":
+            sc.pl.tsne(adata, show=False, ax=ax, **kwargs)
+        else:
+            sc.pl.scatter(adata, show=False, ax=ax, **kwargs)
 
     al = np.array(
         igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected").get_edgelist()
@@ -158,23 +154,28 @@ def trajectory(
                 bbox=bbox,
             )
 
-    savefig_or_show("trajectory", show=show, save=save)
+    savefig_or_show("graph", show=show, save=save)
 
 
-def trajectory_pseudotime(
+def trajectory(
     adata: AnnData,
     basis: str = "umap",
     emb_back=None,
-    colormap: str = "viridis",
-    color_cells="grey",
+    color_seg="t",
+    cmap_seg: str = "viridis",
+    color_cells=None,
+    cmap_cells=None,
     size_cells=None,
     alpha_cells: float = 1,
     scale_path: float = 1,
+    layer=None,
     arrows: bool = False,
     arrow_offset: int = 10,
     ax=None,
+    show_colorbar=True,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    **kwargs,
 ):
 
     if "graph" not in adata.uns:
@@ -194,51 +195,39 @@ def trajectory_pseudotime(
     B = graph["B"]
 
     if ax is None:
-        fig = plt.figure()
-        ax = plt.subplot()
+        if basis == "umap":
+            ax = sc.pl.umap(
+                adata, show=False, color=color_cells, cmap=cmap_cells, **kwargs
+            )
+        elif basis == "tsne":
+            ax = sc.pl.tsne(
+                adata, show=False, color=color_cells, cmap=cmap_cells, **kwargs
+            )
+        else:
+            ax = sc.pl.scatter(
+                adata, show=False, color=color_cells, cmap=cmap_cells, **kwargs
+            )
 
-    ncells = adata.shape[0]
-    if size_cells is None:
-        size_cells = 30000 / ncells
+    else:
+        if basis == "umap":
+            sc.pl.umap(
+                adata, show=False, ax=ax, color=color_cells, cmap=cmap_cells, **kwargs
+            )
+        elif basis == "tsne":
+            sc.pl.tsne(
+                adata, show=False, ax=ax, color=color_cells, cmap=cmap_cells, **kwargs
+            )
+        else:
+            sc.pl.scatter(
+                adata, show=False, ax=ax, color=color_cells, cmap=cmap_cells, **kwargs
+            )
 
-    if emb_back is not None:
-        ncells = emb_back.shape[0]
-        if size_cells is None:
-            size_cells = 30000 / ncells
-        ax.scatter(
-            emb_back[:, 0],
-            emb_back[:, 1],
-            s=size_cells,
-            color="lightgrey",
-            alpha=alpha_cells,
-            edgecolor="none",
-        )
-
-    ax.scatter(
-        emb[:, 0],
-        emb[:, 1],
-        s=size_cells,
-        color=color_cells,
-        alpha=alpha_cells,
-        edgecolor="none",
-    )
-
-    ax.grid(False)
-    x0, x1 = ax.get_xlim()
-    y0, y1 = ax.get_ylim()
-    ax.set_aspect(abs(x1 - x0) / abs(y1 - y0))
-    ax.tick_params(
-        axis="both",  # changes apply to the x-axis
-        which="both",  # both major and minor ticks are affected
-        bottom=False,  # ticks along the bottom edge are off
-        top=False,  # ticks along the top edge are off
-        labelbottom=False,
-        left=False,
-        labelleft=False,
-    )  # labels along the bottom edge are off
-
-    ax.set_xlabel(basis + "1")
-    ax.set_ylabel(basis + "2")
+    if show_colorbar == False:
+        ax.set_box_aspect(aspect=1)
+        fig = ax.get_gridspec().figure
+        fig.get_axes()[
+            np.argwhere(["colorbar" in a.get_label() for a in fig.get_axes()])[0][0]
+        ].remove()
 
     al = np.array(
         igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected").get_edgelist()
@@ -246,20 +235,22 @@ def trajectory_pseudotime(
     segs = al.tolist()
     vertices = proj.tolist()
     lines = [[tuple(vertices[j]) for j in i] for i in segs]
-    all_t = pd.Series(
-        list(
-            map(
-                lambda s: graph["pp_info"]
-                .time[graph["pp_info"].index.isin(s)]
-                .mean()
-                .mean(),
-                segs,
-            )
-        )
+
+    vals = pd.Series(
+        _get_color_values(adata, color_seg, layer=layer)[0], index=adata.obs_names
+    )
+
+    seg_val = pd.Series(
+        [
+            vals[
+                adata[adata.obs.edge == "|".join([str(ss) for ss in s])].obs_names
+            ].values.mean()
+            for s in segs
+        ]
     )
 
     sm = ScalarMappable(
-        norm=Normalize(vmin=all_t.min(), vmax=all_t.max()), cmap=colormap
+        norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
     )
     lc = matplotlib.collections.LineCollection(
         lines, colors="k", linewidths=7.5 * scale_path, zorder=100
@@ -269,8 +260,9 @@ def trajectory_pseudotime(
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     paths = g.get_shortest_paths(graph["root"], graph["tips"])
     seg = graph["pp_seg"].loc[:, ["from", "to"]].values.tolist()
-    for s in seg:
-        if arrows:
+
+    if arrows:
+        for s in seg:
             path = np.array(g.get_shortest_paths(s[0], s[1])[0])
             coord = proj[
                 path,
@@ -291,7 +283,13 @@ def trajectory_pseudotime(
                 units="dots",
                 zorder=101,
             )
-
+            c_arrow = vals[
+                (
+                    np.array([e.split("|") for e in adata.obs.edge], dtype=int)
+                    == path[mid]
+                ).sum(axis=1)
+                == 1
+            ].mean()
             ax.quiver(
                 proj[path[mid], 0],
                 proj[path[mid], 1],
@@ -301,13 +299,13 @@ def trajectory_pseudotime(
                 headaxislength=10 * scale_path,
                 headlength=10 * scale_path,
                 units="dots",
-                color=sm.to_rgba(graph["pp_info"].loc[path, :].time.iloc[mid]),
+                color=sm.to_rgba(c_arrow),
                 zorder=102,
             )
 
     lc = matplotlib.collections.LineCollection(
         lines,
-        colors=[sm.to_rgba(t) for t in all_t],
+        colors=[sm.to_rgba(sv) for sv in seg_val],
         linewidths=5 * scale_path,
         zorder=104,
     )
@@ -320,15 +318,26 @@ def trajectory_pseudotime(
     )
     ax.add_collection(lc)
 
+    tip_val = []
+    for tip in graph["tips"]:
+        sel = (
+            np.array(list(map(lambda e: e.split("|"), adata.obs.edge)), dtype=int)
+            == tip
+        ).sum(axis=1) == 1
+        tip_val = tip_val + [vals.loc[adata.obs_names[sel]].mean()]
+
     ax.scatter(
         proj[graph["tips"], 0],
         proj[graph["tips"], 1],
         zorder=105,
-        c=sm.to_rgba(graph["pp_info"].time.loc[graph["tips"]]),
+        c=sm.to_rgba(tip_val),
         s=140 * scale_path,
     )
 
-    savefig_or_show("pseudotime", show=show, save=save)
+    if show == False:
+        return ax
+
+    savefig_or_show("trajectory", show=show, save=save)
 
 
 @njit()

@@ -1,4 +1,4 @@
-from .trajectory import trajectory, trajectory_pseudotime, trajectory_3d
+from .trajectory import graph, trajectory, trajectory_3d
 from .features import trends, single_trend
 from .test_association import test_association
 from .modules import modules
