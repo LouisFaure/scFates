@@ -6,14 +6,11 @@ import igraph
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_hex
-from matplotlib.gridspec import GridSpec
 from scipy import stats
 from adjustText import adjust_text
 from matplotlib import patches
 from scipy import sparse
-import scanpy as sc
 
-import warnings
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
 
@@ -30,13 +27,12 @@ def trends(
     root_milestone=None,
     milestones=None,
     annot: Union[None, "seg", "milestones"] = None,
+    title: str = "",
     offset_names=0.15,
     heatmap_space=0.5,
     plot_emb: bool = True,
-    cell_size=20,
     cells=None,
-    highlight=True,
-    fontsize=11,
+    fontsize=9,
     order=True,
     ordering="pearson",
     ord_thre=0.7,
@@ -44,15 +40,13 @@ def trends(
     complex_thre=0.7,
     complex_z=3,
     fig_heigth=4,
-    frame: Union[float, None] = 2,
     basis: str = "umap",
     colormap: str = "RdBu_r",
     pseudo_colormap: str = "viridis",
-    emb_back=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     save_genes: Optional[bool] = None,
-    **kwargs
+    **kwargs,
 ):
     offset_heatmap = 1 - heatmap_space
 
@@ -378,8 +372,6 @@ def trends(
         fitted_sorted.shape[0], 0, fitted_sorted.shape[1], color="k", clip_on=True
     )
 
-    plt.tight_layout(h_pad=0, w_pad=0)
-
     adjust_text(
         texts,
         ax=axheatmap,
@@ -399,6 +391,8 @@ def trends(
         yy = [ys[i], texts[i].get_position()[1]]
         axheatmap.plot(xx, yy, color="k", linewidth=0.75)
 
+    plt.tight_layout(h_pad=0, w_pad=0)
+
     if plot_emb:
         axemb = fig.add_subplot(gs[:, 0])
         adata.obs["mean_trajectory"] = np.nan
@@ -414,8 +408,8 @@ def trends(
             cmap_cells=colormap,
             show_colorbar=False,
             ax=axemb,
-            title="Trends over trajectory",
-            **kwargs
+            title=title,
+            **kwargs,
         )
         del adata.obs["mean_trajectory"]
 
@@ -435,45 +429,22 @@ def single_trend(
     layer=None,
     colormap: str = "RdBu_r",
     colorexp=None,
-    figsize=(10, 5.5),
-    show_title=True,
-    emb_back=None,
-    size_cells=None,
-    highlight=False,
+    figsize=(8, 4),
     alpha_expr=0.3,
     size_expr=2,
     fitted_linewidth=2,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    **kwargs,
 ):
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
-    if show_title:
-        fig.suptitle(feature)
 
     color_key = "seg_colors"
     if color_key not in adata.uns:
         from . import palette_tools
 
         palette_tools._set_default_colors_for_categorical_obs(adata, "seg")
-    pal = dict(zip(adata.obs["seg"].cat.categories, adata.uns[color_key]))
-
-    ncells = adata.shape[0]
-
-    if size_cells is None:
-        size_cells = 30000 / ncells
-
-    if emb_back is not None:
-        ncells = emb_back.shape[0]
-        if size_cells is None:
-            size_cells = 30000 / ncells
-        ax1.scatter(
-            emb_back[:, 0],
-            emb_back[:, 1],
-            s=size_cells,
-            color="lightgrey",
-            edgecolor="none",
-        )
 
     if layer is None:
         if sparse.issparse(adata.X):
@@ -495,34 +466,9 @@ def single_trend(
         }
     ).sort_values("t")
 
-    if highlight:
-        ax1.scatter(
-            adata.obsm["X_" + basis][:, 0],
-            adata.obsm["X_" + basis][:, 1],
-            c="k",
-            s=size_cells * 2,
-            edgecolor="none",
-        )
-
-    ax1.scatter(
-        adata.obsm["X_" + basis][:, 0],
-        adata.obsm["X_" + basis][:, 1],
-        c=df.fitted[adata.obs_names],
-        s=size_cells,
-        cmap=colormap,
-        edgecolor="none",
-    )
-    ax1.grid(b=False)
-    ax1.set_xticks([])
-    ax1.set_yticks([])
-    ax1.set_xlabel(basis + "1")
-    ax1.set_ylabel(basis + "2")
-    x0, x1 = ax1.get_xlim()
-    y0, y1 = ax1.get_ylim()
-    ax1.set_aspect(abs(x1 - x0) / abs(y1 - y0))
     for s in df.seg.unique():
         if colorexp is None:
-            plt.scatter(
+            ax2.scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
                 alpha=alpha_expr,
@@ -531,7 +477,7 @@ def single_trend(
                     np.argwhere(adata.obs.seg.cat.categories == s)[0][0]
                 ],
             )
-            plt.plot(
+            ax2.plot(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "fitted"],
                 c=adata.uns["seg_colors"][
@@ -545,7 +491,7 @@ def single_trend(
                     adata.uns["graph"]["pp_seg"].loc[:, "from"].isin([tolink]).values
                 ).flatten()
             ]:
-                plt.plot(
+                ax2.plot(
                     [
                         df.loc[df.seg == s, "t"].iloc[-1],
                         df.loc[df.seg == next_s, "t"].iloc[0],
@@ -560,14 +506,14 @@ def single_trend(
                     linewidth=fitted_linewidth,
                 )
         else:
-            plt.scatter(
+            ax2.scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
                 c=colorexp,
                 alpha=alpha_expr,
                 s=size_expr,
             )
-            plt.plot(
+            ax2.plot(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "fitted"],
                 c=colorexp,
@@ -579,7 +525,7 @@ def single_trend(
                     adata.uns["graph"]["pp_seg"].loc[:, "from"].isin([tolink]).values
                 ).flatten()
             ]:
-                plt.plot(
+                ax2.plot(
                     [
                         df.loc[df.seg == s, "t"].iloc[-1],
                         df.loc[df.seg == next_s, "t"].iloc[0],
@@ -597,7 +543,22 @@ def single_trend(
     x0, x1 = ax2.get_xlim()
     y0, y1 = ax2.get_ylim()
     ax2.set_aspect(abs(x1 - x0) / abs(y1 - y0))
-    plt.tight_layout()
+
+    trajectory(
+        adata,
+        basis=basis,
+        color_seg=feature,
+        cmap_seg=colormap,
+        color_cells=feature,
+        cmap_cells=colormap,
+        show_colorbar=False,
+        ax=ax1,
+        title=feature,
+        layer="fitted",
+        **kwargs,
+    )
+
+    # plt.tight_layout()
 
     savefig_or_show("single_trend", show=show, save=save)
 
