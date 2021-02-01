@@ -28,6 +28,7 @@ MOCK_MODULES = [
     "rpy2.robjects.packages",
     "rpy2.rinterface",
     "scanpy.plotting._utils",
+    "scanpy.plotting._tools.scatterplots",
     "plotly.express",
     "plotly.graph_objects",
     "elpigraph",
