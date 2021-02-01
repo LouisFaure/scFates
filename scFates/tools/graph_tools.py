@@ -1086,7 +1086,8 @@ def root(adata: AnnData, root: int, copy: bool = False):
 
     logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
-        "added\n" + "    .uns['graph']['root'] selected root."
+        "added\n"
+        "    .uns['graph']['root'] selected root.\n"
         "    .uns['graph']['pp_info'] for each PP, its distance vs root and segment assignment.\n"
         "    .uns['graph']['pp_seg'] segments network information."
     )
