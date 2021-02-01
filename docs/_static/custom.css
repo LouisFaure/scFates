@@ -189,7 +189,7 @@ img.logo {
 }
 
 /* make height responsive for notebook figures */
-.rst-content .image-reference img {
-   max-width: 100% !important;
-   height: auto !important;
+img.no-scaled-link {
+    max-width: 100% !important;
+    height: auto !important;
 }
