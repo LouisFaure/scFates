@@ -50,8 +50,6 @@ def graph(
         Annotated data matrix.
     basis
         Name of the `obsm` basis to use.
-    emb_back
-        Other cells to show in background.
     size_nodes
         size of the projected prinicpal points.
     col_traj
@@ -232,14 +230,25 @@ def trajectory(
         _get_color_values(adata, color_seg, layer=layer)[0], index=adata.obs_names
     )
 
+    sorted_edges = np.sort(
+        np.array([e.split("|") for e in adata.obs.edge], dtype=int), axis=1
+    )
+
     seg_val = pd.Series(
         [
-            vals[
-                adata[adata.obs.edge == "|".join([str(ss) for ss in s])].obs_names
-            ].values.mean()
+            vals[adata[(sorted_edges == s).sum(axis=1) == 2].obs_names].values.mean()
             for s in segs
         ]
     )
+
+    emptysegs = seg_val.index[[np.isnan(sv) for sv in seg_val]]
+    for i in emptysegs:
+        empty = graph["pp_info"].loc[segs[i], :].sort_values("time")
+        boundcells = empty.apply(
+            lambda n: (adata[(adata.obs.seg == n.seg)].obs.t - n.time).abs().idxmin(),
+            axis=1,
+        )
+        seg_val[i] = vals[boundcells].mean()
 
     sm = ScalarMappable(
         norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
