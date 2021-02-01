@@ -12,13 +12,21 @@ import sys
 import igraph
 import warnings
 import itertools
-import elpigraph
 import math
 from scipy import sparse
 
 from ..plot.trajectory import trajectory as plot_trajectory
 from .. import logging as logg
 from .. import settings
+
+try:
+    import elpigraph
+
+except Exception as e:
+    warnings.warn(
+        'ElPiGraph package is not installed \
+        \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
+    )
 
 
 def curve(
@@ -31,6 +39,7 @@ def curve(
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 2,
+    epg_verbose: bool = False,
     device: str = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
@@ -66,6 +75,8 @@ def curve(
     epg_initnodes
         numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
         in the initial step
+    epg_verbose
+        show verbose output of epg algorithm
     device
         Run either mehtod on `cpu` or on `gpu`
     plot
@@ -126,6 +137,7 @@ def curve(
         epg_initnodes,
         device,
         seed,
+        epg_verbose,
     )
 
     if plot:
@@ -151,6 +163,7 @@ def tree(
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 2,
+    epg_verbose: bool = False,
     device: str = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
@@ -207,6 +220,8 @@ def tree(
     epg_initnodes
         numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
         in the initial step
+    epg_verbose
+        show verbose output of epg algorithm
     device
         Run either mehtod on `cpu` or on `gpu`
     plot
@@ -298,6 +313,7 @@ def tree(
             epg_initnodes,
             device,
             seed,
+            epg_verbose,
         )
 
     if plot:
@@ -589,6 +605,7 @@ def tree_epg(
     initnodes: int = None,
     device: str = "cpu",
     seed: Optional[int] = None,
+    verbose: bool = True,
 ):
 
     if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
@@ -634,6 +651,7 @@ def tree_epg(
             Mu=mu,
             TrimmingRadius=trimmingradius,
             GPU=True,
+            verbose=verbose,
         )
 
         R = pairwise_distances(
@@ -660,6 +678,7 @@ def tree_epg(
             Lambda=lam,
             Mu=mu,
             TrimmingRadius=trimmingradius,
+            verbose=verbose,
         )
 
         R = pairwise_distances(X.values, Tree[0]["NodePositions"])
@@ -726,6 +745,7 @@ def curve_epg(
     initnodes: int = None,
     device: str = "cpu",
     seed: Optional[int] = None,
+    verbose: bool = True,
 ):
 
     if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
@@ -771,6 +791,7 @@ def curve_epg(
             Mu=mu,
             TrimmingRadius=trimmingradius,
             GPU=True,
+            verbose=verbose,
         )
 
         R = pairwise_distances(
@@ -797,6 +818,7 @@ def curve_epg(
             Lambda=lam,
             Mu=mu,
             TrimmingRadius=trimmingradius,
+            verbose=verbose,
         )
 
         R = pairwise_distances(X.values, Curve[0]["NodePositions"])

@@ -72,29 +72,30 @@ def fit(
     adata: AnnData,
     root=None,
     leaves=None,
+    layer: Optional[str] = None,
     n_map: int = 1,
     n_jobs: int = 1,
-    spline_df: int = 5,
-    fdr_cut: float = 1e-4,
-    A_cut: int = 1,
-    st_cut: float = 0.8,
     gamma: float = 1.5,
+    save_raw: bool = True,
     copy: bool = False,
-    layer: Optional[str] = None,
 ):
 
     """\
     Model feature expression levels as a function of tree positions.
 
     The models are fit using *mgcv* R package. Note that since adata can currently only keep the
-    same dimensions for each of its layers, the dataset is subsetted to keep only significant
-    feratures.
+    same dimensions for each of its layers. While the dataset is subsetted to keep only significant
+    feratures, the unsubsetted dataset is kept in adata.raw (save_raw parameter).
 
 
     Parameters
     ----------
     adata
         Annotated data matrix.
+    root
+        restrain the fit to a subset of the tree (in combination with leaves).
+    leaves
+        restrain the fit to a subset of the tree (in combination with root).
     layer
         adata layer to use for the fitting.
     n_map
@@ -103,10 +104,8 @@ def fit(
         number of cpu processes used to perform the test.
     gamma
         stringency of penalty.
-    root
-        restrain the fit to a subset of the tree (in combination with leaves).
-    leaves
-        restrain the fit to a subset of the tree (in combination with root).
+    saveraw
+        save the unsubsetted anndata to adata.raw
     copy
         Return a copy instead of writing to adata.
     Returns
@@ -230,6 +229,9 @@ def fit(
         dfs = list(dictionary.values)
         fitted = reduce(lambda x, y: x.add(y, fill_value=0), dfs) / n_map
 
+    if save_raw:
+        adata.raw = adata
+
     adata._inplace_subset_obs(np.unique(dictionary["0"].index))
     adata._inplace_subset_var(genes)
 
@@ -243,10 +245,18 @@ def fit(
         time=True,
         end=" " if settings.verbosity > 2 else "\n",
     )
-    logg.hint(
-        "added\n"
-        "    .layers['fitted'], fitted features on the trajectory for all mappings."
-    )
+
+    if save_raw:
+        logg.hint(
+            "added\n"
+            "    .layers['fitted'], fitted features on the trajectory for all mappings."
+            "    .raw, unfiltered data."
+        )
+    else:
+        logg.hint(
+            "added\n"
+            "    .layers['fitted'], fitted features on the trajectory for all mappings."
+        )
 
     return adata if copy else None
 
