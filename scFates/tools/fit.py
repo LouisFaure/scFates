@@ -249,7 +249,7 @@ def fit(
     if save_raw:
         logg.hint(
             "added\n"
-            "    .layers['fitted'], fitted features on the trajectory for all mappings."
+            "    .layers['fitted'], fitted features on the trajectory for all mappings.\n"
             "    .raw, unfiltered data."
         )
     else:
