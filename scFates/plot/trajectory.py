@@ -16,6 +16,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from numba import njit
 import math
+import warnings
 
 
 class GC(GraphicsContextBase):
@@ -209,6 +210,28 @@ def trajectory(
     c_edges = np.array([e.split("|") for e in adata.obs.edge], dtype=int)
     cells = [any(np.isin(c_e, nodes)) for c_e in c_edges]
 
+    import logging
+
+    anndata_logger = logging.getLogger("anndata")
+    prelog = anndata_logger.level
+    anndata_logger.level = 40
+    adata_c = adata[cells, :]
+
+    if is_categorical(adata, color_cells):
+        if color_cells not in adata.uns or len(adata.uns[color_cells * "_colors"]) == 1:
+            from . import palette_tools
+
+            palette_tools._set_default_colors_for_categorical_obs(adata, color_cells)
+
+        adata_c.uns[color_cells + "_colors"] = [
+            adata.uns[color_cells + "_colors"][
+                np.argwhere(adata.obs[color_cells].cat.categories == c)[0][0]
+            ]
+            for c in adata_c.obs[color_cells].cat.categories
+        ]
+    else:
+        pal = None
+
     if ax is None:
         if basis == "umap":
             ax = sc.pl.umap(
@@ -251,7 +274,7 @@ def trajectory(
                 cmap=cmap_cells,
                 **kwargs,
             )
-
+    anndata_logger.level = prelog
     if show_colorbar == False:
         ax.set_box_aspect(aspect=1)
         fig = ax.get_gridspec().figure
@@ -523,3 +546,52 @@ def trajectory_3d(
         margin=dict(l=5, r=5, t=5, b=5),
     )
     fig.show()
+
+
+def is_categorical(data, c=None):
+    from pandas.api.types import is_categorical as cat
+
+    if c is None:
+        return cat(data)  # if data is categorical/array
+    if not is_view(data):  # if data is anndata view
+        strings_to_categoricals(data)
+    return isinstance(c, str) and c in data.obs.keys() and cat(data.obs[c])
+
+
+def is_view(adata):
+    return (
+        adata.is_view
+        if hasattr(adata, "is_view")
+        else adata.isview
+        if hasattr(adata, "isview")
+        else adata._isview
+        if hasattr(adata, "_isview")
+        else True
+    )
+
+
+def strings_to_categoricals(adata):
+    """Transform string annotations to categoricals."""
+    from pandas.api.types import is_string_dtype, is_integer_dtype, is_bool_dtype
+    from pandas import Categorical
+
+    def is_valid_dtype(values):
+        return (
+            is_string_dtype(values) or is_integer_dtype(values) or is_bool_dtype(values)
+        )
+
+    df = adata.obs
+    df_keys = [key for key in df.columns if is_valid_dtype(df[key])]
+    for key in df_keys:
+        c = df[key]
+        c = Categorical(c)
+        if 1 < len(c.categories) < min(len(c), 100):
+            df[key] = c
+
+    df = adata.var
+    df_keys = [key for key in df.columns if is_string_dtype(df[key])]
+    for key in df_keys:
+        c = df[key].astype("U")
+        c = Categorical(c)
+        if 1 < len(c.categories) < min(len(c), 100):
+            df[key] = c
