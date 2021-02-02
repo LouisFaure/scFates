@@ -103,6 +103,7 @@ def test_pipeline():
     scf.tl.fit(adata_2, root="80", leaves=["19"])
 
     scf.tl.rename_milestones(adata_2, ["A", "B", "C", "D"])
+    scf.pl.trajectory(adata_2, root_milestone="A", milestones=["B"])
 
     scf.tl.cluster(adata, knn=3)
 

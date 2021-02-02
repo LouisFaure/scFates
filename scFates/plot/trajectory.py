@@ -328,7 +328,7 @@ def trajectory(
             path = np.array(g.get_shortest_paths(s[0], s[1])[0])
             coord = proj.loc[
                 path,
-            ]
+            ].values
             out = np.empty(len(path) - 1)
             cdist_numba(coord, out)
             mid = np.argmin(np.abs(out.cumsum() - out.sum() / 2))
