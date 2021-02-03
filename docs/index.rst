@@ -32,14 +32,14 @@ Analysis key steps
    api
    references
 
-|Doc Badge| |CircleCI Badge| |codecov Badge|
-
+|Doc Badge| |CircleCI Badge| |TravisCI Badge| |codecov Badge|
 
 .. image:: _static/scFates_logo_dark.png
    :width: 1%
 
 .. |Doc Badge| image:: https://readthedocs.org/projects/scfates/badge/?version=latest
 .. |CircleCI Badge| image:: https://circleci.com/gh/LouisFaure/scFates.svg?style=shield
+.. |TravisCI Badge| image:: https://api.travis-ci.com/LouisFaure/scFates.svg?branch=master
 .. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg
 
 .. _scanpy: https://scanpy.readthedocs.io/

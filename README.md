@@ -1,5 +1,6 @@
 [![Documentation Status](https://readthedocs.org/projects/scfates/badge/?version=latest)](https://scfates.readthedocs.io/en/latest/?badge=latest)
 [![CircleCI](https://circleci.com/gh/LouisFaure/scFates.svg?style=shield)](https://circleci.com/gh/LouisFaure/scFates)
+[![TravisCI](https://api.travis-ci.com/LouisFaure/scFates.svg?branch=master)](https://travis-ci.com/github/LouisFaure/scFates)
 [![codecov](https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg)](https://codecov.io/gh/LouisFaure/scFates)
 [![GitHub license](https://img.shields.io/github/license/LouisFaure/scFates)](https://github.com/LouisFaure/scFates/blob/master/LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
