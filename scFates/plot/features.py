@@ -10,7 +10,6 @@ from scipy import stats
 from adjustText import adjust_text
 from matplotlib import patches
 from scipy import sparse
-import warnings
 
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
@@ -32,7 +31,6 @@ def trends(
     offset_names=0.15,
     heatmap_space=0.5,
     plot_emb: bool = True,
-    cells=None,
     fontsize=9,
     order=True,
     ordering="pearson",
@@ -51,13 +49,14 @@ def trends(
 ):
     offset_heatmap = 1 - heatmap_space
 
+    if plot_emb:
+        adata_temp = adata.copy()
+
     graph = adata.uns["graph"]
 
     if root_milestone is not None:
         adata = adata.copy()
         dct = graph["milestones"]
-        keys = np.array(list(dct.keys()))
-        vals = np.array(list(dct.values()))
 
         leaves = list(map(lambda leave: dct[leave], milestones))
         root = dct[root_milestone]
@@ -96,11 +95,6 @@ def trends(
         )
 
         adata = adata[cells]
-        if plot_emb:
-            plot_emb = False
-            warnings.warn(
-                "For now plotting a subset of the trajectory breaks the embedding side. This will be fixed soon!"
-            )
 
     if features is None:
         features = adata.var_names
@@ -401,23 +395,23 @@ def trends(
 
     if plot_emb:
         axemb = fig.add_subplot(gs[:, 0])
-        adata.obs["mean_trajectory"] = np.nan
-        adata.obs.loc[fitted_sorted.columns, "mean_trajectory"] = fitted_sorted.mean(
-            axis=0
-        ).values
+        adata_temp.obs["mean_trajectory"] = np.nan
+        adata_temp.obs.loc[
+            fitted_sorted.columns, "mean_trajectory"
+        ] = fitted_sorted.mean(axis=0).values
         trajectory(
-            adata,
+            adata=adata_temp,
             basis=basis,
             color_seg="mean_trajectory",
             cmap_seg=colormap,
-            color_cells="mean_trajectory",
-            cmap_cells=colormap,
-            show_colorbar=False,
+            color_cells=annot,
+            show_info=False,
             ax=axemb,
             title=title,
+            root_milestone=root_milestone,
+            milestones=milestones,
             **kwargs,
         )
-        del adata.obs["mean_trajectory"]
 
     if save_genes is not None:
         with open(save_genes, "w") as f:

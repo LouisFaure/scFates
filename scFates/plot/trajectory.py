@@ -165,7 +165,7 @@ def trajectory(
     arrows: bool = False,
     arrow_offset: int = 10,
     ax=None,
-    show_colorbar=True,
+    show_info=True,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs,
@@ -274,13 +274,17 @@ def trajectory(
                 cmap=cmap_cells,
                 **kwargs,
             )
+
     anndata_logger.level = prelog
-    if show_colorbar == False:
-        ax.set_box_aspect(aspect=1)
-        fig = ax.get_gridspec().figure
-        fig.get_axes()[
-            np.argwhere(["colorbar" in a.get_label() for a in fig.get_axes()])[0][0]
-        ].remove()
+    if show_info == False:
+        if is_categorical(adata, color_cells):
+            ax.get_legend().remove()
+        else:
+            ax.set_box_aspect(aspect=1)
+            fig = ax.get_gridspec().figure
+            fig.get_axes()[
+                np.argwhere(["colorbar" in a.get_label() for a in fig.get_axes()])[0][0]
+            ].remove()
 
     al = np.array(g.get_edgelist())
 
