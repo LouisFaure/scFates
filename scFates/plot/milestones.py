@@ -10,13 +10,6 @@ def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
 
     graph = adata.uns["graph"]
 
-    B = graph["B"]
-    R = graph["R"]
-    F = graph["F"]
-    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-    branches = np.argwhere(np.array(g.degree()) > 2).flatten()
-
     dct = graph["milestones"]
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))

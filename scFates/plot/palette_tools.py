@@ -1,8 +1,8 @@
-from typing import Union, List, Sequence, Tuple, Collection, Optional
+from typing import Union, Sequence
 import numpy as np
 from matplotlib import pyplot as pl
 from cycler import Cycler, cycler
-from matplotlib import rcParams, ticker, gridspec, axes
+from matplotlib import rcParams
 from . import palettes
 
 

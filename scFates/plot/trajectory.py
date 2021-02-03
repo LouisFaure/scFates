@@ -16,7 +16,6 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from numba import njit
 import math
-import warnings
 
 
 class GC(GraphicsContextBase):
@@ -229,8 +228,6 @@ def trajectory(
             ]
             for c in adata_c.obs[color_cells].cat.categories
         ]
-    else:
-        pal = None
 
     if ax is None:
         if basis == "umap":
@@ -485,7 +482,6 @@ def trajectory_3d(
             palette_tools._set_default_colors_for_categorical_obs(adata, color)
 
         if adata.obs[color].dtype.name == "category":
-            palette = adata.uns[color + "_colors"]
             pal_dict = dict(
                 zip(adata.obs[color].cat.categories, adata.uns[color + "_colors"])
             )

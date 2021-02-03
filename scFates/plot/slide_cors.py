@@ -23,9 +23,7 @@ def slide_cors(
     save: Union[str, bool, None] = None,
 ):
 
-    graph = adata.uns["graph"]
-
-    uns_temp = adata.uns.copy()
+    # uns_temp = adata.uns.copy()
 
     if "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"]) == 1:
         from . import palette_tools
@@ -35,13 +33,6 @@ def slide_cors(
     mlsc = np.array(adata.uns["milestones_colors"].copy())
     if mlsc.dtype == "float":
         mlsc = list(map(rgb2hex, mlsc))
-
-    dct = graph["milestones"]
-    keys = np.array(list(dct.keys()))
-    vals = np.array(list(dct.values()))
-
-    leaves = list(map(lambda leave: dct[leave], milestones))
-    root = dct[root_milestone]
 
     name = root_milestone + "->" + "<>".join(milestones)
     freqs = adata.uns[name]["cell_freq"]

@@ -1,15 +1,10 @@
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-import warnings
 
 import igraph
-import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.colors import to_hex
-from matplotlib.gridspec import GridSpec
 from scipy import sparse
-import warnings
 
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
@@ -21,7 +16,6 @@ def modules(
     root_milestone,
     milestones,
     color: str = "milestones",
-    basis: str = "umap",
     mode: str = "2d",
     marker_size: int = 20,
     highlight: bool = False,
@@ -40,19 +34,11 @@ def modules(
     uns_temp = adata.uns.copy()
 
     dct = graph["milestones"]
-    keys = np.array(list(dct.keys()))
-    vals = np.array(list(dct.values()))
 
     leaves = list(map(lambda leave: dct[leave], milestones))
     root = dct[root_milestone]
 
-    name = (
-        str(keys[vals == root][0])
-        + "->"
-        + str(keys[vals == leaves[0]][0])
-        + "<>"
-        + str(keys[vals == leaves[1]][0])
-    )
+    name = root_milestone + "->" + "<>".join(milestones)
 
     stats = adata.uns[name]["fork"]
 
@@ -116,19 +102,11 @@ def modules(
 
     miles = adata.obs.loc[X.index, color].astype(str)
 
-    early_1 = (stats.branch.values == str(keys[vals == leaves[0]][0])) & (
-        stats.module.values == "early"
-    )
-    late_1 = (stats.branch.values == str(keys[vals == leaves[0]][0])) & (
-        stats.module.values == "late"
-    )
+    early_1 = (stats.branch.values == milestones[0]) & (stats.module.values == "early")
+    late_1 = (stats.branch.values == milestones[0]) & (stats.module.values == "late")
 
-    early_2 = (stats.branch.values == str(keys[vals == leaves[1]][0])) & (
-        stats.module.values == "early"
-    )
-    late_2 = (stats.branch.values == str(keys[vals == leaves[1]][0])) & (
-        stats.module.values == "late"
-    )
+    early_2 = (stats.branch.values == milestones[1]) & (stats.module.values == "early")
+    late_2 = (stats.branch.values == milestones[1]) & (stats.module.values == "late")
 
     if mode == "2d":
         fig, axs = plt.subplots(2, 2)
@@ -168,8 +146,8 @@ def modules(
                 alpha=alpha,
             )
         axs[0, 0].set_aspect(1.0 / axs[0, 0].get_data_ratio(), adjustable="box")
-        axs[0, 0].set_xlabel("early " + str(keys[vals == leaves[0]][0]))
-        axs[0, 0].set_ylabel("early " + str(keys[vals == leaves[1]][0]))
+        axs[0, 0].set_xlabel("early " + milestones[0])
+        axs[0, 0].set_ylabel("early " + milestones[1])
 
         for m in obscol:
             axs[1, 0].scatter(
@@ -180,8 +158,8 @@ def modules(
                 alpha=alpha,
             )
         axs[1, 0].set_aspect(1.0 / axs[1, 0].get_data_ratio(), adjustable="box")
-        axs[1, 0].set_xlabel("late " + str(keys[vals == leaves[0]][0]))
-        axs[1, 0].set_ylabel("late " + str(keys[vals == leaves[1]][0]))
+        axs[1, 0].set_xlabel("late " + milestones[0])
+        axs[1, 0].set_ylabel("late " + milestones[1])
 
         axs[0, 1].scatter(
             X.loc[:, early_1].mean(axis=1),
@@ -192,8 +170,8 @@ def modules(
             cmap=cmap_pseudotime,
         )
         axs[0, 1].set_aspect(1.0 / axs[0, 1].get_data_ratio(), adjustable="box")
-        axs[0, 1].set_xlabel("early " + str(keys[vals == leaves[0]][0]))
-        axs[0, 1].set_ylabel("early " + str(keys[vals == leaves[1]][0]))
+        axs[0, 1].set_xlabel("early " + milestones[0])
+        axs[0, 1].set_ylabel("early " + milestones[1])
 
         axs[1, 1].scatter(
             X.loc[:, late_1].mean(axis=1),
@@ -204,8 +182,8 @@ def modules(
             cmap=cmap_pseudotime,
         )
         axs[1, 1].set_aspect(1.0 / axs[1, 1].get_data_ratio(), adjustable="box")
-        axs[1, 1].set_xlabel("late " + str(keys[vals == leaves[0]][0]))
-        axs[1, 1].set_ylabel("late " + str(keys[vals == leaves[1]][0]))
+        axs[1, 1].set_xlabel("late " + milestones[0])
+        axs[1, 1].set_ylabel("late " + milestones[1])
         plt.tight_layout()
 
         fig.set_figheight(10)
@@ -226,8 +204,8 @@ def modules(
 
         ax.invert_xaxis()
         ax.view_init(incl_3d, rot_3d)
-        plt.xlabel("early " + str(keys[vals == leaves[0]][0]))
-        plt.ylabel("early " + str(keys[vals == leaves[1]][0]))
+        plt.xlabel("early " + milestones[0])
+        plt.ylabel("early " + milestones[1])
         ax.set_zlabel("pseudotime")
 
         ax = fig.add_subplot(1, 2, 2, projection="3d")
@@ -244,8 +222,8 @@ def modules(
 
         ax.invert_xaxis()
         ax.view_init(incl_3d, rot_3d)
-        plt.xlabel("late " + str(keys[vals == leaves[0]][0]))
-        plt.ylabel("late " + str(keys[vals == leaves[1]][0]))
+        plt.xlabel("late " + milestones[0])
+        plt.ylabel("late " + milestones[1])
         ax.set_zlabel("pseudotime")
 
     adata.uns = uns_temp

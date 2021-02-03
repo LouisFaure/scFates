@@ -34,21 +34,13 @@ def synchro_path(
     mlsc = adata.uns["milestones_colors"].copy()
     if isinstance(mlsc, (list)):
         mlsc = np.array(mlsc)
-    mlsc_temp = mlsc.copy()
-    dct = graph["milestones"]
-    keys = np.array(list(dct.keys()))
-    vals = np.array(list(dct.values()))
+    # mlsc_temp = mlsc.copy()
 
+    dct = graph["milestones"]
     leaves = list(map(lambda leave: dct[leave], milestones))
     root = dct[root_milestone]
 
-    name = (
-        str(keys[vals == root][0])
-        + "->"
-        + str(keys[vals == leaves[0]][0])
-        + "<>"
-        + str(keys[vals == leaves[1]][0])
-    )
+    name = root_milestone + "->" + "<>".join(milestones)
 
     fork = list(
         set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
