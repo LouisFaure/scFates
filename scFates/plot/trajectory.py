@@ -10,22 +10,11 @@ import scanpy as sc
 from scanpy.plotting._utils import savefig_or_show
 from scanpy.plotting._tools.scatterplots import _get_color_values
 import types
-from matplotlib.backend_bases import GraphicsContextBase, RendererBase
 
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from numba import njit
 import math
-
-
-class GC(GraphicsContextBase):
-    def __init__(self):
-        super().__init__()
-        self._capstyle = "round"
-
-
-def custom_new_gc(self):
-    return GC()
 
 
 def graph(
@@ -81,8 +70,6 @@ def graph(
         raise ValueError(
             "You need to run `tl.tree` or `tl.curve` first to compute a princal graph before plotting."
         )
-
-    RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
 
     graph = adata.uns["graph"]
 
@@ -172,8 +159,6 @@ def trajectory(
 
     if "graph" not in adata.uns:
         raise ValueError("You need to run `tl.pseudotime` first before plotting.")
-
-    RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
 
     graph = adata.uns["graph"]
 
