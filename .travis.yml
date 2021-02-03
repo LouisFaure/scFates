@@ -1,0 +1,22 @@
+language: python
+sudo: true
+dist: focal
+os: linux
+
+jobs:
+  include:
+    - name: ubuntu 20.04 python 3.8
+      os: linux
+      python: '3.8'
+    - name: ubuntu 20.04 python 3.7
+      os: linux
+      python: '3.7'
+
+install:
+  - sudo apt-get clean && sudo apt-get update
+  - sudo apt-get install -y r-base r-cran-mgcv
+  - pip install cmake pytest mock git+https://github.com/j-bac/elpigraph-python.git
+  - pip install .
+
+script:
+  - python -m pytest -s scFates/tests/test_wo_plots.py

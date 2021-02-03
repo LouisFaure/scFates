@@ -472,7 +472,8 @@ def synchro_path(
 
     uns_temp = adata.uns.copy()
 
-    mlsc = adata.uns["milestones_colors"].copy()
+    if "milestones_colors" in adata.uns:
+        mlsc = adata.uns["milestones_colors"].copy()
 
     dct = graph["milestones"]
     keys = np.array(list(dct.keys()))
