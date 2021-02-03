@@ -4,6 +4,7 @@ from matplotlib import pyplot as pl
 from cycler import Cycler, cycler
 from matplotlib import rcParams
 from . import palettes
+from matplotlib.colors import to_hex
 
 
 def _set_colors_for_categorical_obs(
@@ -27,7 +28,6 @@ def _set_colors_for_categorical_obs(
     -------
     None
     """
-    from matplotlib.colors import to_hex
 
     categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
@@ -99,7 +99,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     if len(rcParams["axes.prop_cycle"].by_key()["color"]) >= length:
         cc = rcParams["axes.prop_cycle"]()
         palette = [next(cc)["color"] for _ in range(length)]
-
+        palette = [to_hex(x) for x in palette]
     else:
         if length <= 20:
             palette = palettes.default_20

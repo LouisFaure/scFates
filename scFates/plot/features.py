@@ -551,7 +551,7 @@ def single_trend(
         cmap_seg=colormap,
         color_cells=feature,
         cmap_cells=colormap,
-        show_colorbar=False,
+        show_info=False,
         ax=ax1,
         title=feature,
         layer="fitted",

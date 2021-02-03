@@ -3,12 +3,13 @@ import pandas as pd
 import igraph
 from anndata import AnnData
 import matplotlib.collections
-from typing import Union, Optional
+from typing import Union, Optional, Sequence, Tuple
 import plotly.graph_objects as go
 import scanpy as sc
+from cycler import Cycler
 
+from pandas.api.types import is_categorical_dtype
 from scanpy.plotting._utils import savefig_or_show
-from scanpy.plotting._tools.scatterplots import _get_color_values
 import types
 
 from matplotlib.cm import ScalarMappable
@@ -258,7 +259,7 @@ def trajectory(
             )
 
     anndata_logger.level = prelog
-    if show_info == False:
+    if show_info == False and color_cells is not None:
         if is_categorical(adata, color_cells):
             ax.get_legend().remove()
         else:
@@ -531,6 +532,74 @@ def trajectory_3d(
         margin=dict(l=5, r=5, t=5, b=5),
     )
     fig.show()
+
+
+def _get_color_values(
+    adata,
+    value_to_plot,
+    groups=None,
+    palette: Union[str, Sequence[str], Cycler, None] = None,
+    use_raw=False,
+    gene_symbols=None,
+    layer=None,
+) -> Tuple[Union[np.ndarray, str], bool]:
+    """
+    Returns the value or color associated to each data point.
+    For categorical data, the return value is list of colors taken
+    from the category palette or from the given `palette` value.
+    For non-categorical data, the values are returned
+    Returns
+    -------
+    values
+        Values to plot
+    is_categorical
+        Are the values categorical?
+    """
+    if value_to_plot is None:
+        return "lightgray", False
+    if (
+        gene_symbols is not None
+        and value_to_plot not in adata.obs.columns
+        and value_to_plot not in adata.var_names
+    ):
+        # We should probably just make an index for this, and share it over runs
+        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][
+            0
+        ]  # TODO: Throw helpful error if this doesn't work
+    if use_raw and value_to_plot not in adata.obs.columns:
+        values = adata.raw.obs_vector(value_to_plot)
+    else:
+        values = adata.obs_vector(value_to_plot, layer=layer)
+
+    ###
+    # when plotting, the color of the dots is determined for each plot
+    # the data is either categorical or continuous and the data could be in
+    # 'obs' or in 'var'
+    if not is_categorical_dtype(values):
+        return values, False
+    else:  # is_categorical_dtype(values)
+        color_key = f"{value_to_plot}_colors"
+        if palette:
+            _utils._set_colors_for_categorical_obs(adata, value_to_plot, palette)
+        elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
+            values.categories
+        ):
+            #  set a default palette in case that no colors or few colors are found
+            _utils._set_default_colors_for_categorical_obs(adata, value_to_plot)
+        else:
+            _utils._validate_palette(adata, value_to_plot)
+
+        color_vector = np.asarray(adata.uns[color_key])[values.codes]
+
+        # Handle groups
+        if groups:
+            color_vector = np.fromiter(
+                map(colors.to_hex, color_vector), "<U15", len(color_vector)
+            )
+            # set color to 'light gray' for all values
+            # that are not in the groups
+            color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
+        return color_vector, True
 
 
 def is_categorical(data, c=None):
