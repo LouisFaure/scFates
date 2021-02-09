@@ -39,13 +39,16 @@ def slide_cors(
     nwin = len(freqs)
 
     if len(milestones) == 2:
-        bif = adata.uns[name]["fork"]
-        genesetA = bif.index[
-            (bif["branch"] == milestones[0]).values & (bif["module"] == "early").values
-        ]
-        genesetB = bif.index[
-            (bif["branch"] == milestones[1]).values & (bif["module"] == "early").values
-        ]
+        if "fork" in adata.uns[name]:
+            bif = adata.uns[name]["fork"]
+            genesetA = bif.index[
+                (bif["branch"] == milestones[0]).values
+                & (bif["module"] == "early").values
+            ]
+            genesetB = bif.index[
+                (bif["branch"] == milestones[1]).values
+                & (bif["module"] == "early").values
+            ]
         corA = adata.uns[name]["corAB"].loc[milestones[0]].copy()
         corB = adata.uns[name]["corAB"].loc[milestones[1]].copy()
     elif len(milestones) == 1:

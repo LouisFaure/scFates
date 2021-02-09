@@ -259,9 +259,9 @@ def slide_cells(
     )
 
     if ext is False:
-        if len(milestones) == 2:
+        if name in adata.uns:
             adata.uns[name]["cell_freq"] = freqs
-        elif len(milestones) == 1:
+        else:
             adata.uns[name] = {"cell_freq": freqs}
         logg.hint(
             "added \n"
