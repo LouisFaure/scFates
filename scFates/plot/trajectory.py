@@ -163,8 +163,6 @@ def trajectory(
 
     graph = adata.uns["graph"]
 
-    dct = graph["milestones"]
-
     emb = adata.obsm[f"X_{basis}"]
     emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
@@ -180,6 +178,7 @@ def trajectory(
     tips = graph["tips"]
 
     if root_milestone is not None:
+        dct = graph["milestones"]
         nodes = g.get_all_shortest_paths(
             dct[root_milestone], [dct[m] for m in milestones]
         )
