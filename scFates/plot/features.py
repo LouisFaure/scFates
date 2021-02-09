@@ -555,10 +555,10 @@ def single_trend(
         ax=ax1,
         title=feature,
         layer="fitted",
+        show=False,
+        save=False,
         **kwargs,
     )
-
-    # plt.tight_layout()
 
     savefig_or_show("single_trend", show=show, save=save)
 

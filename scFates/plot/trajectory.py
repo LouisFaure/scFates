@@ -290,13 +290,50 @@ def trajectory(
     )
 
     emptyedges = seg_val.index[[np.isnan(sv) for sv in seg_val]]
-    for i in emptyedges:
-        empty = graph["pp_info"].loc[edges[i], :].sort_values("time")
-        boundcells = empty.apply(
-            lambda n: (adata[(adata.obs.seg == n.seg)].obs.t - n.time).abs().idxmin(),
-            axis=1,
+    nodes = np.array([edges[i] for i in emptyedges]).ravel()
+    empty = graph["pp_info"].loc[nodes, :]
+
+    for s in empty.seg.unique():
+        path = np.array(
+            g.get_shortest_paths(
+                int(graph["pp_seg"].loc[int(s), "from"]),
+                int(graph["pp_seg"].loc[int(s), "to"]),
+            )[0]
         )
-        seg_val[i] = vals[boundcells].mean()
+        path = [path[i : i + 2] for i in range(len(path) - 1)]
+        holes = np.array([all(np.isin(e, nodes)) for e in path])
+
+        val1 = 0
+        idx = []
+        toreplace = []
+        for i in range(len(holes)):
+            if (~holes[i]) and (len(idx) == 0):
+                val1 = seg_val[
+                    np.argwhere((np.array(edges) == np.sort(path[i])).sum(axis=1) == 2)[
+                        0
+                    ][0]
+                ]
+            if (~holes[i]) and (len(idx) > 0):
+                val2 = seg_val[
+                    np.argwhere((np.array(edges) == np.sort(path[i])).sum(axis=1) == 2)[
+                        0
+                    ][0]
+                ]
+                toreplace = toreplace + [[idx, np.mean([val1, val2])]]
+                idx = []
+            if holes[i]:
+                idx = idx + [i]
+
+        if holes[len(holes) - 1]:
+            toreplace = toreplace + [[idx, val1]]
+
+        for idx, val in toreplace:
+            for i in idx:
+                seg_val[
+                    np.argwhere((np.array(edges) == np.sort(path[i])).sum(axis=1) == 2)[
+                        0
+                    ][0]
+                ] = val
 
     sm = ScalarMappable(
         norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
