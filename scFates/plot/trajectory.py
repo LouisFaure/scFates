@@ -293,14 +293,25 @@ def trajectory(
     nodes = np.array([edges[i] for i in emptyedges]).ravel()
     empty = graph["pp_info"].loc[nodes, :]
 
-    for s in empty.seg.unique():
+    gg = igraph.Graph()
+    gg.add_vertices(np.unique(np.array(edges).ravel()).astype(str))
+    gg.add_edges(np.array(edges).astype(str))
+    s_tips = np.argwhere(np.array(gg.degree()) == 1).ravel()
+
+    atip = s_tips[0]
+    s_tips = s_tips[1:]
+
+    for t in s_tips:
         path = np.array(
-            g.get_shortest_paths(
-                int(graph["pp_seg"].loc[int(s), "from"]),
-                int(graph["pp_seg"].loc[int(s), "to"]),
+            gg.get_shortest_paths(
+                atip,
+                t,
             )[0]
         )
+
+        path = np.array(gg.vs[:]["name"])[path].astype(int)
         path = [path[i : i + 2] for i in range(len(path) - 1)]
+        path = [np.sort(p) for p in path]
         holes = np.array([all(np.isin(e, nodes)) for e in path])
 
         val1 = 0
