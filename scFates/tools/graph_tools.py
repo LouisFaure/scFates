@@ -15,7 +15,7 @@ import itertools
 import math
 from scipy import sparse
 
-from ..plot.trajectory import trajectory as plot_trajectory
+from ..plot.trajectory import graph as plot_graph
 from .. import logging as logg
 from .. import settings
 
@@ -141,7 +141,7 @@ def curve(
     )
 
     if plot:
-        plot_trajectory(adata, basis)
+        plot_graph(adata, basis)
 
     return adata if copy else None
 
@@ -317,7 +317,7 @@ def tree(
         )
 
     if plot:
-        plot_trajectory(adata, basis)
+        plot_graph(adata, basis)
 
     return adata if copy else None
 
