@@ -169,7 +169,7 @@ def test_pipeline():
     assert signi_fdr_nonscaled == 0
     assert signi_fdr_rescaled == 5
     assert np.all(branch_spe == ["19", "19", "25"])
-    assert np.allclose(activation, [3.95669504, 3.95669504, 0.6351621], rtol=1e-2)
+    assert np.allclose(activation, [4.42785624, 4.61626781, 0.31774091], rtol=1e-2)
     assert np.allclose(cell_freq_sum, 187.5316, rtol=1e-2)
     assert np.allclose(
         corAB,
