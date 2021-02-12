@@ -17,6 +17,7 @@ Tree inference
     :toctree: .
 
     tl.tree
+    tl.curve
     tl.cleanup
     tl.root
     tl.roots
@@ -60,4 +61,4 @@ Plot
 .. autosummary::
     :toctree: .
 
-    pl.tree
+    pl.graph

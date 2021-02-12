@@ -59,7 +59,7 @@ def graph(
     save
         save the plot.
     kwargs
-        arguments to pass to sc.pl.scatter/sc.pl.tsne/sc.pl.umap
+        arguments to pass to scanpy functions pl.scatter/pl.tsne/pl.umap
 
     Returns
     -------
