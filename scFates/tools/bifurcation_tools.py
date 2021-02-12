@@ -459,7 +459,7 @@ def activation(
     milestones,
     deriv_cut: float = 0.15,
     pseudotime_offset: float = 0,
-    nwin: int = 10,
+    nwin: int = 20,
     steps: int = 5,
     n_map: int = 1,
     copy: bool = False,
