@@ -277,7 +277,7 @@ def tree(
         )
         tree_ppt(
             adata,
-            M=Nodes,
+            Nodes=Nodes,
             use_rep=use_rep,
             ndims_rep=ndims_rep,
             init=init,
@@ -324,7 +324,7 @@ def tree(
 
 def tree_ppt(
     adata: AnnData,
-    M: int = None,
+    Nodes: int = None,
     use_rep: str = None,
     ndims_rep: Optional[int] = None,
     init: Optional[DataFrame] = None,
@@ -383,7 +383,9 @@ def tree_ppt(
         if init is None:
             if seed is not None:
                 np.random.seed(seed)
-            F_mat_gpu = X_gpu[:, np.random.choice(X.shape[0], size=M, replace=False)]
+            F_mat_gpu = X_gpu[
+                :, np.random.choice(X.shape[0], size=Nodes, replace=False)
+            ]
         else:
             F_mat_gpu = cp.asarray(init.T)
             M = init.T.shape[0]
@@ -442,28 +444,18 @@ def tree_ppt(
             ]
         )
 
-        B = cp.asnumpy(B)
-        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        forks = np.argwhere(np.array(g.degree()) > 2).flatten()
-
-        if len(tips) > 30:
-            logg.warn("    more than 30 tips detected!")
-
-        r = [
+        ppt = [
             X.index.tolist(),
             cp.asnumpy(score),
             cp.asnumpy(F_mat_gpu),
             cp.asnumpy(R),
-            (B),
+            cp.asnumpy(B),
             cp.asnumpy(L),
             cp.asnumpy(d),
             lam,
             sigma,
             nsteps,
-            tips,
-            forks,
-            "euclidean",
+            metric,
         ]
     else:
         from sklearn.metrics import pairwise_distances
@@ -476,10 +468,12 @@ def tree_ppt(
         if init is None:
             if seed is not None:
                 np.random.seed(seed)
-            F_mat_cpu = X_cpu[:, np.random.choice(X.shape[0], size=M, replace=False)]
+            F_mat_cpu = X_cpu[
+                :, np.random.choice(X.shape[0], size=Nodes, replace=False)
+            ]
         else:
             F_mat_cpu = np.asarray(init.T)
-            M = init.T.shape[0]
+            Nodes = init.T.shape[0]
 
         j = 1
         err = 100
@@ -528,11 +522,7 @@ def tree_ppt(
             lam / 2 * np.sum(d * B),
         ]
 
-        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        forks = np.argwhere(np.array(g.degree()) > 2).flatten()
-
-        r = [
+        ppt = [
             X.index.tolist(),
             score,
             F_mat_cpu,
@@ -543,10 +533,7 @@ def tree_ppt(
             lam,
             sigma,
             nsteps,
-            tips,
-            forks,
-            "euclidean",
-            use_rep,
+            metric,
         ]
 
     names = [
@@ -560,26 +547,43 @@ def tree_ppt(
         "lambda",
         "sigma",
         "nsteps",
-        "tips",
-        "forks",
-        "metrics",
-        "rep_used",
+        "metric",
     ]
-    r = dict(zip(names, r))
+    ppt = dict(zip(names, ppt))
+
+    g = igraph.Graph.Adjacency((ppt["B"] > 0).tolist(), mode="undirected")
+
+    # remvoe lonely nodes
+    co_nodes = np.argwhere(np.array(g.degree()) > 0).ravel()
+    ppt["R"] = ppt["R"][:, co_nodes]
+    ppt["F"] = ppt["F"][:, co_nodes]
+    ppt["B"] = ppt["B"][co_nodes, :][:, co_nodes]
+    ppt["L"] = ppt["L"][co_nodes, :][:, co_nodes]
+    ppt["d"] = ppt["d"][co_nodes, :][:, co_nodes]
+
+    if len(co_nodes) < Nodes:
+        logg.info("    " + str(Nodes - len(co_nodes)) + " lonely nodes removed")
+
+    g = igraph.Graph.Adjacency((ppt["B"] > 0).tolist(), mode="undirected")
+    ppt["tips"] = np.argwhere(np.array(g.degree()) == 1).flatten()
+    ppt["forks"] = np.argwhere(np.array(g.degree()) > 2).flatten()
+
+    if len(ppt["tips"]) > 30:
+        logg.info("    more than 30 tips detected!")
 
     graph = {
-        "B": r["B"],
-        "R": r["R"],
-        "F": r["F"],
-        "tips": tips,
-        "forks": forks,
+        "B": ppt["B"],
+        "R": ppt["R"],
+        "F": ppt["F"],
+        "tips": ppt["tips"],
+        "forks": ppt["forks"],
         "cells_fitted": X.index.tolist(),
-        "metrics": "euclidean",
+        "metrics": ppt["metric"],
     }
 
     adata.uns["graph"] = graph
 
-    adata.uns["ppt"] = r
+    adata.uns["ppt"] = ppt
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
