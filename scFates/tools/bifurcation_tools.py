@@ -75,6 +75,7 @@ def test_fork(
     adata: AnnData,
     root_milestone,
     milestones,
+    features: Union[None, str] = None,
     rescale: bool = False,
     layer: Optional[str] = None,
     n_jobs: int = 1,
@@ -98,6 +99,8 @@ def test_fork(
         tip defining progenitor branch.
     milestones
         tips defining the progenies branches.
+    features
+        Which features to test (all by default).
     rescale
         By default, analysis restrict to only cells having a pseudotime lower than the shortest branch maximum pseudotime, this can be avoided by rescaling the post bifurcation pseudotime of both branches to 1.
     layer
@@ -120,9 +123,9 @@ def test_fork(
 
     adata = adata.copy() if copy else adata
 
-    logg.info("testing fork", reset=True)
+    genes = adata.var_names if features is None else features
 
-    genes = adata.var_names[adata.var.signi]
+    logg.info("testing fork", reset=True)
 
     graph = adata.uns["graph"]
 
