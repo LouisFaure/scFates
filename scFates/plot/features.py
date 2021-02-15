@@ -26,6 +26,8 @@ def trends(
     n_features: int = 10,
     root_milestone=None,
     milestones=None,
+    module: Union[None, "early", "late"] = None,
+    branch: Union[None, str] = None,
     annot: Union[None, "seg", "milestones"] = None,
     title: str = "",
     offset_names=0.15,
@@ -98,6 +100,10 @@ def trends(
 
     if features is None:
         features = adata.var_names
+    if module is not None and branch is not None:
+        name = root_milestone + "->" + "<>".join(milestones)
+        df = adata.uns[name]["fork"]
+        features = df.loc[(df.branch == branch) & (df.module == module), :].index
 
     fitted = pd.DataFrame(
         adata.layers["fitted"], index=adata.obs_names, columns=adata.var_names
