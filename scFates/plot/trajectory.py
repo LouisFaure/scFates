@@ -176,9 +176,9 @@ def trajectory(
         proj = proj.loc[nodes, :]
         g.delete_vertices(graph["pp_info"].index[~graph["pp_info"].index.isin(nodes)])
         if ax is None:
-            ax = sc.pl.scatter(adata, show=False, color="whitesmoke", basis="umap")
+            ax = sc.pl.scatter(adata, show=False, color="whitesmoke", basis=basis)
         else:
-            sc.pl.scatter(adata, show=False, ax=ax, color="whitesmoke", basis="umap")
+            sc.pl.scatter(adata, show=False, ax=ax, color="whitesmoke", basis=basis)
 
     c_edges = np.array([e.split("|") for e in adata.obs.edge], dtype=int)
     cells = [any(np.isin(c_e, nodes)) for c_e in c_edges]
