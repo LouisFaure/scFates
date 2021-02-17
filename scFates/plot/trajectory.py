@@ -211,13 +211,16 @@ def trajectory(
     anndata_logger.level = prelog
     if show_info == False and color_cells is not None:
         if is_categorical(adata, color_cells):
-            ax.get_legend().remove()
+            if ax.get_legend() is not None:
+                ax.get_legend().remove()
         else:
             ax.set_box_aspect(aspect=1)
             fig = ax.get_gridspec().figure
-            fig.get_axes()[
-                np.argwhere(["colorbar" in a.get_label() for a in fig.get_axes()])[0][0]
-            ].remove()
+            cbar = np.argwhere(
+                ["colorbar" in a.get_label() for a in fig.get_axes()]
+            ).ravel()
+            if len(cbar) > 0:
+                fig.get_axes()[cbar[0]].remove()
 
     al = np.array(g.get_edgelist())
 
@@ -601,7 +604,7 @@ def _get_color_values(
 
 
 def is_categorical(data, c=None):
-    from pandas.api.types import is_categorical as cat
+    from pandas.api.types import is_categorical_dtype as cat
 
     if c is None:
         return cat(data)  # if data is categorical/array
