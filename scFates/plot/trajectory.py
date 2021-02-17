@@ -12,6 +12,7 @@ from pandas.api.types import is_categorical_dtype
 from scanpy.plotting._utils import savefig_or_show
 import types
 
+from matplotlib.backend_bases import GraphicsContextBase, RendererBase
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from numba import njit
@@ -146,6 +147,15 @@ def trajectory(
     save: Union[str, bool, None] = None,
     **kwargs,
 ):
+    class GC(GraphicsContextBase):
+        def __init__(self):
+            super().__init__()
+            self._capstyle = "round"
+
+    def custom_new_gc(self):
+        return GC()
+
+    RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
 
     if "graph" not in adata.uns:
         raise ValueError("You need to run `tl.pseudotime` first before plotting.")
