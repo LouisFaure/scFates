@@ -661,14 +661,12 @@ def tree_epg(
         R = pairwise_distances(
             cp.asarray(X.values), cp.asarray(Tree[0]["NodePositions"])
         )
-        # Force soft assigment to assign with confidence cells to their closest node
-        # sigma is scaled according to the maximum variance of the data
-        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0))) / 1000
-        R = cp.exp(-R / auto_sigma)
-        R = (R.T / R.sum(axis=1)).T
-        R[cp.isnan(R)] = 0
 
         R = cp.asnumpy(R)
+        # Hard assigment
+        R = sparse.csr_matrix(
+            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
+        ).A
 
     else:
         from .utils import cor_mat_cpu
@@ -686,12 +684,10 @@ def tree_epg(
         )
 
         R = pairwise_distances(X.values, Tree[0]["NodePositions"])
-        # Force soft assigment to assign with confidence cells to their closest node
-        # sigma is scaled according to the maximum variance of the data
-        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0))) / 1000
-        R = np.exp(-R / auto_sigma)
-        R = (R.T / R.sum(axis=1)).T
-        R[np.isnan(R)] = 0
+        # Hard assigment
+        R = sparse.csr_matrix(
+            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
+        ).A
 
     g = igraph.Graph(directed=False)
     g.add_vertices(np.unique(Tree[0]["Edges"][0].flatten().astype(int)))
@@ -728,9 +724,7 @@ def tree_epg(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic tree generated from elpigraph.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] soft assignment (automatic sigma="
-        + str(auto_sigma)
-        + ") of cells to principal point in representation space.\n"
+        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'] coordinates of principal points in representation space."
     )
 
@@ -801,14 +795,12 @@ def curve_epg(
         R = pairwise_distances(
             cp.asarray(X.values), cp.asarray(Curve[0]["NodePositions"])
         )
-        # Force soft assigment to assign with confidence cells to their closest node
-        # sigma is scaled according to the maximum variance of the data
-        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0))) / 1000
-        R = cp.exp(-R / auto_sigma)
-        R = (R.T / R.sum(axis=1)).T
-        R[cp.isnan(R)] = 0
 
         R = cp.asnumpy(R)
+        # Hard assigment
+        R = sparse.csr_matrix(
+            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
+        ).A
 
     else:
         from .utils import cor_mat_cpu
@@ -826,12 +818,10 @@ def curve_epg(
         )
 
         R = pairwise_distances(X.values, Curve[0]["NodePositions"])
-        # Force soft assigment to assign with confidence cells to their closest node
-        # sigma is scaled according to the maximum variance of the data
-        auto_sigma = round_base_10(np.max((X_t.T).std(axis=0))) / 1000
-        R = np.exp(-R / auto_sigma)
-        R = (R.T / R.sum(axis=1)).T
-        R[np.isnan(R)] = 0
+        # Hard assigment
+        R = sparse.csr_matrix(
+            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
+        ).A
 
     g = igraph.Graph(directed=False)
     g.add_vertices(np.unique(Curve[0]["Edges"][0].flatten().astype(int)))
@@ -868,9 +858,7 @@ def curve_epg(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic curve generated from elpigraph.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] soft assignment (automatic sigma="
-        + str(auto_sigma)
-        + ") of cells to principal point in representation space.\n"
+        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
 
