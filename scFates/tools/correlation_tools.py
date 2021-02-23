@@ -654,7 +654,7 @@ def synchro_path(
         ]
     )
 
-    adata.obs["inter_cor " + name][~adata.obs_names.isin(cells)] = np.nan
+    adata.obs.loc[~adata.obs_names.isin(cells), "inter_cor " + name] = np.nan
 
     adata.uns = uns_temp
 
