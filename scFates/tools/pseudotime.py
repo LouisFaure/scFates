@@ -106,16 +106,17 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     milestones = pd.Series(index=adata.obs_names)
     for seg in graph["pp_seg"].n:
         cell_seg = adata.obs.loc[adata.obs["seg"] == seg, "t"]
-        milestones[
-            cell_seg.index[
-                (cell_seg - min(cell_seg) - (max(cell_seg - min(cell_seg)) / 2) < 0)
-            ]
-        ] = graph["pp_seg"].loc[int(seg), "from"]
-        milestones[
-            cell_seg.index[
-                (cell_seg - min(cell_seg) - (max(cell_seg - min(cell_seg)) / 2) > 0)
-            ]
-        ] = graph["pp_seg"].loc[int(seg), "to"]
+        if len(cell_seg) > 0:
+            milestones[
+                cell_seg.index[
+                    (cell_seg - min(cell_seg) - (max(cell_seg - min(cell_seg)) / 2) < 0)
+                ]
+            ] = graph["pp_seg"].loc[int(seg), "from"]
+            milestones[
+                cell_seg.index[
+                    (cell_seg - min(cell_seg) - (max(cell_seg - min(cell_seg)) / 2) > 0)
+                ]
+            ] = graph["pp_seg"].loc[int(seg), "to"]
     adata.obs["milestones"] = milestones
     adata.obs.milestones = (
         adata.obs.milestones.astype(int).astype("str").astype("category")
