@@ -154,8 +154,8 @@ def test_pipeline():
     scf.tl.activation(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
     activation = adata.uns["80->25<>19"]["fork"].activation.values
 
-    scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"], highlight=True)
-    scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"], mode="3d")
+    scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"])
+    scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"], show_traj=True)
 
     scf.tl.slide_cells(adata, root_milestone="80", milestones=["25", "19"], win=200)
     cell_freq_sum = adata.uns["80->25<>19"]["cell_freq"][0].sum()

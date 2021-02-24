@@ -9,6 +9,10 @@ from scipy import sparse
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
 from ..tools.utils import getpath
+from .trajectory import trajectory as plot_trajectory
+from .utils import setup_axes
+
+import scanpy as sc
 
 
 def modules(
@@ -16,22 +20,15 @@ def modules(
     root_milestone,
     milestones,
     color: str = "milestones",
-    mode: str = "2d",
-    marker_size: int = 20,
-    highlight: bool = False,
-    incl_3d: int = 30,
-    rot_3d: int = 315,
-    alpha: float = 1,
-    cmap_pseudotime="viridis",
+    show_traj: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     layer: Optional[str] = None,
+    **kwargs,
 ):
 
     plt.rcParams["axes.grid"] = False
     graph = adata.uns["graph"]
-
-    uns_temp = adata.uns.copy()
 
     dct = graph["milestones"]
 
@@ -71,36 +68,32 @@ def modules(
         )
     )
 
-    cols = adata.uns[color + "_colors"].copy()
-    obscol = adata.obs[color].cat.categories.tolist()
-    dct_c = dict(zip(obscol, cols))
-
     if layer is None:
         if sparse.issparse(adata.X):
             X = pd.DataFrame(
-                np.array(adata[cells, stats.index].X.A),
-                index=cells,
+                np.array(adata[:, stats.index].X.A),
+                index=adata.obs_names,
                 columns=stats.index,
             )
         else:
             X = pd.DataFrame(
-                np.array(adata[cells, stats.index].X), index=cells, columns=stats.index
+                np.array(adata[:, stats.index].X),
+                index=adata.obs_names,
+                columns=stats.index,
             )
     else:
         if sparse.issparse(adata.layers[layer]):
             X = pd.DataFrame(
-                np.array(adata[cells, stats.index].layers[layer].A),
-                index=cells,
+                np.array(adata[:, stats.index].layers[layer].A),
+                index=adata.obs_names,
                 columns=stats.index,
             )
         else:
             X = pd.DataFrame(
-                np.array(adata[cells, stats.index].layers[layer]),
-                index=cells,
+                np.array(adata[:, stats.index].layers[layer]),
+                index=adata.obs_names,
                 columns=stats.index,
             )
-
-    miles = adata.obs.loc[X.index, color].astype(str)
 
     early_1 = (stats.branch.values == milestones[0]) & (stats.module.values == "early")
     late_1 = (stats.branch.values == milestones[0]) & (stats.module.values == "late")
@@ -108,124 +101,63 @@ def modules(
     early_2 = (stats.branch.values == milestones[1]) & (stats.module.values == "early")
     late_2 = (stats.branch.values == milestones[1]) & (stats.module.values == "late")
 
-    if mode == "2d":
-        fig, axs = plt.subplots(2, 2)
+    X_early = pd.DataFrame(
+        {
+            "early_" + milestones[0]: X.loc[:, early_1].mean(axis=1),
+            "early_" + milestones[1]: X.loc[:, early_2].mean(axis=1),
+        }
+    )
 
-        if highlight:
-            axs[0, 0].scatter(
-                X.loc[:, early_1].mean(axis=1),
-                X.loc[:, early_2].mean(axis=1),
-                s=marker_size * 2,
-                c="k",
-            )
-            axs[1, 0].scatter(
-                X.loc[:, late_1].mean(axis=1),
-                X.loc[:, late_2].mean(axis=1),
-                s=marker_size * 2,
-                c="k",
-            )
-            axs[0, 1].scatter(
-                X.loc[:, early_1].mean(axis=1),
-                X.loc[:, early_2].mean(axis=1),
-                s=marker_size * 2,
-                c="k",
-            )
-            axs[1, 1].scatter(
-                X.loc[:, late_1].mean(axis=1),
-                X.loc[:, late_2].mean(axis=1),
-                s=marker_size * 2,
-                c="k",
-            )
+    X_late = pd.DataFrame(
+        {
+            "late_1" + milestones[0]: X.loc[:, late_1].mean(axis=1),
+            "late_2" + milestones[1]: X.loc[:, late_2].mean(axis=1),
+        }
+    )
 
-        for m in obscol:
-            axs[0, 0].scatter(
-                X.loc[miles.index[miles == m], early_1].mean(axis=1),
-                X.loc[miles.index[miles == m], early_2].mean(axis=1),
-                s=marker_size,
-                c=dct_c[m],
-                alpha=alpha,
-            )
-        axs[0, 0].set_aspect(1.0 / axs[0, 0].get_data_ratio(), adjustable="box")
-        axs[0, 0].set_xlabel("early " + milestones[0])
-        axs[0, 0].set_ylabel("early " + milestones[1])
+    adata_c = adata.copy()
+    adata_c.obsm["X_early"] = X_early.values
+    adata_c.obsm["X_late"] = X_late.values
 
-        for m in obscol:
-            axs[1, 0].scatter(
-                X.loc[miles.index[miles == m], late_1].mean(axis=1),
-                X.loc[miles.index[miles == m], late_2].mean(axis=1),
-                s=marker_size,
-                c=dct_c[m],
-                alpha=alpha,
-            )
-        axs[1, 0].set_aspect(1.0 / axs[1, 0].get_data_ratio(), adjustable="box")
-        axs[1, 0].set_xlabel("late " + milestones[0])
-        axs[1, 0].set_ylabel("late " + milestones[1])
+    axs, _, _, _ = setup_axes(panels=[0, 1])
 
-        axs[0, 1].scatter(
-            X.loc[:, early_1].mean(axis=1),
-            X.loc[:, early_2].mean(axis=1),
-            c=adata.obs.t[X.index],
-            s=marker_size,
-            alpha=alpha,
-            cmap=cmap_pseudotime,
+    sc.pl.scatter(
+        adata_c[cells],
+        basis="early",
+        color=color,
+        legend_loc="none",
+        title="",
+        show=False,
+        ax=axs[0],
+        **kwargs,
+    )
+    if show_traj:
+        plot_trajectory(
+            adata_c,
+            basis="early",
+            root_milestone=root_milestone,
+            milestones=milestones,
+            show=False,
+            alpha=0,
+            title="",
+            ax=axs[0],
+            **kwargs,
         )
-        axs[0, 1].set_aspect(1.0 / axs[0, 1].get_data_ratio(), adjustable="box")
-        axs[0, 1].set_xlabel("early " + milestones[0])
-        axs[0, 1].set_ylabel("early " + milestones[1])
 
-        axs[1, 1].scatter(
-            X.loc[:, late_1].mean(axis=1),
-            X.loc[:, late_2].mean(axis=1),
-            c=adata.obs.t[X.index],
-            s=marker_size,
-            alpha=alpha,
-            cmap=cmap_pseudotime,
-        )
-        axs[1, 1].set_aspect(1.0 / axs[1, 1].get_data_ratio(), adjustable="box")
-        axs[1, 1].set_xlabel("late " + milestones[0])
-        axs[1, 1].set_ylabel("late " + milestones[1])
-        plt.tight_layout()
+    sc.pl.scatter(
+        adata_c[cells],
+        basis="late",
+        color=color,
+        legend_loc="none",
+        show=False,
+        title="",
+        ax=axs[1],
+        **kwargs,
+    )
 
-        fig.set_figheight(10)
-        fig.set_figwidth(10)
-
-    if mode == "3d":
-        fig = plt.figure(figsize=plt.figaspect(0.5))
-        ax = fig.add_subplot(1, 2, 1, projection="3d")
-        for m in obscol:
-            ax.scatter(
-                xs=X.loc[miles.index[miles == m], early_1].mean(axis=1),
-                ys=X.loc[miles.index[miles == m], early_2].mean(axis=1),
-                zs=adata.obs.t[miles.index[miles == m]],
-                c=dct_c[m],
-                alpha=alpha,
-                s=10,
-            )
-
-        ax.invert_xaxis()
-        ax.view_init(incl_3d, rot_3d)
-        plt.xlabel("early " + milestones[0])
-        plt.ylabel("early " + milestones[1])
-        ax.set_zlabel("pseudotime")
-
-        ax = fig.add_subplot(1, 2, 2, projection="3d")
-
-        for m in obscol:
-            ax.scatter(
-                xs=X.loc[miles.index[miles == m], late_1].mean(axis=1),
-                ys=X.loc[miles.index[miles == m], late_2].mean(axis=1),
-                zs=adata.obs.t[miles.index[miles == m]],
-                c=dct_c[m],
-                alpha=alpha,
-                s=10,
-            )
-
-        ax.invert_xaxis()
-        ax.view_init(incl_3d, rot_3d)
-        plt.xlabel("late " + milestones[0])
-        plt.ylabel("late " + milestones[1])
-        ax.set_zlabel("pseudotime")
-
-    adata.uns = uns_temp
+    axs[0].set_xlabel("early " + milestones[0])
+    axs[0].set_ylabel("early " + milestones[1])
+    axs[1].set_xlabel("late " + milestones[0])
+    axs[1].set_ylabel("late " + milestones[1])
 
     savefig_or_show("modules", show=show, save=save)

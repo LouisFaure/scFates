@@ -85,9 +85,9 @@ def graph(
     B = graph["B"]
 
     if ax is None:
-        ax = plot_scanpy(adata, basis, ax, kwargs)
+        ax = plot_scanpy(adata, basis, color_cells, ax, kwargs)
     else:
-        plot_scanpy(adata, basis, ax, kwargs)
+        plot_scanpy(adata, basis, color_cells, ax, kwargs)
 
     al = np.array(
         igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected").get_edgelist()
@@ -186,9 +186,19 @@ def trajectory(
         proj = proj.loc[nodes, :]
         g.delete_vertices(graph["pp_info"].index[~graph["pp_info"].index.isin(nodes)])
         if ax is None:
-            ax = sc.pl.scatter(adata, show=False, color="whitesmoke", basis=basis)
+            ax = sc.pl.scatter(
+                adata, kwargs, show=False, color="whitesmoke", basis=basis, **kwargs
+            )
         else:
-            sc.pl.scatter(adata, show=False, ax=ax, color="whitesmoke", basis=basis)
+            sc.pl.scatter(
+                adata,
+                kwargs,
+                show=False,
+                ax=ax,
+                color="whitesmoke",
+                basis=basis,
+                **kwargs,
+            )
 
     c_edges = np.array([e.split("|") for e in adata.obs.edge], dtype=int)
     cells = [any(np.isin(c_e, nodes)) for c_e in c_edges]
@@ -214,9 +224,9 @@ def trajectory(
         ]
 
     if ax is None:
-        ax = plot_scanpy(adata, basis, ax, kwargs)
+        ax = plot_scanpy(adata, basis, color_cells, ax, kwargs)
     else:
-        plot_scanpy(adata, basis, ax, kwargs)
+        plot_scanpy(adata, basis, color_cells, ax, kwargs)
 
     anndata_logger.level = prelog
     if show_info == False and color_cells is not None:
@@ -662,24 +672,28 @@ def strings_to_categoricals(adata):
             df[key] = c
 
 
-def plot_scanpy(adata, basis, ax, kwargs):
+def plot_scanpy(adata, basis, color_cells, ax, kwargs):
     if ax is None:
         if basis == "umap":
-            ax = sc.pl.umap(adata, show=False, **kwargs)
+            ax = sc.pl.umap(adata, color=color_cells, show=False, **kwargs)
         elif basis == "tsne":
-            ax = sc.pl.tsne(adata, show=False, **kwargs)
+            ax = sc.pl.tsne(adata, color=color_cells, show=False, **kwargs)
         elif "draw_graph" in basis:
-            ax = sc.pl.draw_graph(adata, show=False, **kwargs)
+            ax = sc.pl.draw_graph(adata, color=color_cells, show=False, **kwargs)
         else:
-            ax = sc.pl.scatter(adata, basis=basis, show=False, **kwargs)
+            ax = sc.pl.scatter(
+                adata, color=color_cells, basis=basis, show=False, **kwargs
+            )
         return ax
 
     else:
         if basis == "umap":
-            sc.pl.umap(adata, show=False, ax=ax, **kwargs)
+            sc.pl.umap(adata, color=color_cells, show=False, ax=ax, **kwargs)
         elif basis == "tsne":
-            sc.pl.tsne(adata, show=False, ax=ax, **kwargs)
+            sc.pl.tsne(adata, color=color_cells, show=False, ax=ax, **kwargs)
         elif "draw_graph" in basis:
-            sc.pl.draw_graph(adata, show=False, ax=ax, **kwargs)
+            sc.pl.draw_graph(adata, color=color_cells, show=False, ax=ax, **kwargs)
         else:
-            sc.pl.scatter(adata, basis=basis, show=False, ax=ax, **kwargs)
+            sc.pl.scatter(
+                adata, color=color_cells, basis=basis, show=False, ax=ax, **kwargs
+            )
