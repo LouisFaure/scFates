@@ -1,7 +1,7 @@
 # Extracted from scanpy, thanks!
 from functools import lru_cache
 from typing import Union, Sequence
-from scanpy._utils import Literal
+from typing_extensions import Literal
 
 import numpy as np
 from matplotlib import pyplot as pl

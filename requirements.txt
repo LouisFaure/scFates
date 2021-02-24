@@ -22,3 +22,4 @@ cycler>=0.10.0
 pypandoc>=1.5
 python_igraph>=0.8.2
 cairocffi>=1.2.0
+typing_extensions
