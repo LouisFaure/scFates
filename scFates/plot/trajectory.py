@@ -224,9 +224,9 @@ def trajectory(
         ]
 
     if ax is None:
-        ax = plot_scanpy(adata, basis, color_cells, ax, kwargs)
+        ax = plot_scanpy(adata_c, basis, color_cells, ax, kwargs)
     else:
-        plot_scanpy(adata, basis, color_cells, ax, kwargs)
+        plot_scanpy(adata_c, basis, color_cells, ax, kwargs)
 
     anndata_logger.level = prelog
     if show_info == False and color_cells is not None:
