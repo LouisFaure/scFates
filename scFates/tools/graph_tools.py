@@ -636,8 +636,6 @@ def tree_epg(
     elif use_rep in adata.obsm.keys():
         X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
 
-    X_t = X.values.T
-
     if seed is not None:
         np.random.seed(seed)
 
@@ -647,7 +645,7 @@ def tree_epg(
         from .utils import cor_mat_gpu
 
         Tree = elpigraph.computeElasticPrincipalTree(
-            X_t.T,
+            X.values.astype(np.float64),
             NumNodes=Nodes,
             Do_PCA=False,
             InitNodes=initnodes,
@@ -673,7 +671,7 @@ def tree_epg(
         from sklearn.metrics import pairwise_distances
 
         Tree = elpigraph.computeElasticPrincipalTree(
-            X_t.T,
+            X.values.astype(np.float64),
             NumNodes=Nodes,
             Do_PCA=False,
             InitNodes=initnodes,
@@ -770,8 +768,6 @@ def curve_epg(
     elif use_rep in adata.obsm.keys():
         X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
 
-    X_t = X.values.T
-
     if seed is not None:
         np.random.seed(seed)
 
@@ -781,7 +777,7 @@ def curve_epg(
         from cuml.metrics import pairwise_distances
 
         Curve = elpigraph.computeElasticPrincipalCurve(
-            X_t.T,
+            X.values.astype(np.float64),
             NumNodes=Nodes,
             Do_PCA=False,
             InitNodes=initnodes,
@@ -807,7 +803,7 @@ def curve_epg(
         from sklearn.metrics import pairwise_distances
 
         Curve = elpigraph.computeElasticPrincipalCurve(
-            X_t.T,
+            X.values.astype(np.float64),
             NumNodes=Nodes,
             Do_PCA=False,
             InitNodes=initnodes,
