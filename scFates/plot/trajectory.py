@@ -78,6 +78,12 @@ def graph(
     emb = adata.obsm[f"X_{basis}"]
     emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
+    if "components" in kwargs:
+        emb_f = emb_f[:, kwargs["components"]]
+
+    else:
+        emb_f = emb_f[:, :2]
+
     R = graph["R"]
 
     proj = (np.dot(emb_f.T, R) / R.sum(axis=0)).T
@@ -85,9 +91,13 @@ def graph(
     B = graph["B"]
 
     if ax is None:
-        ax = plot_scanpy(adata, basis, color_cells, ax, kwargs)
+        ax = sc.pl.embedding(
+            adata, color=color_cells, basis=basis, show=False, **kwargs
+        )
     else:
-        plot_scanpy(adata, basis, color_cells, ax, kwargs)
+        sc.pl.embedding(
+            adata, color=color_cells, basis=basis, ax=ax, show=False, **kwargs
+        )
 
     al = np.array(
         igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected").get_edgelist()
@@ -165,6 +175,12 @@ def trajectory(
     emb = adata.obsm[f"X_{basis}"]
     emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
+    if "components" in kwargs:
+        emb_f = emb_f[:, kwargs["components"]]
+
+    else:
+        emb_f = emb_f[:, :2]
+
     R = graph["R"]
 
     nodes = graph["pp_info"].index
@@ -186,19 +202,9 @@ def trajectory(
         proj = proj.loc[nodes, :]
         g.delete_vertices(graph["pp_info"].index[~graph["pp_info"].index.isin(nodes)])
         if ax is None:
-            ax = sc.pl.scatter(
-                adata, kwargs, show=False, color="whitesmoke", basis=basis, **kwargs
-            )
+            ax = sc.pl.embedding(adata, show=False, basis=basis, **kwargs)
         else:
-            sc.pl.scatter(
-                adata,
-                kwargs,
-                show=False,
-                ax=ax,
-                color="whitesmoke",
-                basis=basis,
-                **kwargs,
-            )
+            sc.pl.embedding(adata, show=False, ax=ax, basis=basis, **kwargs)
 
     c_edges = np.array([e.split("|") for e in adata.obs.edge], dtype=int)
     cells = [any(np.isin(c_e, nodes)) for c_e in c_edges]
@@ -224,9 +230,13 @@ def trajectory(
         ]
 
     if ax is None:
-        ax = plot_scanpy(adata_c, basis, color_cells, ax, kwargs)
+        ax = sc.pl.embedding(
+            adata, color=color_cells, basis=basis, show=False, **kwargs
+        )
     else:
-        plot_scanpy(adata_c, basis, color_cells, ax, kwargs)
+        sc.pl.embedding(
+            adata, color=color_cells, basis=basis, ax=ax, show=False, **kwargs
+        )
 
     anndata_logger.level = prelog
     if show_info == False and color_cells is not None:
@@ -670,30 +680,3 @@ def strings_to_categoricals(adata):
         c = Categorical(c)
         if 1 < len(c.categories) < min(len(c), 100):
             df[key] = c
-
-
-def plot_scanpy(adata, basis, color_cells, ax, kwargs):
-    if ax is None:
-        if basis == "umap":
-            ax = sc.pl.umap(adata, color=color_cells, show=False, **kwargs)
-        elif basis == "tsne":
-            ax = sc.pl.tsne(adata, color=color_cells, show=False, **kwargs)
-        elif "draw_graph" in basis:
-            ax = sc.pl.draw_graph(adata, color=color_cells, show=False, **kwargs)
-        else:
-            ax = sc.pl.scatter(
-                adata, color=color_cells, basis=basis, show=False, **kwargs
-            )
-        return ax
-
-    else:
-        if basis == "umap":
-            sc.pl.umap(adata, color=color_cells, show=False, ax=ax, **kwargs)
-        elif basis == "tsne":
-            sc.pl.tsne(adata, color=color_cells, show=False, ax=ax, **kwargs)
-        elif "draw_graph" in basis:
-            sc.pl.draw_graph(adata, color=color_cells, show=False, ax=ax, **kwargs)
-        else:
-            sc.pl.scatter(
-                adata, color=color_cells, basis=basis, show=False, ax=ax, **kwargs
-            )
