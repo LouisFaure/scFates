@@ -79,7 +79,8 @@ def graph(
     emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
     if "components" in kwargs:
-        emb_f = emb_f[:, kwargs["components"]]
+        cmp = np.array(kwargs["components"]) - 1
+        emb_f = emb_f[:, cmp]
 
     else:
         emb_f = emb_f[:, :2]
@@ -176,7 +177,8 @@ def trajectory(
     emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
     if "components" in kwargs:
-        emb_f = emb_f[:, kwargs["components"]]
+        cmp = np.array(kwargs["components"]) - 1
+        emb_f = emb_f[:, cmp]
 
     else:
         emb_f = emb_f[:, :2]
