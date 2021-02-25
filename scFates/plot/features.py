@@ -11,7 +11,7 @@ from adjustText import adjust_text
 from matplotlib import patches
 from scipy import sparse
 
-from typing import Union, Optional
+from typing import Union, Optional, List
 from scanpy.plotting._utils import savefig_or_show
 
 from .. import logging as logg
@@ -22,33 +22,99 @@ from .trajectory import trajectory
 def trends(
     adata: AnnData,
     features=None,
-    highlight_features=None,
+    highlight_features: Union[List, "A", "fdr"] = "A",
     n_features: int = 10,
-    root_milestone=None,
-    milestones=None,
+    root_milestone: Union[None, str] = None,
+    milestones: Union[None, str] = None,
     module: Union[None, "early", "late"] = None,
     branch: Union[None, str] = None,
     annot: Union[None, "seg", "milestones"] = None,
     title: str = "",
-    offset_names=0.15,
-    heatmap_space=0.5,
+    feature_cmap: str = "RdBu_r",
+    pseudo_cmap: str = "viridis",
     plot_emb: bool = True,
-    fontsize=9,
-    order=True,
-    ordering="pearson",
-    ord_thre=0.7,
-    filter_complex=False,
-    complex_thre=0.7,
-    complex_z=3,
-    fig_heigth=4,
     basis: str = "umap",
-    colormap: str = "RdBu_r",
-    pseudo_colormap: str = "viridis",
+    heatmap_space: float = 0.5,
+    offset_names: float = 0.15,
+    fontsize: float = 9,
+    ordering: Union["pearson", "spearman", "quantile", "max", None] = "pearson",
+    ord_thre=0.7,
+    filter_complex: bool = False,
+    complex_thre: float = 0.7,
+    complex_z: float = 3,
+    fig_heigth: float = 4,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     save_genes: Optional[bool] = None,
     **kwargs,
 ):
+
+    """\
+    Plot a set of fitted features over pseudotime.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    features
+        Name of the fitted features.
+    highlight_features
+        which features will be annotated on the heatmap, by default, features with highest amplitude are shown.
+    n_features
+        number of top features to show if no list are provided.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    module
+        if bifurcation analysis as been performed, subset features to a specific module.
+    branch
+        if bifurcation analysis as been performed, subset features to a specific milestone.
+    annot
+        adds an annotation row o ntop of the heatmap.
+    title
+        add a title.
+    feature_cmap
+        colormap for features.
+    pseudo_cmap
+        colormap for pseudotime.
+    plot_emb
+        call pl.trajectory on the left side.
+    basis
+        Name of the `obsm` basis to use if plot_emb is True.
+    heatmap_space
+        how much space does the heatmap take, in proportion of the whole plot space.
+    offset_names
+        how far on the right the annotated features should be displayed, in proportion of the heatmap space.
+    fontsize
+        font size of the feature annotations.
+    ordering
+        strategy to order the features on heatmap, quantile takes the mean pseudotime of the choosen value.
+    ord_thre
+        for 'max': proportion of maximum of fitted value to consider to compute the mean pseudotime.
+        for 'quantile': quantile to consider to compute the mean pseudotime.
+        for 'pearson'/'spearman': proportion of max value to assign starting cell.
+    filter_complex
+        filter out complex features
+    complex_thre
+        quantile to consider for complex filtering
+    complex_z
+        standard deviation threshold on the quantile subsetted feature.
+    fig_heigth
+        figure height.
+    show
+        show the plot.
+    save
+        save the plot.
+    save_genes
+        save list of genes following the order displayed o nthe heatmap.
+
+    Returns
+    -------
+    If `show==False` a matrix of :class:`~matplotlib.axes.Axes`
+
+    """
+
     offset_heatmap = 1 - heatmap_space
 
     if plot_emb:
@@ -146,50 +212,50 @@ def trends(
 
     fitted = fitted.loc[features, :]
 
-    if order:
-        if ordering == "quantile":
-            feature_order = (
-                fitted.apply(
-                    lambda x: adata.obs.t[fitted.columns][
-                        x > np.quantile(x, q=ord_thre)
-                    ].mean(),
-                    axis=1,
-                )
-                .sort_values()
-                .index
+    if ordering == "quantile":
+        feature_order = (
+            fitted.apply(
+                lambda x: adata.obs.t[fitted.columns][
+                    x > np.quantile(x, q=ord_thre)
+                ].mean(),
+                axis=1,
             )
-        elif ordering == "max":
-            feature_order = (
-                fitted.apply(
-                    lambda x: adata.obs.t[fitted.columns][
-                        (x - x.min()) / (x.max() - x.min()) > ord_thre
-                    ].mean(),
-                    axis=1,
-                )
-                .sort_values()
-                .index
+            .sort_values()
+            .index
+        )
+    elif ordering == "max":
+        feature_order = (
+            fitted.apply(
+                lambda x: adata.obs.t[fitted.columns][
+                    (x - x.min()) / (x.max() - x.min()) > ord_thre
+                ].mean(),
+                axis=1,
             )
-        elif ordering in ("pearson", "spearman"):
-            start_feature = (
-                fitted.apply(
-                    lambda x: adata.obs.t[fitted.columns][
-                        (x - x.min()) / (x.max() - x.min()) > ord_thre
-                    ].mean(),
-                    axis=1,
-                )
-                .sort_values()
-                .index[0]
+            .sort_values()
+            .index
+        )
+    elif ordering in ("pearson", "spearman"):
+        start_feature = (
+            fitted.apply(
+                lambda x: adata.obs.t[fitted.columns][
+                    (x - x.min()) / (x.max() - x.min()) > ord_thre
+                ].mean(),
+                axis=1,
             )
-            feature_order = (
-                fitted.T.corr(method=ordering)
-                .loc[start_feature, :]
-                .sort_values(ascending=False)
-                .index
-            )
+            .sort_values()
+            .index[0]
+        )
+        feature_order = (
+            fitted.T.corr(method=ordering)
+            .loc[start_feature, :]
+            .sort_values(ascending=False)
+            .index
+        )
 
-        fitted_sorted = fitted.loc[feature_order, :]
     else:
-        fitted_sorted = fitted
+        feature_order = fitted.index
+
+    fitted_sorted = fitted.loc[feature_order, :]
 
     if annot == "milestones":
         color_key = "milestones_colors"
@@ -284,7 +350,7 @@ def trends(
         pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,
         robust=True,
         rasterized=True,
-        cmap=pseudo_colormap,
+        cmap=pseudo_cmap,
         xticklabels=False,
         yticklabels=False,
         cbar=False,
@@ -295,7 +361,7 @@ def trends(
     sns.heatmap(
         fitted_sorted,
         robust=True,
-        cmap=colormap,
+        cmap=feature_cmap,
         rasterized=True,
         xticklabels=False,
         yticklabels=False,
@@ -336,9 +402,13 @@ def trends(
 
     axheatmap = add_frames(axheatmap, fitted_sorted.shape[0])
 
-    if highlight_features is None:
+    if highlight_features is "A":
         highlight_features = (
             adata.var.A[features].sort_values(ascending=False)[:n_features].index
+        )
+    elif highlight_features is "fdr":
+        highlight_features = (
+            adata.var.fdr[features].sort_values(ascending=True)[:n_features].index
         )
     xs = np.repeat(fitted_sorted.shape[1], len(highlight_features))
     ys = (
@@ -409,7 +479,7 @@ def trends(
             adata=adata_temp,
             basis=basis,
             color_seg="mean_trajectory",
-            cmap_seg=colormap,
+            cmap_seg=feature_cmap,
             color_cells=annot,
             show_info=False,
             ax=axemb,
@@ -424,6 +494,9 @@ def trends(
             for item in fitted_sorted.index:
                 f.write("%s\n" % item)
 
+    if show == False:
+        return f_axs
+
     savefig_or_show("trends", show=show, save=save)
 
 
@@ -431,18 +504,59 @@ def single_trend(
     adata: AnnData,
     feature: str,
     basis: str = "umap",
-    ylab="expression",
-    layer=None,
-    colormap: str = "RdBu_r",
-    colorexp=None,
-    figsize=(8, 4),
-    alpha_expr=0.3,
-    size_expr=2,
-    fitted_linewidth=2,
+    ylab: str = "expression",
+    color_exp=None,
+    alpha_expr: float = 0.3,
+    size_expr: float = 2,
+    fitted_linewidth: float = 2,
+    layer: Union[str, None] = None,
+    cmap_seg: str = "RdBu_r",
+    cmap_cells: str = "RdBu_r",
+    figsize: tuple = (8, 4),
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs,
 ):
+
+    """\
+    Plot a single feature fit over pseudotime.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    feature
+        Name of the fitted feature
+    basis
+        Name of the `obsm` basis to use.
+    ylab
+        ylabel of right plot.
+    colo_rexp
+        color of raw datapoints on right plot.
+    alpha_expr
+        alpha of raw datapoints on right plot.
+    size_expr
+        size of raw datapoints on right plot.
+    fitted_linewidth
+        linewidth of fitted line on right plot.
+    layer
+        layer to plot for the raw datapoints.
+    cmap_seg
+        colormap for trajectory segments on left plot.
+    cmap_cells
+        colormap for cells on left plot.
+    figsize
+        figure size in inches
+    show
+        show the plot.
+    save
+        save the plot.
+
+    Returns
+    -------
+    If `show==False` a tuple of two :class:`~matplotlib.axes.Axes`
+
+    """
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
 
@@ -473,7 +587,7 @@ def single_trend(
     ).sort_values("t")
 
     for s in df.seg.unique():
-        if colorexp is None:
+        if color_exp is None:
             ax2.scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
@@ -515,14 +629,14 @@ def single_trend(
             ax2.scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
-                c=colorexp,
+                c=color_exp,
                 alpha=alpha_expr,
                 s=size_expr,
             )
             ax2.plot(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "fitted"],
-                c=colorexp,
+                c=color_exp,
                 linewidth=fitted_linewidth,
             )
             tolink = adata.uns["graph"]["pp_seg"].loc[int(s), "to"]
@@ -540,7 +654,7 @@ def single_trend(
                         df.loc[df.seg == s, "fitted"].iloc[-1],
                         df.loc[df.seg == next_s, "fitted"].iloc[0],
                     ],
-                    c=colorexp,
+                    c=color_exp,
                     linewidth=fitted_linewidth,
                 )
 
@@ -554,9 +668,9 @@ def single_trend(
         adata,
         basis=basis,
         color_seg=feature,
-        cmap_seg=colormap,
+        cmap_seg=cmap_seg,
         color_cells=feature,
-        cmap_cells=colormap,
+        cmap=cmap_cells,
         show_info=False,
         ax=ax1,
         title=feature,

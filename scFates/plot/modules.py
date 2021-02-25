@@ -21,11 +21,40 @@ def modules(
     milestones,
     color: str = "milestones",
     show_traj: bool = False,
+    layer: Optional[str] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
-    layer: Optional[str] = None,
     **kwargs,
 ):
+    """\
+    Display the milestone graph in PAGA style.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    color
+        color the cells with variable from adata.obs.
+    show_traj
+        show trajectory on the early module plot.
+    layer
+        layer to use to compute mean of module.
+    show
+        show the plot.
+    save
+        save the plot.
+    kwargs
+        arguments to pass to scanpy functions pl.embedding
+
+    Returns
+    -------
+    If `show==False` a tuple of :class:`~matplotlib.axes.Axes`
+
+    """
 
     plt.rcParams["axes.grid"] = False
     graph = adata.uns["graph"]
@@ -159,5 +188,8 @@ def modules(
     axs[0].set_ylabel("early " + milestones[1])
     axs[1].set_xlabel("late " + milestones[0])
     axs[1].set_ylabel("late " + milestones[1])
+
+    if show == False:
+        return tuple(axs)
 
     savefig_or_show("modules", show=show, save=save)

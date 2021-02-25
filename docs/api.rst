@@ -58,7 +58,30 @@ Bifurcation analysis
 Plot
 ----
 
+**Trajectory**
+
 .. autosummary::
     :toctree: .
 
     pl.graph
+    pl.trajectory
+    pl.trajectory_3d
+    pl.milestones
+
+**Pseudotime features**
+
+.. autosummary::
+    :toctree: .
+
+    pl.test_association
+    pl.single_trend
+    pl.trends
+
+**Bifurcation & correlation analysis**
+
+.. autosummary::
+    :toctree: .
+
+    pl.modules
+    pl.slide_cors
+    pl.synchro_path

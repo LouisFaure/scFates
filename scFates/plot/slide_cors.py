@@ -14,16 +14,46 @@ def slide_cors(
     adata: AnnData,
     root_milestone,
     milestones,
-    genesetA=None,
-    genesetB=None,
-    col=None,
+    genesetA: Union[None, list] = None,
+    genesetB: Union[None, list] = None,
+    col: Union[None, list] = None,
     basis: str = "umap",
     win_keep: Union[None, list] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
 
-    # uns_temp = adata.uns.copy()
+    """\
+    Plot results generated from tl.slide_cors.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    genesetA
+        plot correlation with custom geneset.
+    genesetB
+        plot correlation with custom geneset.
+    col
+        specify color for the two modules, by default according to their respective milestones.
+    basis
+        Name of the `obsm` basis to use.
+    win_keep
+        plot only a subset of windows.
+    show
+        show the plot.
+    save
+        save the plot.
+
+    Returns
+    -------
+    If `show==False` a matrix of :class:`~matplotlib.axes.Axes`
+
+    """
 
     if "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"]) == 1:
         from . import palette_tools
@@ -127,5 +157,8 @@ def slide_cors(
         axs[1, i].set_ylim([-maxlim, maxlim])
         axs[1, i].set_xticks([])
         axs[1, i].set_yticks([])
+
+    if show == False:
+        return axs
 
     savefig_or_show("slide_cors", show=show, save=save)

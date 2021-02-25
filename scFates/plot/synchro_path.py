@@ -19,6 +19,29 @@ def synchro_path(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
+    """\
+    Plot results generated from tl.synchro_path.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    loess_span
+        loess fit span parameter.
+    show
+        show the plot.
+    save
+        save the plot.
+
+    Returns
+    -------
+    If `show==False` a matrix of :class:`~matplotlib.axes.Axes`
+
+    """
 
     plt.rcParams["axes.grid"] = False
 
@@ -133,4 +156,8 @@ def synchro_path(
                 axs[i].grid(b=None)
 
             i = i + 1
+
+    if show == False:
+        return axs
+
     savefig_or_show("synchro_path", show=show, save=save)

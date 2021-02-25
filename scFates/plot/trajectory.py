@@ -33,7 +33,7 @@ def graph(
 ):
 
     """\
-    Project trajectory onto embedding.
+    Project principal graph onto embedding.
 
     Parameters
     ----------
@@ -43,12 +43,8 @@ def graph(
         Name of the `obsm` basis to use.
     size_nodes
         size of the projected prinicpal points.
-    col_traj
-        color trajectory by segments.
     color_cells
         cells color
-    alpha_cells
-        cells alpha
     tips
         display tip ids.
     forks
@@ -60,7 +56,7 @@ def graph(
     save
         save the plot.
     kwargs
-        arguments to pass to scanpy functions pl.scatter/pl.tsne/pl.umap
+        arguments to pass to scanpy functions pl.embedding
 
     Returns
     -------
@@ -142,22 +138,64 @@ def graph(
 def trajectory(
     adata: AnnData,
     basis: str = "umap",
-    root_milestone=None,
-    milestones=None,
-    color_seg="t",
+    root_milestone: Union[str, None] = None,
+    milestones: Union[str, None] = None,
+    color_seg: str = "t",
     cmap_seg: str = "viridis",
-    color_cells=None,
-    cmap_cells=None,
+    layer_seg: Union[str, None] = None,
+    color_cells: Union[str, None] = None,
     scale_path: float = 1,
-    layer=None,
     arrows: bool = False,
     arrow_offset: int = 10,
+    show_info: bool = True,
     ax=None,
-    show_info=True,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs,
 ):
+
+    """\
+    Project trajectory onto embedding.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    basis
+        Name of the `obsm` basis to use.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    col_seg
+        color trajectory segments.
+    layer_seg
+        layer to use when coloring seg with a feature.
+    color_cells
+        cells color.
+    scale_path
+        changes the width of the path
+    arrows
+        display arrows on segments (positioned at half pseudotime distance).
+    arrow_offset
+        arrow offset in number of nodes used to obtain its direction.
+    show_info
+        display legend/colorbar.
+    ax
+        Add plot to existing ax
+    show
+        show the plot.
+    save
+        save the plot.
+    kwargs
+        arguments to pass to scanpy functions pl.scatter/pl.tsne/pl.umap
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`
+
+    """
+
     class GC(GraphicsContextBase):
         def __init__(self):
             super().__init__()
@@ -261,7 +299,7 @@ def trajectory(
     lines = [[tuple(proj.loc[j]) for j in i] for i in edges]
 
     vals = pd.Series(
-        _get_color_values(adata, color_seg, layer=layer)[0], index=adata.obs_names
+        _get_color_values(adata, color_seg, layer=layer_seg)[0], index=adata.obs_names
     )
 
     sorted_edges = np.sort(
@@ -431,13 +469,13 @@ def cdist_numba(coords, out):
         )
 
 
-def scatter3d(emb, col, cell_cex, nm):
+def scatter3d(emb, col, cell_size, nm):
     return go.Scatter3d(
         x=emb[:, 0],
         y=emb[:, 1],
         z=emb[:, 2],
         mode="markers",
-        marker=dict(size=cell_cex, color=col, opacity=0.9),
+        marker=dict(size=cell_size, color=col, opacity=0.9),
         name=nm,
     )
 
@@ -446,11 +484,37 @@ def trajectory_3d(
     adata: AnnData,
     basis: str = "umap3d",
     color: str = None,
-    traj_cex: int = 5,
-    cell_cex: int = 2,
+    traj_width: int = 5,
+    cell_size: int = 2,
     figsize: tuple = (900, 900),
     cmap=None,
 ):
+
+    """\
+    Project trajectory onto 3d embedding.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    basis
+        Name of the `obsm` basis to use.
+    color
+        cells color.
+    traj_width
+        segments width.
+    cell_size
+        cell size.
+    figsize
+        figure size in pixels.
+    cmap
+        colormap of the cells.
+
+    Returns
+    -------
+    an interactive plotly graph figure.
+
+    """
 
     r = adata.uns["graph"]
 
@@ -507,7 +571,7 @@ def trajectory_3d(
             trace1 = list(
                 map(
                     lambda x: scatter3d(
-                        emb_f[adata.obs[color] == x, :], pal_dict[x], cell_cex, x
+                        emb_f[adata.obs[color] == x, :], pal_dict[x], cell_size, x
                     ),
                     list(pal_dict.keys()),
                 )
@@ -523,7 +587,7 @@ def trajectory_3d(
                     z=emb_f[:, 2],
                     mode="markers",
                     marker=dict(
-                        size=cell_cex,
+                        size=cell_size,
                         color=adata.obs[color],
                         colorscale=cmap,
                         opacity=0.9,
@@ -538,7 +602,7 @@ def trajectory_3d(
                 y=emb_f[:, 1],
                 z=emb_f[:, 2],
                 mode="markers",
-                marker=dict(size=cell_cex, color="grey", opacity=0.9),
+                marker=dict(size=cell_size, color="grey", opacity=0.9),
             )
         ]
 
@@ -549,7 +613,7 @@ def trajectory_3d(
             z=z_lines,
             mode="lines",
             name="lines",
-            line=dict(width=traj_cex),
+            line=dict(width=traj_width),
         )
     ]
 

@@ -7,6 +7,27 @@ import matplotlib.colors as mcolors
 
 
 def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
+    """\
+    Display the milestone graph in PAGA style.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    color
+        color the milestones with variable from adata.obs.
+    cmap
+        colormap to use for the node coloring.
+    roots
+        select milestones to position on top fo the plot
+    figsize
+        figure size in pixels
+
+    Returns
+    -------
+    igraph.plot
+
+    """
 
     graph = adata.uns["graph"]
 

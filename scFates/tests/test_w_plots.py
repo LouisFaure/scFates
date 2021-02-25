@@ -126,7 +126,7 @@ def test_pipeline():
         show=False,
     )
 
-    scf.pl.single_trend(adata, feature=adata.var_names[0], colorexp="k")
+    scf.pl.single_trend(adata, feature=adata.var_names[0], color_exp="k")
     del adata.uns["seg_colors"]
     scf.pl.single_trend(
         adata,

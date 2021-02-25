@@ -2,6 +2,21 @@ from anndata import AnnData
 
 
 def test_association(adata: AnnData, log_A: bool = False):
+    """\
+    Plot a set of fitted features over pseudotime.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    log_A
+        change the xaxis scale to log.
+
+    Returns
+    -------
+    just the plot.
+
+    """
 
     stats = adata.var.copy(deep=True)
     # correct for zeros but setting them to the lowest value
