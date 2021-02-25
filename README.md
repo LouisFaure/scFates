@@ -1,3 +1,4 @@
+[![PyPI](https://img.shields.io/pypi/v/scFates.svg)](https://pypi.python.org/pypi/scFates/)
 [![Documentation Status](https://readthedocs.org/projects/scfates/badge/?version=latest)](https://scfates.readthedocs.io/en/latest/?badge=latest)
 [![CircleCI](https://circleci.com/gh/LouisFaure/scFates.svg?style=shield)](https://circleci.com/gh/LouisFaure/scFates)
 [![TravisCI](https://api.travis-ci.com/LouisFaure/scFates.svg?branch=master)](https://travis-ci.com/github/LouisFaure/scFates)
