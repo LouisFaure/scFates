@@ -1,7 +1,7 @@
 scFates - a suite for advanced pseudotime analysis
 ==================================================
 
-**scFates** is a scalable suite for tree inference and advanced pseudotime analysis.
+**scFates** is a scalable Python suite for tree inference and advanced pseudotime analysis.
 
 It initially is a translation from crestree_, a R package developed for the analysis of neural crest fates during
 murine embryonic development (`Soldatov et al., Science, 2019 <https://doi.org/10.1126/science.aas9536>`_), and used

@@ -9,7 +9,7 @@
 Description
 ===========
 
-This package provides an Python tool suite for fast tree inference and advanced pseudotime downstream analysis, with a focus on fate biasing. This package is compatible with anndata object format used in scanpy or scvelo pipelines. A complete documentation of this package is available [here](https://scfates.readthedocs.io/en/latest).
+This package provides a scalable Python suite for fast tree inference and advanced pseudotime downstream analysis, with a focus on fate biasing. This package is compatible with anndata object format used in scanpy or scvelo pipelines. A complete documentation of this package is available [here](https://scfates.readthedocs.io/en/latest).
 
 Tree inference algorithms
 =========================
@@ -57,14 +57,14 @@ or the latest development version can be installed from GitHub:
 ## Python dependencies
 
 scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data.
-Elpigraph needs to be installed from its github repository with the following command::
+Elpigraph needs to be installed from its github repository with the following command:
 
 	pip install git+https://github.com/j-bac/elpigraph-python.git
 
 ## R dependencies
 
 scFates rely on the R package *mgcv* to perform testing and fitting of the features on the peudotime
-tree. Package is installed in an R session with the following command::
+tree. Package is installed in an R session with the following command:
 
     install.packages('mgcv')
 
@@ -76,7 +76,7 @@ If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in
 ## Docker container
 
 scFates can be run on a [Docker container](https://hub.docker.com/repository/docker/louisfaure/scfates) based on Rapids 0.17 container,
-which provide a gpu enabled environment with Jupyter Lab. Use the following command::
+which provide a gpu enabled environment with Jupyter Lab. Use the following command:
 
     docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
         louisfaure/scfates:version-0.2
