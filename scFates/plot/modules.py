@@ -139,8 +139,8 @@ def modules(
 
     X_late = pd.DataFrame(
         {
-            "late_1" + milestones[0]: X.loc[:, late_1].mean(axis=1),
-            "late_2" + milestones[1]: X.loc[:, late_2].mean(axis=1),
+            "late_" + milestones[0]: X.loc[:, late_1].mean(axis=1),
+            "late_" + milestones[1]: X.loc[:, late_2].mean(axis=1),
         }
     )
 
@@ -188,6 +188,29 @@ def modules(
     axs[0].set_ylabel("early " + milestones[1])
     axs[1].set_xlabel("late " + milestones[0])
     axs[1].set_ylabel("late " + milestones[1])
+
+    if all([sum(early_1) != 0, sum(early_2) != 0]):
+        axs[0].set_xlim(
+            0,
+            X_early.loc[cells].values[:, 0].max()
+            + X_early.loc[cells].values[:, 0].max() / 10,
+        )
+        axs[0].set_ylim(
+            0,
+            X_early.loc[cells].values[:, 1].max()
+            + X_early.loc[cells].values[:, 1].max() / 10,
+        )
+    if all([sum(late_1) != 0, sum(late_2) != 0]):
+        axs[1].set_xlim(
+            0,
+            X_late.loc[cells].values[:, 0].max()
+            + X_late.loc[cells].values[:, 0].max() / 10,
+        )
+        axs[1].set_ylim(
+            0,
+            X_late.loc[cells].values[:, 1].max()
+            + X_late.loc[cells].values[:, 1].max() / 10,
+        )
 
     if show == False:
         return tuple(axs)
