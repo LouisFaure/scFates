@@ -538,48 +538,41 @@ def activation(
     allact = []
 
     for m in range(n_map):
-        df = adata.uns["pseudotime_list"][str(m)]
 
-        def get_df(feature):
-            global rmgcv
+        df = adata.uns["pseudotime_list"][str(m)]
+        acti = pd.Series(0, index=stats.index)
+
+        for leave in leaves:
             subtree = getpath(img, root, graph["tips"], leave, graph, df).sort_values(
                 "t"
             )
             del subtree["branch"]
-            # save parameters to dataframe
             subtree["deriv_cut"] = deriv_cut
             subtree["nwin"] = nwin
             subtree["steps"] = steps
+
+            genes = stats.index[stats["branch"] == str(keys[vals == leave][0])]
 
             wf = warnings.filters.copy()
             warnings.filterwarnings("ignore")
             if layer is None:
                 if sparse.issparse(adata.X):
-                    subtree["exp"] = np.array(adata[subtree.index, feature].X.A)
+                    Xgenes = adata[subtree.index, genes].X.A.T.tolist()
                 else:
-                    subtree["exp"] = np.array(adata[subtree.index, feature].X)
+                    Xgenes = adata[subtree.index, genes].X.T.tolist()
             else:
                 if sparse.issparse(adata.layers[layer]):
-                    subtree["exp"] = np.array(
-                        adata[subtree.index, feature].layers[layer].A
-                    )
+                    Xgenes = adata[subtree.index, genes].layers[layer].A.T.tolist()
                 else:
-                    subtree["exp"] = np.array(
-                        adata[subtree.index, feature].layers[layer]
-                    )
+                    Xgenes = adata[subtree.index, genes].layers[layer].T.tolist()
             warnings.filters = wf
-            return subtree
 
-        acti = pd.Series(0, index=stats.index)
+            data = list(zip([subtree] * len(Xgenes), Xgenes))
 
-        for i in range(len(leaves)):
-            genes = stats.index[stats["branch"] == str(keys[vals == leaves[i]][0])]
-            leave = leaves[i]
-            dfs = list(map(get_df, genes))
             acti.loc[genes] = Parallel(n_jobs=n_jobs)(
-                delayed(get_activation)(dfs[d])
+                delayed(get_activation)(data[d])
                 for d in tqdm(
-                    range(len(dfs)),
+                    range(len(data)),
                     file=sys.stdout,
                     desc="    leave " + str(keys[vals == leave][0]),
                 )
@@ -637,8 +630,10 @@ def activation(
     return adata if copy else None
 
 
-def get_activation(subtree):
+def get_activation(data):
     global rmgcv
+    subtree = data[0]
+    subtree["exp"] = data[1]
     # load parameters
     deriv_cut = subtree["deriv_cut"][0]
     nwin = subtree["nwin"][0]
