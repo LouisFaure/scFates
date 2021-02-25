@@ -45,15 +45,13 @@ Albergante, L., Mirkes, E. M., Chen, H., Martin, A., Faure, L., Barillot, E., â€
 Installation
 ============
 
-Currently, scFates can only be installed from GitHub_ using::
+scFates 0.2 is now available on pypi, you can install it using:
+
+    pip install scFates
+
+or the latest development version can be installed from GitHub:
 
     pip install git+https://github.com/LouisFaure/scFates
-
-or::
-
-    git clone https://github.com/LouisFaure/scFates
-    pip install -e scFates
-
 
 ## Python dependencies
 
@@ -80,4 +78,4 @@ scFates can be run on a [Docker container](https://hub.docker.com/repository/doc
 which provide a gpu enabled environment with Jupyter Lab. Use the following command::
 
     docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-        louisfaure/scfates:tagname
+        louisfaure/scfates:version-0.2
