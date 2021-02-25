@@ -350,6 +350,7 @@ def tree_ppt(
         n_pcs = None if use_rep == "X" else n_pcs
 
     if use_rep == "X":
+        ndims_rep = None
         if sparse.issparse(adata.X):
             X = DataFrame(adata.X.A, index=adata.obs_names)
         else:
@@ -362,6 +363,8 @@ def tree_ppt(
     elif use_rep in adata.obsm.keys():
         X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
 
+    if ndims_rep is not None:
+        X = X.iloc[:, :ndims_rep]
     X_t = X.values.T
 
     # if seed is not None:
@@ -636,6 +639,9 @@ def tree_epg(
     elif use_rep in adata.obsm.keys():
         X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
 
+    if ndims_rep is not None:
+        X = X.iloc[:, :ndims_rep]
+
     if seed is not None:
         np.random.seed(seed)
 
@@ -767,6 +773,9 @@ def curve_epg(
             X = DataFrame(adata.layers[use_rep], index=adata.obs_names)
     elif use_rep in adata.obsm.keys():
         X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
+
+    if ndims_rep is not None:
+        X = X.iloc[:, :ndims_rep]
 
     if seed is not None:
         np.random.seed(seed)
