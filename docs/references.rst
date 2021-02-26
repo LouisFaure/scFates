@@ -24,3 +24,6 @@ References
 .. [Mao15] Mao *et al.* (2015),
    *SimplePPT: A simple principal tree algorithm*,
    `SIAM International Conference on Data Mining <https://doi.org/10.1137/1.9781611974010.89>`__.
+
+.. image:: _static/scFates_logo_dark.png
+   :width: 1%

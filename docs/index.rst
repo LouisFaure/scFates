@@ -1,3 +1,21 @@
+|PyPi| |Doc Badge| |CircleCI Badge| |TravisCI Badge| |codecov Badge| |License| |black|
+
+.. |PyPi| image:: https://img.shields.io/pypi/v/scFates.svg
+    :target: https://pypi.python.org/pypi/scFates/
+.. |Doc Badge| image:: https://readthedocs.org/projects/scfates/badge/?version=latest
+    :target: https://scfates.readthedocs.io/en/latest/
+.. |CircleCI Badge| image:: https://circleci.com/gh/LouisFaure/scFates.svg?style=shield
+    :target: https://circleci.com/gh/LouisFaure/scFates
+.. |TravisCI Badge| image:: https://api.travis-ci.com/LouisFaure/scFates.svg?branch=master
+    :target: https://travis-ci.com/github/LouisFaure/scFates
+.. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/LouisFaure/scFates
+.. |License| image:: https://img.shields.io/github/license/LouisFaure/scFates
+    :target: https://github.com/LouisFaure/scFates/blob/master/LICENSE
+.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+
+
 scFates - a suite for advanced pseudotime analysis
 ==================================================
 
@@ -31,16 +49,6 @@ Analysis key steps
    notebooks/Advanced_bifurcation_analysis
    api
    references
-
-|Doc Badge| |CircleCI Badge| |TravisCI Badge| |codecov Badge|
-
-.. image:: _static/scFates_logo_dark.png
-   :width: 1%
-
-.. |Doc Badge| image:: https://readthedocs.org/projects/scfates/badge/?version=latest
-.. |CircleCI Badge| image:: https://circleci.com/gh/LouisFaure/scFates.svg?style=shield
-.. |TravisCI Badge| image:: https://api.travis-ci.com/LouisFaure/scFates.svg?branch=master
-.. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg
 
 .. _scanpy: https://scanpy.readthedocs.io/
 .. _crestree: https://github.com/hms-dbmi/crestree
