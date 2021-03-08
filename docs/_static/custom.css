@@ -6,7 +6,7 @@
 
 /* Fix logo size */
 img.logo {
-  width: 100% !important;
+  width: 320px !important;
   height: 100% !important;
 }
 
