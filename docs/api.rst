@@ -9,6 +9,20 @@ API
 Import scFates as::
 
    import scFates as scf
+   
+Some convenient preprocessing functions translated from pagoda2 have been included:
+
+Pre-processing
+--------------
+
+.. autosummary::
+    :toctree: .
+
+    pp.filter_cells
+    pp.batch_correct
+    pp.find_overdispersed
+    pp.diffusion
+
 
 Tree inference
 --------------
