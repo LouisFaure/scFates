@@ -595,7 +595,7 @@ def synchro_path(
             allcor = pd.concat([allcor_r, allcor_p], keys=["real", "permuted"])
         else:
             allcor = pd.concat([allcor_r], keys=["real"])
-    
+
     runs = pd.DataFrame(allcor.to_records())["level_0"].unique()
 
     dct_cormil = dict(

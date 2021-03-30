@@ -9,7 +9,7 @@ API
 Import scFates as::
 
    import scFates as scf
-   
+
 Some convenient preprocessing functions translated from pagoda2 have been included:
 
 Pre-processing

@@ -6,18 +6,21 @@ import numpy as np
 from .. import logging as logg
 from .. import settings
 
-def diffusion(adata: AnnData, 
-              n_components = 10, 
-              knn = 30, 
-              alpha = 0,
-              multiscale: bool = True,
-              n_eigs: int = None,
-              device = 'cpu',
-              n_pcs = 50,
-              copy = False):
+
+def diffusion(
+    adata: AnnData,
+    n_components=10,
+    knn=30,
+    alpha=0,
+    multiscale: bool = True,
+    n_eigs: int = None,
+    device="cpu",
+    n_pcs=50,
+    copy=False,
+):
     """\
     Wrapper to generate diffusion maps using Palantir.
-    
+
     Parameters
     ----------
     adata
@@ -29,9 +32,9 @@ def diffusion(adata: AnnData,
     knn
         Number of nearest neighbors for graph construction.
     alpha
-        Normalization parameter for the diffusion operator. 
+        Normalization parameter for the diffusion operator.
     multiscale
-        Whether to get mutliscale diffusion space 
+        Whether to get mutliscale diffusion space
         (calls palantir.utils.determine_multiscale_space).
     n_eigs
         if multiscale is True, how much components to retain.
@@ -47,34 +50,34 @@ def diffusion(adata: AnnData,
     -------
     adata : anndata.AnnData
         if `copy=True` it returns AnnData, else it update field to `adata`:
-        
+
         `.obsm['X_diffusion']` if `multiscale = False`, diffusion space.
         `.obsm['X_multiscale_diffusion']` if `multiscale = True`, multiscale diffusion space.
         `.uns['diffusion']` dict containing results from Palantir.
     """
-    
+
     logg.info("Running Diffusion maps ", reset=True)
 
-    
-    data_df = pd.DataFrame(adata.obsm["X_pca"],index=adata.obs_names)
-    
-    if device == 'cpu':
+    data_df = pd.DataFrame(adata.obsm["X_pca"], index=adata.obs_names)
+
+    if device == "cpu":
         from palantir.utils import run_diffusion_maps
-        res = run_diffusion_maps(data_df,
-                                 n_components = n_components, 
-                                 knn = knn, 
-                                 alpha = alpha
-                                 )
+
+        res = run_diffusion_maps(
+            data_df, n_components=n_components, knn=knn, alpha=alpha
+        )
     # code converted in GPU
-    elif device == 'gpu':
+    elif device == "gpu":
         import cupy as cp
         from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
         from cupyx.scipy.sparse.linalg import eigsh
+
         # Determine the kernel
         N = data_df.shape[0]
         if not issparse(data_df):
             from cuml.neighbors import NearestNeighbors
-            nn = NearestNeighbors(n_neighbors = knn,metric = 'euclidean')
+
+            nn = NearestNeighbors(n_neighbors=knn, metric="euclidean")
             X_contiguous = np.ascontiguousarray(data_df.values)
             nn.fit(X_contiguous)
 
@@ -136,18 +139,24 @@ def diffusion(adata: AnnData,
             res["EigenVectors"].index = data_df.index
         res["EigenValues"] = pd.Series(res["EigenValues"])
         res["kernel"] = kernel.get()
-    
+
     if multiscale:
         logg.info("    determining multiscale diffusion space")
         from palantir.utils import determine_multiscale_space
-        adata.obsm["X_diffusion_multiscale"] = determine_multiscale_space(res,n_eigs=n_eigs).values
+
+        adata.obsm["X_diffusion_multiscale"] = determine_multiscale_space(
+            res, n_eigs=n_eigs
+        ).values
         logstr = "    .obsm['X_diffusion_multiscale'], multiscale diffusion space.\n"
     else:
-        adata.obsm["X_diffusion"] = res["EigenVectors"].iloc[:,1:].values
+        adata.obsm["X_diffusion"] = res["EigenVectors"].iloc[:, 1:].values
         logstr = "    .obsm['X_diffusion'], diffusion space.\n"
-        
+
     adata.uns["diffusion"] = res
-    
-    logg.info('    finished',time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint("added \n"+logstr+"    .uns['diffusion'] dict containing diffusion maps results.")
-    
+
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added \n"
+        + logstr
+        + "    .uns['diffusion'] dict containing diffusion maps results."
+    )

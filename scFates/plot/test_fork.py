@@ -4,12 +4,14 @@ from matplotlib.colors import rgb2hex
 from typing import Union
 import numpy as np
 
-def test_fork(adata: AnnData,
-                     root_milestone,
-                     milestones,
-                     col: Union[None, list] = None,
-                    ):
-    
+
+def test_fork(
+    adata: AnnData,
+    root_milestone,
+    milestones,
+    col: Union[None, list] = None,
+):
+
     if "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"]) == 1:
         from . import palette_tools
 
@@ -21,32 +23,32 @@ def test_fork(adata: AnnData,
 
     name = root_milestone + "->" + "<>".join(milestones)
     df = adata.uns[name]["fork"]
-    df = df.loc[df.fdr<0.05]
+    df = df.loc[df.fdr < 0.05]
 
-    c_mil =np.array(mlsc)[
-        np.argwhere(adata.obs.milestones.cat.categories.isin(milestones))
-    ].flatten() if col is None else col
+    c_mil = (
+        np.array(mlsc)[
+            np.argwhere(adata.obs.milestones.cat.categories.isin(milestones))
+        ].flatten()
+        if col is None
+        else col
+    )
 
-    A=df.iloc[:,[0,1]].values
+    A = df.iloc[:, [0, 1]].values
 
     fig, ax = plt.subplots()
 
-    ax.scatter(A[A[:,0]!=0,0], 
-                df.loc[A[:,0]!=0].fdr.values,
-                color=c_mil[0])
-    ax.scatter(np.abs(A[A[:,1]!=0,1]), 
-                df.loc[A[:,1]!=0].fdr.values,
-                color=c_mil[1])
-
+    ax.scatter(A[A[:, 0] != 0, 0], df.loc[A[:, 0] != 0].fdr.values, color=c_mil[0])
+    ax.scatter(
+        np.abs(A[A[:, 1] != 0, 1]), df.loc[A[:, 1] != 0].fdr.values, color=c_mil[1]
+    )
 
     ax.set_xlabel(" < A > ".join(milestones))
     ax.set_ylabel("FDR")
 
     left, right = ax.get_xlim()
     bounds = np.abs(A.ravel()).max()
-    bounds = bounds + bounds*0.1
-    ax.set_xlim([-bounds,bounds])
+    bounds = bounds + bounds * 0.1
+    ax.set_xlim([-bounds, bounds])
     xticks = ax.get_xticks()
     xticks = [str(int(xt)) if xt.is_integer() else str(xt) for xt in np.abs(xticks)]
-    ax.set_xticklabels(xticks);
-    
+    ax.set_xticklabels(xticks)
