@@ -3,6 +3,7 @@ branch = True
 omit =
     scFates/plot/palette_tools.py
     scFates/logging.py
+    scFates/preprocessing/*
 [report]
 exclude_lines =
     if device=="gpu":
