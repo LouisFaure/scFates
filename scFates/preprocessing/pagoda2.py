@@ -126,6 +126,7 @@ def filter_cells(adata: AnnData,
 
 def batch_correct(adata,
                   batch_key,
+                  layer="X",
                   depth_scale = 1e3,
                   device = 'cpu',
                   inplace = True):
@@ -141,6 +142,8 @@ def batch_correct(adata,
         Annotated data matrix.
     batch_key
         Column name to use for batch.
+    layer
+        Which layer to correct
     depth_scale
         Depth scale.
     device
@@ -158,8 +161,11 @@ def batch_correct(adata,
             batch-corrected count matrix.
 
     """
-      
-    X = adata.X.copy()
+    
+    if layer == "X":
+        X = adata.X.copy()
+    else:
+        X = adata.layers[layer].copy()
     logg.info('Performing pagoda2 batch correction', reset=True)
     if adata.obs[batch_key].dtype.name != "category":
         adata.obs[batch_key] = adata.obs[batch_key].astype("category")
@@ -216,11 +222,19 @@ def batch_correct(adata,
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     
     if inplace:
-        adata.X = csr_matrix(X)
-        logg.hint(
+        if layer == "X":
+            adata.X = csr_matrix(X)
+            logg.hint(
                 "updated \n"
                 "    .X, batch corrected matrix."
             )
+        else:
+            adata.layers[layer] = csr_matrix(X)
+            logg.hint(
+                "updated \n"
+                "    .layer['"+layer+"'], batch corrected matrix."
+            )
+        
     else:
         return csr_matrix(X)     
 

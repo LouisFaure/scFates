@@ -13,7 +13,6 @@ def diffusion(adata: AnnData,
               multiscale: bool = True,
               n_eigs: int = None,
               device = 'cpu',
-              do_PCA: bool = False,
               n_pcs = 50,
               copy = False):
     """\
@@ -55,16 +54,7 @@ def diffusion(adata: AnnData,
     """
     
     logg.info("Running Diffusion maps ", reset=True)
-    
-    do_PCA = True if "X_pca" not in adata.obsm else do_PCA
-    
-    if do_PCA & (device=="cpu"):
-        sc.pp.pca(adata,n_comps=n_pcs)
-    
-    elif do_PCA & (device=="gpu"):
-        from cuml import PCA
-        adata.obsm["X_pca"] = PCA(n_components=n_pcs, 
-                                  svd_solver="auto").fit_transform(X)
+
     
     data_df = pd.DataFrame(adata.obsm["X_pca"],index=adata.obs_names)
     
