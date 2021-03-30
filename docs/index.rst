@@ -47,6 +47,7 @@ Analysis key steps
    installation
    notebooks/Basic_pseudotime_analysis
    notebooks/Advanced_bifurcation_analysis
+   notebooks/Convertion_from_CellRank_pipeline
    api
    references
 
