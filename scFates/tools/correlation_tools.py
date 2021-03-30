@@ -595,7 +595,7 @@ def synchro_path(
             allcor = pd.concat([allcor_r, allcor_p], keys=["real", "permuted"])
         else:
             allcor = pd.concat([allcor_r], keys=["real"])
-
+    
     runs = pd.DataFrame(allcor.to_records())["level_0"].unique()
 
     dct_cormil = dict(
@@ -605,7 +605,7 @@ def synchro_path(
             + [milestones[0] + " vs " + milestones[1] + "\ninter-module"],
         )
     )
-
+    logg.info(" done, computing LOESS fit")
     for cc in ["corAA", "corBB", "corAB"]:
         allcor[cc + "_lowess"] = 0
         allcor[cc + "_ll"] = 0
