@@ -77,6 +77,18 @@ def cellrank_to_tree(
 
     if reassign_pseudotime:
         adata.obs["t"] = adata.obs[time]
-        logg.info("    .obs['t'] has been replaced by .obs['" + time + "']")
+        
+        adata.uns['pseudotime_list']["0"]["t"]=adata.obs[time]
+        for n in range(adata.uns["graph"]["R"].shape[1]):
+            adata.uns["graph"]["pp_info"].loc[n,"time"]=\
+                np.average(adata.obs.t,weights=adata.uns["graph"]["R"][:,n])
+            
+        for n in adata.uns["graph"]["pp_seg"].index:
+            adata.uns["graph"]["pp_seg"].loc[n,"d"]=\
+            np.diff(adata.uns["graph"]["pp_info"].loc[adata.uns["graph"]["pp_seg"].loc[n,["from","to"]].values,"time"].values)[0]
+            
+        logg.info("    .obs['t'] has been replaced by .obs['" + time + "']\n"
+                  "    .uns['graph']['pp_info'].time has been updated with "+time+"\n"
+                  "    .uns['graph']['pp_seg'].d has been updated with "+time)
 
     return adata if copy else None

@@ -192,7 +192,7 @@ def batch_correct(
         bc = pd.DataFrame(np.transpose(bc), columns=batches)
         X = csr_matrix(X.transpose())
 
-        batch = adata.obs.batch.cat.rename_categories(range(nbatches))
+        batch = adata.obs[batch_key].cat.rename_categories(range(nbatches))
         count_gene = np.repeat(np.arange(X.shape[0]), np.diff(X.indptr))
         acc = np.transpose(np.vstack([count_gene, batch[X.indices].values]))
         X.data = X.data / bc.values[acc[:, 0], acc[:, 1]]
@@ -222,7 +222,7 @@ def batch_correct(
         bc = cudf.DataFrame(np.transpose(bc.get()), columns=batches)
         X = csr_matrix_gpu(X.transpose())
 
-        batch = adata.obs.batch.cat.rename_categories(range(nbatches))
+        batch = adata.obs[batch_key].cat.rename_categories(range(nbatches))
         count_gene = cp.repeat(cp.arange(X.shape[0]), cp.diff(X.indptr).get().tolist())
         batch_to_stack = cp.array(batch.values[X.indices.get()])
         acc = cp.transpose(cp.vstack([count_gene, batch_to_stack]))
