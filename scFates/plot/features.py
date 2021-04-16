@@ -122,60 +122,64 @@ def trends(
 
     graph = adata.uns["graph"]
 
-    if root_milestone is not None:
-        adata = adata.copy()
-        dct = graph["milestones"]
+    adata = adata.copy()
+    dct = graph["milestones"]
 
-        leaves = list(map(lambda leave: dct[leave], milestones))
-        root = dct[root_milestone]
-        df = adata.obs.copy(deep=True)
-        edges = (
+    leaves = list(map(lambda leave: dct[leave], milestones))
+    root = dct[root_milestone]
+    df = adata.obs.copy(deep=True)
+    edges = (
+        adata.uns["graph"]["pp_seg"][["from", "to"]]
+        .astype(str)
+        .apply(tuple, axis=1)
+        .values
+    )
+    img = igraph.Graph()
+    img.add_vertices(
+        np.unique(
             adata.uns["graph"]["pp_seg"][["from", "to"]]
+            .values.flatten()
             .astype(str)
-            .apply(tuple, axis=1)
-            .values
         )
-        img = igraph.Graph()
-        img.add_vertices(
-            np.unique(
-                adata.uns["graph"]["pp_seg"][["from", "to"]]
-                .values.flatten()
-                .astype(str)
-            )
-        )
-        img.add_edges(edges)
-        cells = np.unique(
-            np.concatenate(
-                list(
-                    map(
-                        lambda leave: getpath(
-                            img,
-                            root,
-                            adata.uns["graph"]["tips"],
-                            leave,
-                            adata.uns["graph"],
-                            df,
-                        ).index,
-                        leaves,
-                    )
+    )
+    img.add_edges(edges)
+
+    cells = np.unique(
+        np.concatenate(
+            list(
+                map(
+                    lambda leave: getpath(
+                        img,
+                        root,
+                        adata.uns["graph"]["tips"],
+                        leave,
+                        adata.uns["graph"],
+                        df,
+                    ).index,
+                    leaves,
                 )
             )
         )
+    )
 
-        adata = adata[cells]
+    adata = adata[cells]
 
     if features is None:
         features = adata.var_names
-    if module is not None and branch is not None:
+    if branch is not None:
         name = root_milestone + "->" + "<>".join(milestones)
         df = adata.uns[name]["fork"]
-        features = df.loc[(df.branch == branch) & (df.module == module), :].index
+        if module is not None:
+            sel = (df.branch == branch) & (df.module == module)
+        else:
+            sel = (df.branch == branch)  
+        features = df.loc[sel, :].index
 
     fitted = pd.DataFrame(
         adata.layers["fitted"], index=adata.obs_names, columns=adata.var_names
     ).T.copy(deep=True)
     g = adata.obs.groupby("seg")
-    seg_order = g.apply(lambda x: np.mean(x.t)).sort_values().index.tolist()
+    seg_order = g.apply(lambda x: np.min(x.t)).sort_values().index.tolist()
     cell_order = np.concatenate(
         list(
             map(
@@ -480,7 +484,6 @@ def trends(
             basis=basis,
             color_seg="mean_trajectory",
             cmap_seg=feature_cmap,
-            color_cells=annot,
             show_info=False,
             ax=axemb,
             title=title,
