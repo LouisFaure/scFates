@@ -121,48 +121,49 @@ def trends(
         adata_temp = adata.copy()
 
     graph = adata.uns["graph"]
+    
+    if milestones is not None:
+        adata = adata.copy()
+        dct = graph["milestones"]
 
-    adata = adata.copy()
-    dct = graph["milestones"]
-
-    leaves = list(map(lambda leave: dct[leave], milestones))
-    root = dct[root_milestone]
-    df = adata.obs.copy(deep=True)
-    edges = (
-        adata.uns["graph"]["pp_seg"][["from", "to"]]
-        .astype(str)
-        .apply(tuple, axis=1)
-        .values
-    )
-    img = igraph.Graph()
-    img.add_vertices(
-        np.unique(
+        leaves = list(map(lambda leave: dct[leave], milestones))
+        root = dct[root_milestone]
+        df = adata.obs.copy(deep=True)
+        edges = (
             adata.uns["graph"]["pp_seg"][["from", "to"]]
-            .values.flatten()
             .astype(str)
+            .apply(tuple, axis=1)
+            .values
         )
-    )
-    img.add_edges(edges)
+        img = igraph.Graph()
+        img.add_vertices(
+            np.unique(
+                adata.uns["graph"]["pp_seg"][["from", "to"]]
+                .values.flatten()
+                .astype(str)
+            )
+        )
+        img.add_edges(edges)
 
-    cells = np.unique(
-        np.concatenate(
-            list(
-                map(
-                    lambda leave: getpath(
-                        img,
-                        root,
-                        adata.uns["graph"]["tips"],
-                        leave,
-                        adata.uns["graph"],
-                        df,
-                    ).index,
-                    leaves,
+        cells = np.unique(
+            np.concatenate(
+                list(
+                    map(
+                        lambda leave: getpath(
+                            img,
+                            root,
+                            adata.uns["graph"]["tips"],
+                            leave,
+                            adata.uns["graph"],
+                            df,
+                        ).index,
+                        leaves,
+                    )
                 )
             )
         )
-    )
 
-    adata = adata[cells]
+        adata = adata[cells]
 
     if features is None:
         features = adata.var_names
