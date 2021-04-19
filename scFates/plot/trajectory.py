@@ -3,7 +3,7 @@ import pandas as pd
 import igraph
 from anndata import AnnData
 import matplotlib.collections
-from typing import Union, Optional, Sequence, Tuple
+from typing import Union, Optional, Sequence, Tuple, List
 import plotly.graph_objects as go
 import scanpy as sc
 from cycler import Cycler
@@ -142,7 +142,8 @@ def trajectory(
     milestones: Union[str, None] = None,
     color_seg: str = "t",
     cmap_seg: str = "viridis",
-    layer_seg: Union[str, None] = None,
+    layer_seg: Union[str, None] = "fitted",
+    perc_seg: Union[List,None] = None,
     color_cells: Union[str, None] = None,
     scale_path: float = 1,
     arrows: bool = False,
@@ -171,6 +172,8 @@ def trajectory(
         color trajectory segments.
     layer_seg
         layer to use when coloring seg with a feature.
+    perc_seg
+        percentile cutoffs for segments.
     color_cells
         cells color.
     scale_path
@@ -301,74 +304,17 @@ def trajectory(
     vals = pd.Series(
         _get_color_values(adata, color_seg, layer=layer_seg)[0], index=adata.obs_names
     )
+    
 
-    sorted_edges = np.sort(
-        np.array([e.split("|") for e in adata.obs.edge], dtype=int), axis=1
-    )
-
-    seg_val = pd.Series(
-        [
-            vals[adata[(sorted_edges == e).sum(axis=1) == 2].obs_names].values.mean()
-            for e in edges
-        ]
-    )
-
-    emptyedges = seg_val.index[[np.isnan(sv) for sv in seg_val]]
-    nodes = np.array([edges[i] for i in emptyedges]).ravel()
-    empty = graph["pp_info"].loc[nodes, :]
-
-    gg = igraph.Graph()
-    gg.add_vertices(np.unique(np.array(edges).ravel()).astype(str))
-    gg.add_edges(np.array(edges).astype(str))
-    s_tips = np.argwhere(np.array(gg.degree()) == 1).ravel()
-
-    atip = s_tips[0]
-    s_tips = s_tips[1:]
-
-    for t in s_tips:
-        path = np.array(
-            gg.get_shortest_paths(
-                atip,
-                t,
-            )[0]
-        )
-
-        path = np.array(gg.vs[:]["name"])[path].astype(int)
-        path = [path[i : i + 2] for i in range(len(path) - 1)]
-        path = [np.sort(p) for p in path]
-        holes = np.array([all(np.isin(e, nodes)) for e in path])
-
-        val1 = 0
-        idx = []
-        toreplace = []
-        for i in range(len(holes)):
-            if (~holes[i]) and (len(idx) == 0):
-                val1 = seg_val[
-                    np.argwhere((np.array(edges) == np.sort(path[i])).sum(axis=1) == 2)[
-                        0
-                    ][0]
-                ]
-            if (~holes[i]) and (len(idx) > 0):
-                val2 = seg_val[
-                    np.argwhere((np.array(edges) == np.sort(path[i])).sum(axis=1) == 2)[
-                        0
-                    ][0]
-                ]
-                toreplace = toreplace + [[idx, np.mean([val1, val2])]]
-                idx = []
-            if holes[i]:
-                idx = idx + [i]
-
-        if holes[len(holes) - 1]:
-            toreplace = toreplace + [[idx, val1]]
-
-        for idx, val in toreplace:
-            for i in idx:
-                seg_val[
-                    np.argwhere((np.array(edges) == np.sort(path[i])).sum(axis=1) == 2)[
-                        0
-                    ][0]
-                ] = val
+    def get_nval(i):
+        return np.average(vals,weights=adata.uns["graph"]["R"][:,i])
+    node_vals = np.array(list(map(get_nval,range(R.shape[1]))))
+    seg_val = node_vals[edges].mean(axis=1)
+    
+    if perc_seg is not None:
+        min_v,max_v = np.percentile(seg_val,perc_seg)
+        seg_val[seg_val<min_v]=min_v
+        seg_val[seg_val>max_v]=max_v
 
     sm = ScalarMappable(
         norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
@@ -438,13 +384,7 @@ def trajectory(
     )
     ax.add_collection(lc)
 
-    tip_val = []
-    for tip in tips:
-        sel = (
-            np.array(list(map(lambda e: e.split("|"), adata.obs.edge)), dtype=int)
-            == tip
-        ).sum(axis=1) == 1
-        tip_val = tip_val + [vals.loc[adata.obs_names[sel]].mean()]
+    tip_val = node_vals[tips]
 
     ax.scatter(
         proj.loc[tips, 0],
