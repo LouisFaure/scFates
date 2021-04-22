@@ -482,7 +482,7 @@ def synchro_path(
     leaves = list(map(lambda leave: dct[leave], milestones))
     root = dct[root_milestone]
 
-    name = root_milestone + "->" + milestones[0] + "<>" + milestones[1]
+    name = root_milestone + "->" + "<>".join(milestones)
 
     bif = adata.uns[name]["fork"]
 
