@@ -6,3 +6,4 @@ from .milestones import milestones
 from .slide_cors import slide_cors
 from .synchro_path import synchro_path
 from .test_fork import test_fork
+from .critical_transition import critical_transition
