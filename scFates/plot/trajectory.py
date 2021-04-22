@@ -260,7 +260,7 @@ def trajectory(
     adata_c = adata[cells, :]
 
     if is_categorical(adata, color_cells):
-        if color_cells not in adata.uns or len(adata.uns[color_cells * "_colors"]) == 1:
+        if color_cells+"_colors" not in adata.uns or len(adata.uns[color_cells + "_colors"]) == 1:
             from . import palette_tools
 
             palette_tools._set_default_colors_for_categorical_obs(adata, color_cells)
