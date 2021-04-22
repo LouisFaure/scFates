@@ -102,21 +102,22 @@ def synchro_path(
                 lowess = pred.values
                 ll = conf.lower
                 ul = conf.upper
-
+                col = mlsc[adata.obs.milestones.cat.categories == mil][0]
                 axs[i].plot(
                     res.t.values,
                     res[cc],
                     "+",
-                    c=mlsc[adata.obs.milestones.cat.categories == mil][0],
+                    c=col,
                     alpha=0.5,
                 )
                 axs[i].plot(
                     res.t.values,
                     lowess,
-                    c=mlsc[adata.obs.milestones.cat.categories == mil][0],
+                    c=col,
                 )
                 axs[i].fill_between(
-                    res.t.values.tolist(), ll.tolist(), ul.tolist(), alpha=0.33
+                    res.t.values.tolist(), ll.tolist(), ul.tolist(), alpha=0.33,
+                    edgecolor=col,facecolor=col
                 )
                 axs[i].axvline(fork_t, color="black")
                 axs[i].axhline(0, linestyle="dashed", color="grey", zorder=0)
