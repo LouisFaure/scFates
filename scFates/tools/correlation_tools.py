@@ -6,6 +6,8 @@ import igraph
 from anndata import AnnData
 from scipy import sparse
 
+from joblib import delayed, Parallel
+from tqdm import tqdm
 from functools import partial
 from statsmodels.stats.weightstats import DescrStatsW
 from skmisc.loess import loess
@@ -485,6 +487,9 @@ def synchro_path(
     name = root_milestone + "->" + "<>".join(milestones)
 
     bif = adata.uns[name]["fork"]
+    
+    if n_map == 1:
+        logg.info("    single mapping")
 
     def synchro_map(m):
         df = adata.uns["pseudotime_list"][str(m)]
@@ -565,7 +570,10 @@ def synchro_path(
                 )
 
             return pd.concat(
-                list(map(slide_path, np.arange(0, mat.shape[0] - w, step))), axis=1
+                list(map(slide_path, tqdm(np.arange(0, mat.shape[0] - w, step),
+                                          disable = n_map > 1,
+                                          desc="    leave " + str(keys[vals == leave][0])))),
+                axis=1
             ).T
 
         return pd.concat(list(map(synchro_milestone, leaves)), keys=milestones)
@@ -573,13 +581,15 @@ def synchro_path(
     if n_map > 1:
         permut = False
         stats = Parallel(n_jobs=n_jobs)(
-            delayed(synchro_map)(i) for i in tqdm(range(n_map))
+            delayed(synchro_map)(i) for i in tqdm(range(n_map),
+                                                  desc="    multi mapping ")
         )
         allcor_r = pd.concat(stat)
         if perm:
             permut = True
             stats = Parallel(n_jobs=n_jobs)(
-                delayed(synchro_map)(i) for i in tqdm(range(n_map))
+                delayed(synchro_map)(i) for i in tqdm(range(n_map),
+                                                      desc="    multi mapping permutations")
             )
             allcor_p = pd.concat(stats)
             allcor = pd.concat([allcor_r, allcor_p], keys=["real", "permuted"])
