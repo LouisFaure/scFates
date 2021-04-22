@@ -49,8 +49,8 @@ def norm_R_cpu(R, Rsum):
 def cor_mat_cpu(A, B):
     import numpy as np
 
-    A1 = A - np.mean(A, axis=0)
-    B1 = B - np.mean(B, axis=0)
+    A1 = A - A.mean(axis=0)
+    B1 = B - B.mean(axis=0)
     res = (B1.T.dot(A1)).T / np.sqrt(
         (A1 ** 2).sum(axis=0).reshape(A1.shape[1], 1)
         @ (B1 ** 2).sum(axis=0).reshape(1, B1.shape[1])
@@ -61,8 +61,8 @@ def cor_mat_cpu(A, B):
 def cor_mat_gpu(A, B):
     import cupy as cp
 
-    A1 = A - cp.mean(A, axis=0)
-    B1 = B - cp.mean(B, axis=0)
+    A1 = A - A.mean(axis=0)
+    B1 = B - B.mean(axis=0)
     res = (B1.T.dot(A1)).T / cp.sqrt(
         (A1 ** 2).sum(axis=0).reshape(A1.shape[1], 1)
         @ (B1 ** 2).sum(axis=0).reshape(1, B1.shape[1])
