@@ -36,24 +36,34 @@ Citations
 
 Code for PPT inference and most of downstream pseudotime analysis was initially written in a [R package](https://github.com/hms-dbmi/crestree) by Ruslan Soldatov for the following paper:
 
-Soldatov, R., Kaucka, M., Kastriti, M. E., Petersen, J., Chontorotzea, T., Englmaier, L., … Adameyko, I. (2019). Spatiotemporal structure of cell fate decisions in murine neural crest. Science, 364(6444).
+Soldatov, R., Kaucka, M., Kastriti, M. E., Petersen, J., Chontorotzea, T., Englmaier, L., … Adameyko, I. (2019).
+Spatiotemporal structure of cell fate decisions in murine neural crest.
+Science, 364(6444).
 
 if you are using ElPiGraph, please cite :
 
-Albergante, L., Mirkes, E. M., Chen, H., Martin, A., Faure, L., Barillot, E., … Zinovyev, A. (2020). Robust And Scalable Learning Of Complex Dataset Topologies Via Elpigraph. Entropy, 22(3), 296.
+Albergante, L., Mirkes, E. M., Chen, H., Martin, A., Faure, L., Barillot, E., … Zinovyev, A. (2020).
+Robust And Scalable Learning Of Complex Dataset Topologies Via Elpigraph.
+Entropy, 22(3), 296.
 
-All the code for preprocessing has been translated from R package pagoda2, if you use any of these functions (`scf.pp.*`), please cite:
+Code for preprocessing has been translated from R package pagoda2, if you use any of these functions (`scf.pp.batch_correct` & `scf.pp.find_overdispersed`), please cite:
 
 Nikolas Barkas, Viktor Petukhov, Peter Kharchenko and Evan
 Biederstedt (2021). pagoda2: Single Cell Analysis and Differential
 Expression. R package version 1.0.2.
 
+Palantir python tool provides a great dimensionality reduction method, which usually lead to consitent trees with scFates, if use `scf.pp.diffusion`, please cite:
+
+Manu Setty and Vaidotas Kiseliovas and Jacob Levine and Adam Gayoso and Linas Mazutis and Dana Pe'er (2019)
+Characterization of cell fate probabilities in single-cell data with Palantir.
+Nature Biotechnology
+
 Installation
 ============
 
-scFates 0.2 is now available on pypi, you can install it using:
+scFates 0.2.1 is now available on pypi, you can install it using:
 
-    pip install scFates
+    pip install -U scFates
 
 or the latest development version can be installed from GitHub:
 
@@ -84,4 +94,4 @@ scFates can be run on a [Docker container](https://hub.docker.com/repository/doc
 which provide a gpu enabled environment with Jupyter Lab. Use the following command:
 
     docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-        louisfaure/scfates:version-0.2
+        louisfaure/scfates:version-0.2.1
