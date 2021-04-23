@@ -143,7 +143,7 @@ def trajectory(
     color_seg: str = "t",
     cmap_seg: str = "viridis",
     layer_seg: Union[str, None] = "fitted",
-    perc_seg: Union[List,None] = None,
+    perc_seg: Union[List, None] = None,
     color_cells: Union[str, None] = None,
     scale_path: float = 1,
     arrows: bool = False,
@@ -260,7 +260,10 @@ def trajectory(
     adata_c = adata[cells, :]
 
     if is_categorical(adata, color_cells):
-        if color_cells+"_colors" not in adata.uns or len(adata.uns[color_cells + "_colors"]) == 1:
+        if (
+            color_cells + "_colors" not in adata.uns
+            or len(adata.uns[color_cells + "_colors"]) == 1
+        ):
             from . import palette_tools
 
             palette_tools._set_default_colors_for_categorical_obs(adata, color_cells)
@@ -304,17 +307,19 @@ def trajectory(
     vals = pd.Series(
         _get_color_values(adata, color_seg, layer=layer_seg)[0], index=adata.obs_names
     )
-    
+    R = adata.uns["graph"]["R"][~np.isnan(vals), :]  # in case of subsetted tree
+    vals = vals[~np.isnan(vals)]
 
     def get_nval(i):
-        return np.average(vals,weights=adata.uns["graph"]["R"][:,i])
-    node_vals = np.array(list(map(get_nval,range(R.shape[1]))))
+        return np.average(vals, weights=R[:, i])
+
+    node_vals = np.array(list(map(get_nval, range(R.shape[1]))))
     seg_val = node_vals[edges].mean(axis=1)
-    
+
     if perc_seg is not None:
-        min_v,max_v = np.percentile(seg_val,perc_seg)
-        seg_val[seg_val<min_v]=min_v
-        seg_val[seg_val>max_v]=max_v
+        min_v, max_v = np.percentile(seg_val, perc_seg)
+        seg_val[seg_val < min_v] = min_v
+        seg_val[seg_val > max_v] = max_v
 
     sm = ScalarMappable(
         norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
