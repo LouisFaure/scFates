@@ -34,7 +34,7 @@ MOCK_MODULES = [
     "elpigraph",
     "phenograph",
     "sklearn.preprocessing",
-    "cellrank"
+    "cellrank",
 ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
@@ -101,11 +101,39 @@ project = "scFates"
 author = "Louis Faure"
 title = "Tree learning on scRNAseq"
 
-version = "0.1"
+version = scFates.__version__.replace(".dirty", "")
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "sphinx"
 todo_include_todos = False
 
+
+# -- Retrieve notebooks ------------------------------------------------
+
+from urllib.request import urlretrieve
+
+notebooks_url = "https://github.com/LouisFaure/scFates_notebooks/raw/main/"
+notebooks = [
+    "Basic_pseudotime_analysis.ipynb",
+    "Advanced_bifurcation_analysis.ipynb",
+    "Conversion_from_CellRank_pipeline.ipynb",
+]
+for nb in notebooks:
+    try:
+        urlretrieve(notebooks_url + nb, nb)
+    except:
+        pass
+
+
+nbsphinx_prolog = r"""
+{% set docname = 'github/LouisFaure/scFates_notebooks/blob/main/' + env.doc2path(env.docname, base=None) %}
+.. raw:: html
+    <div class="note">
+      <a href="https://colab.research.google.com/{{ docname|e }}" target="_parent">
+      <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+      <a href="https://nbviewer.jupyter.org/{{ docname|e }}" target="_parent">
+      <img src="https://github.com/theislab/scvelo/raw/master/docs/source/_static/nbviewer-badge.svg" alt="Open In nbviewer"/></a>
+</div>
+"""
 
 # -- Options for HTML output ----------------------------------------------
 
