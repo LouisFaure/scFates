@@ -17,7 +17,8 @@ if on_rtd:
 
 setup(
     name="scFates",
-    version="0.2.0",
+    version_format="{tag}",
+    setup_requires=["setuptools-git-version"],
     description="scanpy compatible python suite for fast tree inference and advanced pseudotime downstream analysis",
     long_description=read_md("README.md"),
     long_description_content_type="text/markdown",
