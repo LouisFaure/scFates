@@ -36,7 +36,7 @@ def critical_transition(
     """
 
     name = root_milestone + "->" + "<>".join(milestones)
-    mlsc = adata.uns["milestones_colors"].copy()
+    mlsc = np.array(adata.uns["milestones_colors"].copy())
 
     if len(milestones) > 1:
         graph = adata.uns["graph"]

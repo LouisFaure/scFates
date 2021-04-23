@@ -54,7 +54,7 @@ def synchro_path(
     )
     img.add_edges(edges)
 
-    mlsc = adata.uns["milestones_colors"].copy()
+    mlsc = np.array(adata.uns["milestones_colors"].copy())
     if isinstance(mlsc, (list)):
         mlsc = np.array(mlsc)
     # mlsc_temp = mlsc.copy()
@@ -116,8 +116,12 @@ def synchro_path(
                     c=col,
                 )
                 axs[i].fill_between(
-                    res.t.values.tolist(), ll.tolist(), ul.tolist(), alpha=0.33,
-                    edgecolor=col,facecolor=col
+                    res.t.values.tolist(),
+                    ll.tolist(),
+                    ul.tolist(),
+                    alpha=0.33,
+                    edgecolor=col,
+                    facecolor=col,
                 )
                 axs[i].axvline(fork_t, color="black")
                 axs[i].axhline(0, linestyle="dashed", color="grey", zorder=0)

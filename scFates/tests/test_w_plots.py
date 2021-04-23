@@ -140,6 +140,8 @@ def test_pipeline():
     )
     scf.tl.test_fork(adata, root_milestone="80", milestones=["25", "19"], n_jobs=2)
     signi_fdr_nonscaled = adata.uns["80->25<>19"]["fork"].signi_fdr.sum()
+    adata.uns["80->25<>19"]["fork"]["fdr"] = 0.02
+    scf.pl.test_fork(adata, root_milestone="80", milestones=["25", "19"])
 
     scf.tl.test_fork(
         adata, root_milestone="80", milestones=["25", "19"], n_jobs=2, rescale=True
@@ -195,6 +197,25 @@ def test_pipeline():
     )
     syncAB = adata.uns["80->25<>19"]["synchro"]["corAB"].values[:5]
 
+    scf.tl.critical_transition(
+        adata,
+        root_milestone="80",
+        milestones=["25", "19"],
+        w=50,
+        step=30,
+        loess_span=0.5,
+    )
+
+    CI_lowess = adata.uns["80->25<>19"]["critical transition"]["pre-fork"]["lowess"][
+        :5
+    ].values
+
+    scf.pl.critical_transition(adata, root_milestone="80", milestones=["25", "19"])
+
+    scf.tl.criticality_drivers(adata, root_milestone="80", milestones=["25", "19"])
+
+    CI_corr = adata.uns["80->25<>19"]["criticality drivers"]["corr"].values
+
     assert np.allclose(
         F_PC1_epgc_cpu,
         [7.58077519, -23.63881596, -13.71322111, -5.53347147, -13.44127461],
@@ -241,5 +262,17 @@ def test_pipeline():
     assert np.allclose(
         syncAB,
         [-0.33520381, -0.32288241, -0.33093774, -0.33303708, -0.35310308],
+        rtol=1e-2,
+    )
+
+    assert np.allclose(
+        CI_lowess,
+        [0.83870565, 0.83870565, 0.77834635, 0.77834635, 0.73800016],
+        rtol=1e-2,
+    )
+
+    assert np.allclose(
+        CI_corr,
+        [0.1158179, 0.06283165, 0.03986905, -0.02398251, -0.02990104],
         rtol=1e-2,
     )

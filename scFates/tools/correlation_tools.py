@@ -865,7 +865,10 @@ def critical_transition(
 
     if len(milestones) == 1:
         df, l = loess_fit(allci.loc[milestones[0]], loess_span)
-        adata.uns[name] = {"critical transition": df}
+        if name in adata.uns:
+            adata.uns[name]["critical transition"] = df
+        else:
+            adata.uns[name] = {"critical transition": df}
         cells = getpath(img, root, graph["tips"], leaves[0], graph, adata.obs).index
 
     else:
@@ -884,10 +887,14 @@ def critical_transition(
         df = pre_fork.sort_values("t").reset_index(drop=True)
         df, l = loess_fit(df, loess_span)
         dfs = dfs + [df]
-
-        adata.uns[name] = {
-            "critical transition": dict(zip(milestones + ["pre-fork"], dfs))
-        }
+        if name in adata.uns:
+            adata.uns[name]["critical transition"] = dict(
+                zip(milestones + ["pre-fork"], dfs)
+            )
+        else:
+            adata.uns[name] = {
+                "critical transition": dict(zip(milestones + ["pre-fork"], dfs))
+            }
 
         cells = getpath(img, root, graph["tips"], fork, graph, adata.obs).index
 
