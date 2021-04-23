@@ -226,7 +226,9 @@ def test_association(
 
     stat_assoc_l = list()
 
-    for m in range(n_map):
+    for m in tqdm(
+        range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
+    ):
         data = list(
             zip(
                 [adata.uns["pseudotime_list"][str(m)].loc[cells, :]] * len(Xgenes),
@@ -237,7 +239,10 @@ def test_association(
         stat = Parallel(n_jobs=n_jobs)(
             delayed(gt_fun)(data[d])
             for d in tqdm(
-                range(len(data)), file=sys.stdout, desc="    mapping " + str(m)
+                range(len(data)),
+                disable=n_map > 1,
+                file=sys.stdout,
+                desc="    single mapping ",
             )
         )
         stat = pd.DataFrame(stat, index=genes, columns=["p_val", "A"])

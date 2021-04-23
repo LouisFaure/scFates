@@ -33,6 +33,8 @@ MOCK_MODULES = [
     "plotly.graph_objects",
     "elpigraph",
     "phenograph",
+    "sklearn.preprocessing",
+    "cellrank",
 ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
@@ -99,10 +101,28 @@ project = "scFates"
 author = "Louis Faure"
 title = "Tree learning on scRNAseq"
 
-version = "0.1"
+version = scFates.__version__.replace(".dirty", "")
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "sphinx"
 todo_include_todos = False
+
+
+# -- Retrieve notebooks ------------------------------------------------
+
+from urllib.request import urlretrieve
+
+notebooks_url = "https://github.com/LouisFaure/scFates_notebooks/raw/main/"
+notebooks = [
+    "Basic_pseudotime_analysis.ipynb",
+    "Advanced_bifurcation_analysis.ipynb",
+    "Conversion_from_CellRank_pipeline.ipynb",
+    "Critical_Transition.ipynb",
+]
+for nb in notebooks:
+    try:
+        urlretrieve(notebooks_url + nb, nb)
+    except:
+        pass
 
 
 # -- Options for HTML output ----------------------------------------------

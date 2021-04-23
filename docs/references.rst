@@ -25,5 +25,9 @@ References
    *SimplePPT: A simple principal tree algorithm*,
    `SIAM International Conference on Data Mining <https://doi.org/10.1137/1.9781611974010.89>`__.
 
+.. [Bargaje17] Bargaje *et al. (2017)*,
+    *Cell population structure prior to bifurcation predicts efficiency of directed differentiation in human induced pluripotent cells*,
+    `PNAS <https://doi.org/10.1073/pnas.1621412114>`__.
+
 .. image:: _static/scFates_logo_dark.png
    :width: 1%

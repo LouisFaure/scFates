@@ -150,8 +150,12 @@ def test_fork(
     fork_stat = list()
     upreg_stat = list()
 
-    for m in range(n_map):
-        logg.info("    mapping: " + str(m))
+    for m in tqdm(
+        range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
+    ):
+
+        if n_map == 1:
+            logg.info("    single mapping")
         ## Diff expr between forks
 
         df = adata.uns["pseudotime_list"][str(m)]
@@ -205,7 +209,10 @@ def test_fork(
         stat = Parallel(n_jobs=n_jobs)(
             delayed(gt_fun)(data[d])
             for d in tqdm(
-                range(len(data)), file=sys.stdout, desc="    differential expression"
+                range(len(data)),
+                disable=n_map > 1,
+                file=sys.stdout,
+                desc="    differential expression",
             )
         )
 
@@ -242,6 +249,7 @@ def test_fork(
                 delayed(test_upreg)(data[d])
                 for d in tqdm(
                     range(len(data)),
+                    disable=n_map > 1,
                     file=sys.stdout,
                     desc="    leave " + str(keys[vals == leave][0]),
                 )
@@ -537,7 +545,9 @@ def activation(
 
     allact = []
 
-    for m in range(n_map):
+    for m in tqdm(
+        range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
+    ):
 
         df = adata.uns["pseudotime_list"][str(m)]
         acti = pd.Series(0, index=stats.index)
@@ -573,6 +583,7 @@ def activation(
                 delayed(get_activation)(data[d])
                 for d in tqdm(
                     range(len(data)),
+                    disable=n_map > 1,
                     file=sys.stdout,
                     desc="    leave " + str(keys[vals == leave][0]),
                 )

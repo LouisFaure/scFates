@@ -10,6 +10,20 @@ Import scFates as::
 
    import scFates as scf
 
+Some convenient preprocessing functions translated from pagoda2 have been included:
+
+Pre-processing
+--------------
+
+.. autosummary::
+    :toctree: .
+
+    pp.filter_cells
+    pp.batch_correct
+    pp.find_overdispersed
+    pp.diffusion
+
+
 Tree inference
 --------------
 
@@ -54,6 +68,8 @@ Bifurcation analysis
     tl.slide_cells
     tl.slide_cors
     tl.synchro_path
+    tl.critical_transition
+    tl.criticality_drivers
 
 Plot
 ----
@@ -85,3 +101,4 @@ Plot
     pl.modules
     pl.slide_cors
     pl.synchro_path
+    pl.critical_transition

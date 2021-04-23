@@ -78,7 +78,7 @@ def curve(
     epg_verbose
         show verbose output of epg algorithm
     device
-        Run either mehtod on `cpu` or on `gpu`
+        Run method on either `cpu` or on `gpu`
     plot
         Plot the resulting tree.
     basis

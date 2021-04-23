@@ -42,6 +42,11 @@ if you are using ElPiGraph, please cite :
 
 Albergante, L., Mirkes, E. M., Chen, H., Martin, A., Faure, L., Barillot, E., … Zinovyev, A. (2020). Robust And Scalable Learning Of Complex Dataset Topologies Via Elpigraph. Entropy, 22(3), 296.
 
+All the code for preprocessing has been translated from R package pagoda2, if you use any of these functions (`scf.pp.*`), please cite:
+
+Nikolas Barkas, Viktor Petukhov, Peter Kharchenko and Evan
+Biederstedt (2021). pagoda2: Single Cell Analysis and Differential
+Expression. R package version 1.0.2.
 
 Installation
 ============

@@ -121,8 +121,8 @@ def trends(
         adata_temp = adata.copy()
 
     graph = adata.uns["graph"]
-
-    if root_milestone is not None:
+    
+    if milestones is not None:
         adata = adata.copy()
         dct = graph["milestones"]
 
@@ -144,6 +144,7 @@ def trends(
             )
         )
         img.add_edges(edges)
+
         cells = np.unique(
             np.concatenate(
                 list(
@@ -166,16 +167,20 @@ def trends(
 
     if features is None:
         features = adata.var_names
-    if module is not None and branch is not None:
+    if branch is not None:
         name = root_milestone + "->" + "<>".join(milestones)
         df = adata.uns[name]["fork"]
-        features = df.loc[(df.branch == branch) & (df.module == module), :].index
+        if module is not None:
+            sel = (df.branch == branch) & (df.module == module)
+        else:
+            sel = (df.branch == branch)  
+        features = df.loc[sel, :].index
 
     fitted = pd.DataFrame(
         adata.layers["fitted"], index=adata.obs_names, columns=adata.var_names
     ).T.copy(deep=True)
     g = adata.obs.groupby("seg")
-    seg_order = g.apply(lambda x: np.mean(x.t)).sort_values().index.tolist()
+    seg_order = g.apply(lambda x: np.min(x.t)).sort_values().index.tolist()
     cell_order = np.concatenate(
         list(
             map(
@@ -480,7 +485,6 @@ def trends(
             basis=basis,
             color_seg="mean_trajectory",
             cmap_seg=feature_cmap,
-            color_cells=annot,
             show_info=False,
             ax=axemb,
             title=title,

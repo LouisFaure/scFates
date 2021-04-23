@@ -8,14 +8,13 @@ from typing import Union, Optional, Tuple, Collection, Sequence, Iterable
 
 import numpy as np
 import pandas as pd
-from functools import partial
+from functools import partial, reduce
 from anndata import AnnData
 import shutil
 import sys
 import copy
 import igraph
 import warnings
-from functools import reduce
 
 from joblib import delayed, Parallel
 from tqdm import tqdm
@@ -160,7 +159,9 @@ def fit(
 
     stat_assoc = list()
 
-    for m in range(n_map):
+    for m in tqdm(
+        range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
+    ):
         if "t_old" in adata.obs.columns:
             df = adata.obs.copy()
         else:
@@ -210,7 +211,10 @@ def fit(
         stat = Parallel(n_jobs=n_jobs)(
             delayed(gt_fun)(data[d])
             for d in tqdm(
-                range(len(data)), file=sys.stdout, desc="    mapping " + str(m)
+                range(len(data)),
+                disable=n_map > 1,
+                file=sys.stdout,
+                desc="    single mapping ",
             )
         )
 
@@ -226,7 +230,7 @@ def fit(
     if n_map == 1:
         fitted = dictionary["0"]
     else:
-        dfs = list(dictionary.values)
+        dfs = list(dictionary.values())
         fitted = reduce(lambda x, y: x.add(y, fill_value=0), dfs) / n_map
 
     if save_raw:
