@@ -48,6 +48,7 @@ Analysis key steps
    Basic_pseudotime_analysis
    Advanced_bifurcation_analysis
    Conversion_from_CellRank_pipeline
+   Critical_Transition
    api
    references
 

@@ -116,6 +116,7 @@ notebooks = [
     "Basic_pseudotime_analysis.ipynb",
     "Advanced_bifurcation_analysis.ipynb",
     "Conversion_from_CellRank_pipeline.ipynb",
+    "Critical_Transition.ipynb",
 ]
 for nb in notebooks:
     try:
@@ -123,17 +124,6 @@ for nb in notebooks:
     except:
         pass
 
-
-nbsphinx_prolog = r"""
-{% set docname = 'github/LouisFaure/scFates_notebooks/blob/main/' + env.doc2path(env.docname, base=None) %}
-.. raw:: html
-    <div class="note">
-      <a href="https://colab.research.google.com/{{ docname|e }}" target="_parent">
-      <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
-      <a href="https://nbviewer.jupyter.org/{{ docname|e }}" target="_parent">
-      <img src="https://github.com/theislab/scvelo/raw/master/docs/source/_static/nbviewer-badge.svg" alt="Open In nbviewer"/></a>
-</div>
-"""
 
 # -- Options for HTML output ----------------------------------------------
 

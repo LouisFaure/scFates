@@ -706,7 +706,21 @@ def critical_transition(
     copy: bool = False,
 ):
     """\
-    Estimates local critical transition index along trajectory.
+    Estimates local critical transition index along the trajectory.
+
+    Based from the concept of pre-bifurcation struture from [Bargaje17]_.
+    This study proposes the idea that a signature indicating the flattening
+    of the quasi-potential landscape can be detected prior to bifurcation.
+
+    To detect this signal, this function estimates local critical transition
+    index along the trajectory, by calculating along a moving window of cell
+    the following:
+
+    .. math::
+        \\frac{<{\\left | R(g_i,g_j) \\right |>}}{<\\left | R(c_k,c_l) \\right |>}
+
+    Which is the ratio between the mean of the absolute gene by gene correlations
+    and the mean of the absolute cell by cell correlations.
 
     Parameters
     ----------
@@ -742,9 +756,9 @@ def critical_transition(
         `.obs['root_milestone->milestoneA<>milestoneB pre-fork CI lowess']`
             local critical transition index loess fitted onto cells prior to bifurcation.
 
-         For a linear trajectory:
+    For a linear trajectory:
 
-         `.uns['root_milestone->milestoneA']['critical transition']`
+        `.uns['root_milestone->milestoneA']['critical transition']`
             containing local critical transition index per window of cells.
         `.obs['root_milestone->milestoneA CI lowess']`
             local critical transition index loess fitted onto cells along the path.
