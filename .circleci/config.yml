@@ -6,7 +6,7 @@ orbs:
 jobs:
   scfatesenv:
     docker:
-      - image: cimg/python3.8.8
+      - image: louisfaure/scfates:env-ready
     steps:
       - checkout
       - run:
