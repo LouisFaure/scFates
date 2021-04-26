@@ -76,7 +76,7 @@ def critical_transition(
             if p == "pre-fork"
             else mlsc[adata.obs.milestones.cat.categories == p][0]
         )
-        plt.scatter(df.t, df.ic, c=col)
+        plt.scatter(df.t, df.ci, c=col)
         plt.plot(df.t, df.lowess, c=col)
         plt.fill_between(
             df.t.values.tolist(),

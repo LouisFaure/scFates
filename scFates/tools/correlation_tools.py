@@ -703,6 +703,7 @@ def critical_transition(
     w=100,
     step=30,
     loess_span=0.4,
+    gamma = 1.5,
     copy: bool = False,
 ):
     """\
@@ -839,7 +840,7 @@ def critical_transition(
                 R_cell = np.nanmean(
                     np.abs(cor_cell[np.triu_indices(cor_cell.shape[0], k=1)])
                 )
-                return (adata.obs.t[cls].max(), R_gene / R_cell)
+                return [adata.obs.t[cls].max(), R_gene / R_cell,cls]
 
             stats = Parallel(n_jobs=n_jobs)(
                 delayed(slide_path)(i)
@@ -850,13 +851,31 @@ def critical_transition(
                     desc="    leave " + str(keys[vals == leave][0]),
                 )
             )
-            return pd.DataFrame(stats, columns=("t", "ic"))
 
-        return pd.concat(list(map(critical_milestone, leaves)), keys=milestones)
+            cells_l = [s[2] for s in stats]
+            stats = [[s[0],s[1]] for s in stats]
+            return [pd.DataFrame(stats, columns=("t", "ci")),cells_l]
+
+        res = list(map(critical_milestone, leaves))
+
+        dfs = []
+        res_slide=[]
+        for l in range(len(leaves)):
+            dfs = dfs+ [pd.DataFrame(np.repeat(res[l][0].ci[i].reshape(-1, 1),
+                                          len(res[l][1][i])),
+                                index=res[l][1][i],columns=["ci"]) for i in range(len(res[l][1]))]
+            res_slide=res_slide+[res[l][0]]
+        df = pd.concat(dfs, axis=1)
+        df = df.T.groupby(level=0).mean().T
+
+        res_slide = pd.concat(res_slide,keys=milestones)
+
+        return (df,res_slide)
 
     if n_map == 1:
-        allci = pd.concat(list(map(critical_map, range(n_map))))
+        df,allci = critical_map(0)
     else:
+        #TODO: adapt multimapping
         stats = Parallel(n_jobs=n_jobs)(
             delayed(critical_map)(i)
             for i in tqdm(range(n_map), file=sys.stdout, desc="    multi mapping ")
@@ -865,24 +884,24 @@ def critical_transition(
 
     logg.info("    loess fitting and predicting cell-wise CI")
 
-    def loess_fit(df, span):
-        l = loess(df.t, df.ic, span=span)
+    def loess_fit(data, span):
+        l = loess(data.t, data.ci, span=span)
         l.fit()
-        pred = l.predict(df.t, stderror=True)
+        pred = l.predict(data.t, stderror=True)
         conf = pred.confidence()
 
-        df["lowess"] = pred.values
-        df["ll"] = conf.lower
-        df["ul"] = conf.upper
+        data["lowess"] = pred.values
+        data["ll"] = conf.lower
+        data["ul"] = conf.upper
 
-        return df, l
+        return data, l
 
     if len(milestones) == 1:
-        df, l = loess_fit(allci.loc[milestones[0]], loess_span)
+        df_l, l = loess_fit(allci.loc[milestones[0]], loess_span)
         if name in adata.uns:
-            adata.uns[name]["critical transition"] = df
+            adata.uns[name]["critical transition"] = df_l
         else:
-            adata.uns[name] = {"critical transition": df}
+            adata.uns[name] = {"critical transition": df_l}
         cells = getpath(img, root, graph["tips"], leaves[0], graph, adata.obs).index
 
     else:
@@ -898,9 +917,9 @@ def critical_transition(
         pre_fork = pd.concat(
             [allci.loc[m][allci.loc[m].t < fork_t] for m in milestones]
         )
-        df = pre_fork.sort_values("t").reset_index(drop=True)
-        df, l = loess_fit(df, loess_span)
-        dfs = dfs + [df]
+        df_l = pre_fork.sort_values("t").reset_index(drop=True)
+        df_l, l = loess_fit(df_l, loess_span)
+        dfs = dfs + [df_l]
         if name in adata.uns:
             adata.uns[name]["critical transition"] = dict(
                 zip(milestones + ["pre-fork"], dfs)
@@ -912,16 +931,30 @@ def critical_transition(
 
         cells = getpath(img, root, graph["tips"], fork, graph, adata.obs).index
 
-    cells_t = adata.obs.loc[cells, "t"]
-    cells_t = cells_t[(cells_t > df.t.min()) & (cells_t < df.t.max())]
+    adata.obs[name + " CI"] = np.nan
+    adata.obs.loc[df.index, name + " CI"] = df.values.ravel()
 
-    pred_cells = l.predict(cells_t, stderror=True)
-    obs_name = (
-        name + " pre-fork CI lowess" if len(milestones) > 1 else name + " CI lowess"
+    df["t"]=adata.obs.loc[df.index,"t"].values
+
+    from rpy2.robjects import pandas2ri, Formula
+    from rpy2.robjects.packages import importr
+    import rpy2.rinterface
+    pandas2ri.activate()
+
+    rmgcv = importr("mgcv")
+
+    m = rmgcv.gam(
+        Formula("ci~s(t,bs='ts')"),
+        data=df,
+        gamma=gamma,
     )
-    bif = " prior to bifurcation." if len(milestones) > 1 else "along the path."
-    adata.obs[obs_name] = np.nan
-    adata.obs.loc[cells_t.index, obs_name] = pred_cells.values
+
+    df_f=pd.Series(
+        rmgcv.predict_gam(m), index=df.index
+    )
+
+    adata.obs[name + " CI fitted"] = np.nan
+    adata.obs.loc[df_f.index, name + " CI fitted"] = df_f.values
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -929,10 +962,8 @@ def critical_transition(
         "    .uns['"
         + name
         + "']['critical transition'], df containing local critical transition index per window of cells.\n"
-        "    .obs['"
-        + obs_name
-        + "'], local critical transition index loess fitted onto cells"
-        + bif
+        "    .obs['"+ name+ " CI'], local critical transition index projected onto cells.\n"
+        "    .obs['"+ name+ " CI fitted'], GAM fit of local critical transition index projected onto cells."
     )
 
     return adata if copy else None
@@ -984,9 +1015,7 @@ def criticality_drivers(
     logg.info("Calculating gene to critical transition index correlations", reset=True)
 
     name = root_milestone + "->" + "<>".join(milestones)
-    obs_name = (
-        name + " pre-fork CI lowess" if len(milestones) > 1 else name + " CI lowess"
-    )
+    obs_name = name + " CI fitted"
 
     X = adata[~np.isnan(adata.obs[obs_name])].X
     CI = adata[~np.isnan(adata.obs[obs_name])].obs[obs_name].values
@@ -1041,191 +1070,6 @@ def criticality_drivers(
         "    .uns['"
         + name
         + "']['criticality drivers'], df containing gene correlation with critical index transition."
-    )
-
-    return adata if copy else None
-
-
-def pre_fork_var(
-    adata: AnnData,
-    root_milestone,
-    fork_milestone,
-    n_map=1,
-    n_jobs=None,
-    layer: Optional[str] = None,
-    w=100,
-    step=30,
-    copy: bool = False,
-):
-    """\
-    Estimates per gene local variance prior to bifurcation.
-
-    Based from the concept of pre-bifurcation struture from [Bargaje17]_.
-    This study proposes the idea that a signature indicating the flattening
-    of the quasi-potential landscape can be detected prior to bifurcation.
-
-    To detect this signal, this function estimates local critical transition
-    index along the trajectory, by calculating along a moving window of cell
-    the following:
-
-    .. math::
-        \\frac{<{\\left | R(g_i,g_j) \\right |>}}{<\\left | R(c_k,c_l) \\right |>}
-
-    Which is the ratio between the mean of the absolute gene by gene correlations
-    and the mean of the absolute cell by cell correlations.
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    root_milestone
-        tip defining progenitor branch.
-    milestones
-        tips defining the progenies branches.
-    n_map
-        number of probabilistic cells projection to use for estimates.
-    n_jobs
-        number of cpu processes to perform estimates (per mapping).
-    layer
-        adata layer to use for estimates.
-    w
-        local window, in number of cells, to estimate correlations.
-    step
-        steps, in number of cells, between local windows.
-    copy
-        Return a copy instead of writing to adata.
-
-    Returns
-    -------
-    adata : anndata.AnnData
-        if `copy=True` it returns subsetted or else subset (keeping only
-        significant features) and add fields to `adata` for a bifurcation:
-
-        `.uns['root_milestone->milestoneA<>milestoneB']['critical transition']`
-            containing local critical transition index per window of cells.
-        `.obs['root_milestone->milestoneA<>milestoneB pre-fork CI lowess']`
-            local critical transition index loess fitted onto cells prior to bifurcation.
-
-    For a linear trajectory:
-
-        `.uns['root_milestone->milestoneA']['critical transition']`
-            containing local critical transition index per window of cells.
-        `.obs['root_milestone->milestoneA CI lowess']`
-            local critical transition index loess fitted onto cells along the path.
-
-    """
-
-    adata = adata.copy() if copy else adata
-
-    logg.info("Calculating local critical transition index", reset=True)
-
-    graph = adata.uns["graph"]
-
-    edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
-    img = igraph.Graph()
-    img.add_vertices(
-        np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
-    )
-    img.add_edges(edges)
-
-    uns_temp = adata.uns.copy()
-
-    if "milestones_colors" in adata.uns:
-        mlsc = adata.uns["milestones_colors"].copy()
-
-    dct = graph["milestones"]
-    keys = np.array(list(dct.keys()))
-    vals = np.array(list(dct.values()))
-
-    fork = dct[fork_milestone]
-    root = dct[root_milestone]
-
-    name = root_milestone + "->" + fork_milestone
-
-    def var_map(m):
-        df = adata.uns["pseudotime_list"][str(m)]
-        edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
-        img = igraph.Graph()
-        img.add_vertices(
-            np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
-        )
-        img.add_edges(edges)
-
-
-        cells = getpath(img, root, graph["tips"], fork, graph, df).index
-
-        if layer is None:
-            if sparse.issparse(adata.X):
-                mat = pd.DataFrame(
-                    adata[cells].X.A, index=cells, columns=adata.var_names
-                )
-            else:
-                mat = pd.DataFrame(
-                    adata[cells].X, index=cells, columns=adata.var_names
-                )
-        else:
-            if sparse.issparse(adata.layers[layer]):
-                mat = pd.DataFrame(
-                    adata[cells].layers[layer].A,
-                    index=cells,
-                    columns=adata.var_names,
-                )
-            else:
-                mat = pd.DataFrame(
-                    adata[cells].layers[layer],
-                    index=cells,
-                    columns=adata.var_names,
-                )
-
-        mat = mat.iloc[adata.obs.t[mat.index].argsort().values, :]
-
-        def slide_path(i):
-            cls = mat.index[i: (i + w)]
-            return [adata.obs.t[cls].max() ,mat.loc[cls, :].var(axis=0),cls]
-
-        stats = Parallel(n_jobs=n_jobs)(
-            delayed(slide_path)(i)
-            for i in tqdm(
-                np.arange(0, mat.shape[0] - w, step),
-                disable=n_map > 1,
-                file=sys.stdout,
-                desc="    pre-fork ",
-            )
-        )
-        t = list(map(lambda x: x[0], stats))
-        stat = list(map(lambda x: x[1],stats))
-        cells_l = list(map(lambda x: x[2],stats))
-        return (t,pd.concat(stat,axis=1).values,cells_l)
-
-    if n_map == 1:
-        t,allvar,cells_l = var_map(0)
-    else:
-        # TODO
-        stats = Parallel(n_jobs=n_jobs)(
-            delayed(critical_map)(i)
-            for i in tqdm(range(n_map), file=sys.stdout, desc="    multi mapping ")
-        )
-        allci = pd.concat(stats)
-
-    dfs = [pd.DataFrame(np.repeat(allvar[:,i].reshape(-1,1),100,axis=1),
-                      index=adata.var_names,columns=cells_l[i]) for i in range(22)]
-    df = pd.concat(dfs, axis=1)
-    df=df.T.groupby(level=0).mean()
-    adata.varm["X_"+name] = df.T
-
-    if name in adata.uns:
-        adata.uns[name]["prefork_var"] = t
-    else:
-        adata.uns[name] = {
-            "prefork_var": t
-        }
-
-    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint(
-        "added \n"
-        "    .varm['X_"
-        + name
-        + "']"
     )
 
     return adata if copy else None
