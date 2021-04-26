@@ -237,7 +237,7 @@ def test_association(
         )
 
         stat = Parallel(n_jobs=n_jobs)(
-            delayed(gt_fun)(data[d])
+            delayed(gt_fun_exp)(data[d])
             for d in tqdm(
                 range(len(data)),
                 disable=n_map > 1,
@@ -274,8 +274,47 @@ def test_association(
 
     return adata if copy else None
 
+def test_var(adata: AnnData,
+             root_milestone,
+             milestones,
+            n_map: int = 1,
+            n_jobs: int = 1,
+            spline_df: int = 5,
+            fdr_cut: float = 0.05,
+            A_cut: int = 1,
+            st_cut: float = 0.8,
+            reapply_filters: bool = False,
+            copy: bool = False,
+            layer: Optional[str] = None):
 
-def gt_fun(data):
+    name=root_milestone+"->"+"<>".join(milestones)
+    prefix=name+"_"
+
+    cells = adata.varm['X_'+name].columns
+    var = adata.varm['X_'+name].values
+
+    dfs = list(map(lambda i: pd.DataFrame({'t':adata.obs.loc[cells,"t"],
+                       'var':var[i,:]}),range(var.shape[0])))
+
+    stats = Parallel(n_jobs=n_jobs)(
+        delayed(gt_fun_var)(dfs[d])
+        for d in tqdm(
+            range(len(dfs)),
+            disable=n_map > 1,
+            file=sys.stdout,
+            desc="    single mapping ",
+        )
+    )
+
+    stat = pd.DataFrame(stats,columns=[prefix+"p_val",prefix+"A"],index=adata.var_names)
+    stat[prefix+"fdr"] = multipletests(stat[prefix+"p_val"], method="bonferroni")[1]
+
+    adata = apply_filters(adata, [stat], fdr_cut, A_cut, st_cut,prefix=prefix)
+
+    return adata if copy else None
+
+
+def gt_fun_exp(data):
     sdf = data[0]
     sdf["exp"] = data[1]
 
@@ -305,23 +344,54 @@ def gt_fun(data):
     return [pval, max(pr) - min(pr)]
 
 
-def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut):
+def gt_fun_var(df):
+    global rmgcv
+    global rstats
+
+    m = rmgcv.gam(Formula("var~s(t,k=5)"), data=df)
+    res=dict({"d": m[5][0], "df": m[42][0], "p": rmgcv.predict_gam(m)})
+
+    m0 = rmgcv.gam(Formula("var~1"), data=df)
+
+
+    mdl = [res]
+    mdf = pd.concat(list(map(lambda x: pd.DataFrame([x["d"], x["df"]]), mdl)), axis=1).T
+    mdf.columns = ["d", "df"]
+
+    odf = sum(mdf["df"]) - mdf.shape[0]
+
+    if sum(mdf["d"]) == 0:
+        fstat = 0
+    else:
+        fstat = (m0[5][0] - sum(mdf["d"])) / (m0[42][0] - odf) / (sum(mdf["d"]) / odf)
+
+    df_res0 = m0[42][0]
+    df_res_odf = df_res0 - odf
+    pval = rstats.pf(fstat, df_res_odf, odf, lower_tail=False)[0]
+
+
+    pr = np.concatenate(list(map(lambda x: x["p"], mdl)))
+
+    return [pval, max(pr) - min(pr)]
+
+
+def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut,prefix=""):
     n_map = len(stat_assoc_l)
     if n_map > 1:
         stat_assoc = pd.DataFrame(
             {
-                "p_val": pd.concat(
-                    list(map(lambda x: x["p_val"], stat_assoc_l)), axis=1
+                prefix+"p_val": pd.concat(
+                    list(map(lambda x: x[prefix+"p_val"], stat_assoc_l)), axis=1
                 ).median(axis=1),
-                "A": pd.concat(
-                    list(map(lambda x: x["A"], stat_assoc_l)), axis=1
+                prefix+"A": pd.concat(
+                    list(map(lambda x: x[prefix+"A"], stat_assoc_l)), axis=1
                 ).median(axis=1),
-                "fdr": pd.concat(
-                    list(map(lambda x: x["fdr"], stat_assoc_l)), axis=1
+                prefix+"fdr": pd.concat(
+                    list(map(lambda x: x[prefix+"fdr"], stat_assoc_l)), axis=1
                 ).median(axis=1),
-                "st": pd.concat(
+                prefix+"st": pd.concat(
                     list(
-                        map(lambda x: (x.fdr < fdr_cut) & (x.A > A_cut), stat_assoc_l)
+                        map(lambda x: (x[prefix+"fdr"] < fdr_cut) & (x[prefix+"A"] > A_cut), stat_assoc_l)
                     ),
                     axis=1,
                 ).sum(axis=1)
@@ -330,25 +400,20 @@ def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut):
         )
     else:
         stat_assoc = stat_assoc_l[0]
-        stat_assoc["st"] = ((stat_assoc.fdr < fdr_cut) & (stat_assoc.A > A_cut)) * 1
+        stat_assoc[prefix+"st"] = ((stat_assoc[prefix+"fdr"] < fdr_cut) & (stat_assoc[prefix+"A"] > A_cut)) * 1
 
     # saving results
-    stat_assoc["signi"] = stat_assoc["st"] > st_cut
+    stat_assoc[prefix+"signi"] = stat_assoc[prefix+"st"] > st_cut
 
     if set(stat_assoc.columns.tolist()).issubset(adata.var.columns):
         adata.var[stat_assoc.columns] = stat_assoc
     else:
         adata.var = pd.concat([adata.var, stat_assoc], axis=1)
 
-    # save all tests for each mapping
     names = np.arange(len(stat_assoc_l)).astype(str).tolist()
-    # todict=list(map(lambda x: x.to_dict(),stat_assoc_l))
 
-    # todict=list(map(lambda x: dict(zip(["features"]+x.columns.tolist(),
-    #                                   [x.index.tolist()]+x.to_numpy().T.tolist())),
-    #                stat_assoc_l))
 
     dictionary = dict(zip(names, stat_assoc_l))
-    adata.uns["stat_assoc_list"] = dictionary
+    adata.uns[prefix+"stat_assoc_list"] = dictionary
 
     return adata
