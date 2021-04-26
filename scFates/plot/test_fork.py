@@ -1,8 +1,9 @@
 from anndata import AnnData
 import matplotlib.pyplot as plt
 from matplotlib.colors import rgb2hex
-from typing import Union
+from typing import Union, Optional
 import numpy as np
+from scanpy.plotting._utils import savefig_or_show
 
 
 def test_fork(
@@ -10,6 +11,8 @@ def test_fork(
     root_milestone,
     milestones,
     col: Union[None, list] = None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
 ):
 
     if "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"]) == 1:
@@ -52,3 +55,5 @@ def test_fork(
     xticks = ax.get_xticks()
     xticks = [str(int(xt)) if xt.is_integer() else str(xt) for xt in np.abs(xticks)]
     ax.set_xticklabels(xticks)
+
+    savefig_or_show("test_fork", show=show, save=save)

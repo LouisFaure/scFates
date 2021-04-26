@@ -3,13 +3,13 @@ from anndata import AnnData
 from typing import Union, Optional
 import igraph
 import numpy as np
+from scanpy.plotting._utils import savefig_or_show
 
 
 def critical_transition(
     adata: AnnData,
     root_milestone,
     milestones,
-    path: Union["all", "pre-fork", str] = "all",
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -60,22 +60,9 @@ def critical_transition(
         fork = np.array(img.vs["name"], dtype=int)[fork]
         fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
 
-    if len(milestones) == 1:
-        dfs = [adata.uns[name]["critical transition"]]
-        dfs = dict(zip(milestones, dfs))
-    elif (path == "all") & (len(milestones) > 1):
-        dfs = [adata.uns[name]["critical transition"][m] for m in milestones]
-        dfs = dict(zip(milestones, dfs))
-    elif path != "all":
-        dfs = [adata.uns[name]["critical transition"][path]]
-        dfs = dict(zip([path], dfs))
 
-    for p, df in dfs.items():
-        col = (
-            "grey"
-            if p == "pre-fork"
-            else mlsc[adata.obs.milestones.cat.categories == p][0]
-        )
+    for p, df in adata.uns[name]["critical transition"].items():
+        col = mlsc[adata.obs.milestones.cat.categories == p][0]
         plt.scatter(df.t, df.ci, c=col)
         plt.plot(df.t, df.lowess, c=col)
         plt.fill_between(
@@ -88,5 +75,7 @@ def critical_transition(
         )
         plt.xlabel("pseudotime")
         plt.ylabel("critical index")
-        if (len(milestones) > 1) & (path != "pre-fork"):
+        if (len(milestones) > 1):
             plt.axvline(fork_t, color="black")
+
+    savefig_or_show("critical_transition", show=show, save=save)

@@ -23,6 +23,12 @@ import sys
 
 sys.setrecursionlimit(10000)
 
+from rpy2.robjects import pandas2ri, Formula
+from rpy2.robjects.packages import importr
+import rpy2.rinterface
+pandas2ri.activate()
+
+rmgcv = importr("mgcv")
 
 def slide_cells(
     adata: AnnData,
@@ -593,7 +599,7 @@ def synchro_path(
             delayed(synchro_map)(i)
             for i in tqdm(range(n_map), desc="    multi mapping ")
         )
-        allcor_r = pd.concat(stat)
+        allcor_r = pd.concat(stats)
         if perm:
             permut = True
             stats = Parallel(n_jobs=n_jobs)(
@@ -792,8 +798,7 @@ def critical_transition(
     root = dct[root_milestone]
 
     name = root_milestone + "->" + "<>".join(milestones)
-
-    def critical_map(m):
+    def critical_map(m,gamma,loess_span):
         df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
@@ -853,108 +858,63 @@ def critical_transition(
             )
 
             cells_l = [s[2] for s in stats]
-            stats = [[s[0],s[1]] for s in stats]
-            return [pd.DataFrame(stats, columns=("t", "ci")),cells_l]
+            stats = pd.DataFrame([[s[0],s[1]] for s in stats], columns=("t", "ci"))
+
+            l = loess(stats.t, stats.ci, span=loess_span)
+            l.fit()
+            pred = l.predict(stats.t, stderror=True)
+            conf = pred.confidence()
+
+            stats["lowess"] = pred.values
+            stats["ll"] = conf.lower
+            stats["ul"] = conf.upper
+
+            cell_stats=[pd.DataFrame(np.repeat(stats.ci[i].reshape(-1, 1),
+                                               len(cells_l[i])),
+                                     index=cells_l[i],
+                                     columns=["ci"]) for i in range(stats.shape[0])]
+
+            cell_stats = pd.concat(cell_stats, axis=1)
+            cell_stats = cell_stats.T.groupby(level=0).mean().T
+            cell_stats["t"]=adata.obs.loc[cell_stats.index,"t"]
+            global rmgcv
+            m = rmgcv.gam(
+                Formula("ci~s(t,bs='ts')"),
+                data=cell_stats,
+                gamma=gamma,
+            )
+
+            cell_stats["fit"]=rmgcv.predict_gam(m)
+            del cell_stats["t"]
+            return stats,cell_stats
 
         res = list(map(critical_milestone, leaves))
 
-        dfs = []
-        res_slide=[]
-        for l in range(len(leaves)):
-            dfs = dfs+ [pd.DataFrame(np.repeat(res[l][0].ci[i].reshape(-1, 1),
-                                          len(res[l][1][i])),
-                                index=res[l][1][i],columns=["ci"]) for i in range(len(res[l][1]))]
-            res_slide=res_slide+[res[l][0]]
-        df = pd.concat(dfs, axis=1)
-        df = df.T.groupby(level=0).mean().T
+        cell_stats = pd.concat([r[1] for r in res]).groupby(level=0).mean()
 
-        res_slide = pd.concat(res_slide,keys=milestones)
+        res_slide = dict(zip(milestones,[r[0] for r in res]))
 
-        return (df,res_slide)
+        return cell_stats, res_slide
 
     if n_map == 1:
-        df,allci = critical_map(0)
+        df,res_slide = critical_map(0,gamma,loess_span)
     else:
         #TODO: adapt multimapping
         stats = Parallel(n_jobs=n_jobs)(
             delayed(critical_map)(i)
             for i in tqdm(range(n_map), file=sys.stdout, desc="    multi mapping ")
         )
-        allci = pd.concat(stats)
+        res_slides = pd.concat(stats)
 
-    logg.info("    loess fitting and predicting cell-wise CI")
 
-    def loess_fit(data, span):
-        l = loess(data.t, data.ci, span=span)
-        l.fit()
-        pred = l.predict(data.t, stderror=True)
-        conf = pred.confidence()
-
-        data["lowess"] = pred.values
-        data["ll"] = conf.lower
-        data["ul"] = conf.upper
-
-        return data, l
-
-    if len(milestones) == 1:
-        df_l, l = loess_fit(allci.loc[milestones[0]], loess_span)
-        if name in adata.uns:
-            adata.uns[name]["critical transition"] = df_l
-        else:
-            adata.uns[name] = {"critical transition": df_l}
-        cells = getpath(img, root, graph["tips"], leaves[0], graph, adata.obs).index
-
+    if name in adata.uns:
+        adata.uns[name]["critical transition"] = res_slide
     else:
-        dfs = [loess_fit(allci.loc[m], loess_span)[0] for m in milestones]
-        fork = list(
-            set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
-                img.get_shortest_paths(str(root), str(leaves[1]))[0]
-            )
-        )
-        fork = np.array(img.vs["name"], dtype=int)[fork]
-        fork = adata.uns["graph"]["pp_info"].loc[fork, "time"].idxmax()
-        fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"]
-        pre_fork = pd.concat(
-            [allci.loc[m][allci.loc[m].t < fork_t] for m in milestones]
-        )
-        df_l = pre_fork.sort_values("t").reset_index(drop=True)
-        df_l, l = loess_fit(df_l, loess_span)
-        dfs = dfs + [df_l]
-        if name in adata.uns:
-            adata.uns[name]["critical transition"] = dict(
-                zip(milestones + ["pre-fork"], dfs)
-            )
-        else:
-            adata.uns[name] = {
-                "critical transition": dict(zip(milestones + ["pre-fork"], dfs))
-            }
+        adata.uns[name] = {"critical transition": res_slide}
 
-        cells = getpath(img, root, graph["tips"], fork, graph, adata.obs).index
+    adata.obs.loc[df.index, name + " CI"] = df.ci.values
 
-    adata.obs[name + " CI"] = np.nan
-    adata.obs.loc[df.index, name + " CI"] = df.values.ravel()
-
-    df["t"]=adata.obs.loc[df.index,"t"].values
-
-    from rpy2.robjects import pandas2ri, Formula
-    from rpy2.robjects.packages import importr
-    import rpy2.rinterface
-    pandas2ri.activate()
-
-    rmgcv = importr("mgcv")
-
-    m = rmgcv.gam(
-        Formula("ci~s(t,bs='ts')"),
-        data=df,
-        gamma=gamma,
-    )
-
-    df_f=pd.Series(
-        rmgcv.predict_gam(m), index=df.index
-    )
-
-    adata.obs[name + " CI fitted"] = np.nan
-    adata.obs.loc[df_f.index, name + " CI fitted"] = df_f.values
+    adata.obs.loc[df.index, name + " CI fitted"] = df.fit.values
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -1062,7 +1022,7 @@ def criticality_drivers(
         res[~np.isnan(pvals)].pval.values, alpha=0.05, method="fdr_bh"
     )[1]
 
-    adata.uns[name]["criticality drivers"] = res.sort_values("corr", ascending=False)
+    adata.uns[name]["criticality drivers"] = res.sort_values("corr", ascending=False).dropna()
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
