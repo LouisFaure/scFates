@@ -206,9 +206,7 @@ def test_pipeline():
         loess_span=0.5,
     )
 
-    CI_lowess = adata.uns["80->25<>19"]["critical transition"]["pre-fork"]["lowess"][
-        :5
-    ].values
+    CI_lowess = adata.uns["80->25<>19"]["critical transition"]["25"]["lowess"][:5].values
 
     scf.pl.critical_transition(adata, root_milestone="80", milestones=["25", "19"])
 
@@ -267,12 +265,12 @@ def test_pipeline():
 
     assert np.allclose(
         CI_lowess,
-        [0.83870565, 0.83870565, 0.77834635, 0.77834635, 0.73800016],
+        [0.67226054, 0.67321935, 0.67406923, 0.67481306, 0.67568304],
         rtol=1e-2,
     )
 
     assert np.allclose(
         CI_corr,
-        [0.1158179, 0.06283165, 0.03986905, -0.02398251, -0.02990104],
+        [-0.01677734, -0.0424511 , -0.09958371, -0.19341488, -0.42026877],
         rtol=1e-2,
     )
