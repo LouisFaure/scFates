@@ -952,7 +952,7 @@ def criticality_drivers(
     """\
     Calculates correlations between genes and local critical transition index along trajectory.
 
-    Fisher test for the correlations comes from CellRank implementation.
+    Fisher test for the correlations comes from CellRank function `cr.tl.lineages_drivers`.
 
     Parameters
     ----------
