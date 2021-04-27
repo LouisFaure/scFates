@@ -121,7 +121,7 @@ def trends(
         adata_temp = adata.copy()
 
     graph = adata.uns["graph"]
-    
+
     if milestones is not None:
         adata = adata.copy()
         dct = graph["milestones"]
@@ -173,7 +173,7 @@ def trends(
         if module is not None:
             sel = (df.branch == branch) & (df.module == module)
         else:
-            sel = (df.branch == branch)  
+            sel = df.branch == branch
         features = df.loc[sel, :].index
 
     fitted = pd.DataFrame(

@@ -60,7 +60,6 @@ def critical_transition(
         fork = np.array(img.vs["name"], dtype=int)[fork]
         fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
 
-
     for p, df in adata.uns[name]["critical transition"].items():
         col = mlsc[adata.obs.milestones.cat.categories == p][0]
         plt.scatter(df.t, df.ci, c=col)
@@ -75,7 +74,7 @@ def critical_transition(
         )
         plt.xlabel("pseudotime")
         plt.ylabel("critical index")
-        if (len(milestones) > 1):
+        if len(milestones) > 1:
             plt.axvline(fork_t, color="black")
 
     savefig_or_show("critical_transition", show=show, save=save)

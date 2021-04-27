@@ -26,9 +26,11 @@ sys.setrecursionlimit(10000)
 from rpy2.robjects import pandas2ri, Formula
 from rpy2.robjects.packages import importr
 import rpy2.rinterface
+
 pandas2ri.activate()
 
 rmgcv = importr("mgcv")
+
 
 def slide_cells(
     adata: AnnData,
@@ -709,7 +711,7 @@ def critical_transition(
     w=100,
     step=30,
     loess_span=0.4,
-    gamma = 1.5,
+    gamma=1.5,
     copy: bool = False,
 ):
     """\
@@ -798,7 +800,8 @@ def critical_transition(
     root = dct[root_milestone]
 
     name = root_milestone + "->" + "<>".join(milestones)
-    def critical_map(m,gamma,loess_span):
+
+    def critical_map(m, gamma, loess_span):
         df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
@@ -845,7 +848,7 @@ def critical_transition(
                 R_cell = np.nanmean(
                     np.abs(cor_cell[np.triu_indices(cor_cell.shape[0], k=1)])
                 )
-                return [adata.obs.t[cls].max(), R_gene / R_cell,cls]
+                return [adata.obs.t[cls].max(), R_gene / R_cell, cls]
 
             stats = Parallel(n_jobs=n_jobs)(
                 delayed(slide_path)(i)
@@ -858,7 +861,7 @@ def critical_transition(
             )
 
             cells_l = [s[2] for s in stats]
-            stats = pd.DataFrame([[s[0],s[1]] for s in stats], columns=("t", "ci"))
+            stats = pd.DataFrame([[s[0], s[1]] for s in stats], columns=("t", "ci"))
 
             l = loess(stats.t, stats.ci, span=loess_span)
             l.fit()
@@ -869,14 +872,18 @@ def critical_transition(
             stats["ll"] = conf.lower
             stats["ul"] = conf.upper
 
-            cell_stats=[pd.DataFrame(np.repeat(stats.ci[i].reshape(-1, 1),
-                                               len(cells_l[i])),
-                                     index=cells_l[i],
-                                     columns=["ci"]) for i in range(stats.shape[0])]
+            cell_stats = [
+                pd.DataFrame(
+                    np.repeat(stats.ci[i].reshape(-1, 1), len(cells_l[i])),
+                    index=cells_l[i],
+                    columns=["ci"],
+                )
+                for i in range(stats.shape[0])
+            ]
 
             cell_stats = pd.concat(cell_stats, axis=1)
             cell_stats = cell_stats.T.groupby(level=0).mean().T
-            cell_stats["t"]=adata.obs.loc[cell_stats.index,"t"]
+            cell_stats["t"] = adata.obs.loc[cell_stats.index, "t"]
             global rmgcv
             m = rmgcv.gam(
                 Formula("ci~s(t,bs='ts')"),
@@ -884,28 +891,27 @@ def critical_transition(
                 gamma=gamma,
             )
 
-            cell_stats["fit"]=rmgcv.predict_gam(m)
+            cell_stats["fit"] = rmgcv.predict_gam(m)
             del cell_stats["t"]
-            return stats,cell_stats
+            return stats, cell_stats
 
         res = list(map(critical_milestone, leaves))
 
         cell_stats = pd.concat([r[1] for r in res]).groupby(level=0).mean()
 
-        res_slide = dict(zip(milestones,[r[0] for r in res]))
+        res_slide = dict(zip(milestones, [r[0] for r in res]))
 
         return cell_stats, res_slide
 
     if n_map == 1:
-        df,res_slide = critical_map(0,gamma,loess_span)
+        df, res_slide = critical_map(0, gamma, loess_span)
     else:
-        #TODO: adapt multimapping
+        # TODO: adapt multimapping
         stats = Parallel(n_jobs=n_jobs)(
             delayed(critical_map)(i)
             for i in tqdm(range(n_map), file=sys.stdout, desc="    multi mapping ")
         )
         res_slides = pd.concat(stats)
-
 
     if name in adata.uns:
         adata.uns[name]["critical transition"] = res_slide
@@ -922,8 +928,12 @@ def critical_transition(
         "    .uns['"
         + name
         + "']['critical transition'], df containing local critical transition index per window of cells.\n"
-        "    .obs['"+ name+ " CI'], local critical transition index projected onto cells.\n"
-        "    .obs['"+ name+ " CI fitted'], GAM fit of local critical transition index projected onto cells."
+        "    .obs['"
+        + name
+        + " CI'], local critical transition index projected onto cells.\n"
+        "    .obs['"
+        + name
+        + " CI fitted'], GAM fit of local critical transition index projected onto cells."
     )
 
     return adata if copy else None
@@ -941,7 +951,7 @@ def criticality_drivers(
 
     """\
     Calculates correlations between genes and local critical transition index along trajectory.
-    
+
     Fisher test for the correlations comes from CellRank implementation.
 
     Parameters
@@ -1006,7 +1016,7 @@ def criticality_drivers(
     ### Fisher testing of correlations, CellRank implementation
     ### https://github.com/theislab/cellrank/blob/b6345d5e6dd148317782ffc9a9f96793ad98ead9/cellrank/tl/_utils.py#L488
     ### Copyright (c) 2019, Theis Lab
-    
+
     confidence_level = 0.95
     n = adata.shape[0]
     ql = 1 - confidence_level - (1 - confidence_level) / 2.0
@@ -1019,7 +1029,7 @@ def criticality_drivers(
     corr_ci_low = np.tanh(mean - z * se)
     corr_ci_high = np.tanh(mean + z * se)
     pvals = 2 * norm.cdf(-np.abs(z_score))
-    
+
     ###
 
     res = pd.DataFrame(
@@ -1032,7 +1042,9 @@ def criticality_drivers(
         res[~np.isnan(pvals)].pval.values, alpha=0.05, method="fdr_bh"
     )[1]
 
-    adata.uns[name]["criticality drivers"] = res.sort_values("corr", ascending=False).dropna()
+    adata.uns[name]["criticality drivers"] = res.sort_values(
+        "corr", ascending=False
+    ).dropna()
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(

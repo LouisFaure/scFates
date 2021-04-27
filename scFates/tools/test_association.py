@@ -305,23 +305,31 @@ def gt_fun_exp(data):
     return [pval, max(pr) - min(pr)]
 
 
-def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut,prefix=""):
+def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut, prefix=""):
     n_map = len(stat_assoc_l)
     if n_map > 1:
         stat_assoc = pd.DataFrame(
             {
-                prefix+"p_val": pd.concat(
-                    list(map(lambda x: x[prefix+"p_val"], stat_assoc_l)), axis=1
+                prefix
+                + "p_val": pd.concat(
+                    list(map(lambda x: x[prefix + "p_val"], stat_assoc_l)), axis=1
                 ).median(axis=1),
-                prefix+"A": pd.concat(
-                    list(map(lambda x: x[prefix+"A"], stat_assoc_l)), axis=1
+                prefix
+                + "A": pd.concat(
+                    list(map(lambda x: x[prefix + "A"], stat_assoc_l)), axis=1
                 ).median(axis=1),
-                prefix+"fdr": pd.concat(
-                    list(map(lambda x: x[prefix+"fdr"], stat_assoc_l)), axis=1
+                prefix
+                + "fdr": pd.concat(
+                    list(map(lambda x: x[prefix + "fdr"], stat_assoc_l)), axis=1
                 ).median(axis=1),
-                prefix+"st": pd.concat(
+                prefix
+                + "st": pd.concat(
                     list(
-                        map(lambda x: (x[prefix+"fdr"] < fdr_cut) & (x[prefix+"A"] > A_cut), stat_assoc_l)
+                        map(
+                            lambda x: (x[prefix + "fdr"] < fdr_cut)
+                            & (x[prefix + "A"] > A_cut),
+                            stat_assoc_l,
+                        )
                     ),
                     axis=1,
                 ).sum(axis=1)
@@ -330,10 +338,12 @@ def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut,prefix=""):
         )
     else:
         stat_assoc = stat_assoc_l[0]
-        stat_assoc[prefix+"st"] = ((stat_assoc[prefix+"fdr"] < fdr_cut) & (stat_assoc[prefix+"A"] > A_cut)) * 1
+        stat_assoc[prefix + "st"] = (
+            (stat_assoc[prefix + "fdr"] < fdr_cut) & (stat_assoc[prefix + "A"] > A_cut)
+        ) * 1
 
     # saving results
-    stat_assoc[prefix+"signi"] = stat_assoc[prefix+"st"] > st_cut
+    stat_assoc[prefix + "signi"] = stat_assoc[prefix + "st"] > st_cut
 
     if set(stat_assoc.columns.tolist()).issubset(adata.var.columns):
         adata.var[stat_assoc.columns] = stat_assoc
@@ -342,8 +352,7 @@ def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut,prefix=""):
 
     names = np.arange(len(stat_assoc_l)).astype(str).tolist()
 
-
     dictionary = dict(zip(names, stat_assoc_l))
-    adata.uns[prefix+"stat_assoc_list"] = dictionary
+    adata.uns[prefix + "stat_assoc_list"] = dictionary
 
     return adata
