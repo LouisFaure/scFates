@@ -15,6 +15,7 @@ jobs:
             coverage run -m pytest scFates/tests/test_w_plots.py
             coverage report -m
             coverage xml
+          no-output-timeout: 30m
       - codecov/upload:
             file: ./coverage.xml
             token: 77169eda-e862-4980-bd44-2a5d3f5e2c2c
