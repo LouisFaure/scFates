@@ -36,9 +36,9 @@ Citations
 
 Code for PPT inference and most of downstream pseudotime analysis was initially written in a [R package](https://github.com/hms-dbmi/crestree) by Ruslan Soldatov for the following paper:
 
-Soldatov, R., Kaucka, M., Kastriti, M. E., Petersen, J., Chontorotzea, T., Englmaier, L., … Adameyko, I. (2019).
-Spatiotemporal structure of cell fate decisions in murine neural crest.
-Science, 364(6444).
+    Soldatov, R., Kaucka, M., Kastriti, M. E., Petersen, J., Chontorotzea, T., Englmaier, L., … Adameyko, I. (2019).
+    Spatiotemporal structure of cell fate decisions in murine neural crest.
+    Science, 364(6444).
 
 if you are using ElPiGraph, please cite:
 
@@ -61,7 +61,7 @@ Palantir python tool provides a great dimensionality reduction method, which usu
 Installation
 ============
 
-scFates 0.2.1 is now available on pypi, you can install it using:
+scFates is available on pypi, you can install it using:
 
     pip install -U scFates
 
@@ -74,7 +74,7 @@ or the latest development version can be installed from GitHub:
 scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data.
 Elpigraph needs to be installed from its github repository with the following command:
 
-	pip install git+https://github.com/j-bac/elpigraph-python.git
+    pip install git+https://github.com/j-bac/elpigraph-python.git
 
 ## R dependencies
 
@@ -94,4 +94,4 @@ scFates can be run on a [Docker container](https://hub.docker.com/repository/doc
 which provide a gpu enabled environment with Jupyter Lab. Use the following command:
 
     docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-        louisfaure/scfates:version-0.2.1
+        louisfaure/scfates:version-{version.number}
