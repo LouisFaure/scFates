@@ -28,6 +28,10 @@ References
 .. [Bargaje17] Bargaje *et al. (2017)*,
     *Cell population structure prior to bifurcation predicts efficiency of directed differentiation in human induced pluripotent cells*,
     `PNAS <https://doi.org/10.1073/pnas.1621412114>`__.
+    
+.. [Lange21] Lange *et al. (2021)*,
+    *CellRank for directed single-cell fate mapping*,
+    `biorxiv <https://www.biorxiv.org/content/10.1101/2020.10.19.345983v2>`__.
 
 .. image:: _static/scFates_logo_dark.png
    :width: 1%

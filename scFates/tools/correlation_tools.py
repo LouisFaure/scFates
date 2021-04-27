@@ -933,6 +933,7 @@ def criticality_drivers(
     adata: AnnData,
     root_milestone,
     milestones,
+    confidence_level: float = 0.95,
     layer: Optional[str] = None,
     device="cpu",
     copy: bool = False,
@@ -940,6 +941,8 @@ def criticality_drivers(
 
     """\
     Calculates correlations between genes and local critical transition index along trajectory.
+    
+    Fisher test for the correlations comes from CellRank implementation.
 
     Parameters
     ----------
@@ -949,6 +952,8 @@ def criticality_drivers(
         tip defining progenitor branch.
     milestones
         tips defining the progenies branches.
+    confidence_level
+        correlation confidence interval.
     layer
         adata layer to use for estimates.
     device
@@ -998,7 +1003,10 @@ def criticality_drivers(
         X = csr_gpu(X) if sparse.issparse(X) else cp.array(X)
         corr = cor_mat_gpu(X, cp.array(CI).reshape(-1, 1)).ravel().get()
 
-    # fisher testing of correlations, code borrowed from CellRank :)
+    ### Fisher testing of correlations, CellRank implementation
+    ### https://github.com/theislab/cellrank/blob/b6345d5e6dd148317782ffc9a9f96793ad98ead9/cellrank/tl/_utils.py#L488
+    ### Copyright (c) 2019, Theis Lab
+    
     confidence_level = 0.95
     n = adata.shape[0]
     ql = 1 - confidence_level - (1 - confidence_level) / 2.0
@@ -1011,6 +1019,8 @@ def criticality_drivers(
     corr_ci_low = np.tanh(mean - z * se)
     corr_ci_high = np.tanh(mean + z * se)
     pvals = 2 * norm.cdf(-np.abs(z_score))
+    
+    ###
 
     res = pd.DataFrame(
         {"corr": corr, "pval": pvals, "ci_low": corr_ci_low, "ci_high": corr_ci_high},

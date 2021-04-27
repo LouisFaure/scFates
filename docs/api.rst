@@ -35,6 +35,7 @@ Tree inference
     tl.cleanup
     tl.root
     tl.roots
+    tl.cellrank_to_tree
 
 Pseudotime analysis
 -------------------

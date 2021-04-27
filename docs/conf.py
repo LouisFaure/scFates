@@ -72,6 +72,7 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx_autodoc_typehints",
     "readthedocs_ext.readthedocs",
+    "sphinx_copybutton",
     "nbsphinx",
 ]
 
