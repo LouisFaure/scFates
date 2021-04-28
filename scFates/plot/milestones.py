@@ -40,7 +40,7 @@ def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
     img.add_vertices(vals.astype(str))
     img.add_edges(edges)
 
-    img.vs["label"] = adata.obs.milestones.cat.categories.tolist()
+    img.vs["label"] = keys
 
     dct = dict(zip(img.vs["name"], img.vs["label"]))
     if roots is None:
