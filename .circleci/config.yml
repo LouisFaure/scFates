@@ -3,12 +3,35 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@1.0.2
 
+commands:
+  check-diff-files-to-halt:
+    description: "halt CircleCI step if there is any files matched with a pattern"
+    parameters:
+      pattern:
+        description: "regular expression to filter changed files"
+        type: string
+    steps:
+      - run: |
+          # `|| :` is used to avoid exit when there is no changed file which matches the pattern.
+          changed_files=$(bash ./ci/get_changed_files.sh "<< parameters.pattern >>" || :)
+          num_changed_files=$(echo "$changed_files" | grep -v -e '^\s*$' | wc -l || :)
+          if [[ $num_changed_files -eq 0 ]] ; then
+            echo "Halt due to no changed file"
+            circleci step halt
+          else
+            echo "Changed files match the pattern << parameters.pattern >>"
+            echo $changed_files
+          fi
+
+
 jobs:
   scfatesenv:
     docker:
       - image: louisfaure/scfates:env-ready
     steps:
       - checkout
+      - check-diff-files-to-halt:
+          pattern: "^scFates/"
       - run:
           command: |
             pip install -U pip
