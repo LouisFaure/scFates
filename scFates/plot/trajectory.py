@@ -314,7 +314,7 @@ def trajectory(
         return np.average(vals, weights=R[:, i])
 
     node_vals = np.array(list(map(get_nval, range(R.shape[1]))))
-    seg_val = node_vals[edges].mean(axis=1)
+    seg_val = node_vals[np.array(edges)].mean(axis=1)
 
     if perc_seg is not None:
         min_v, max_v = np.percentile(seg_val, perc_seg)
