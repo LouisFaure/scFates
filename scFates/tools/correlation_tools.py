@@ -702,17 +702,18 @@ def synchro_path(
 
 
 def critical_transition(
-    adata: AnnData,
-    root_milestone,
-    milestones,
-    n_map=1,
-    n_jobs=None,
-    layer: Optional[str] = None,
-    w=100,
-    step=30,
-    loess_span=0.4,
-    gamma=1.5,
-    copy: bool = False,
+        adata: AnnData,
+        root_milestone,
+        milestones,
+        n_map=1,
+        n_jobs=None,
+        layer: Optional[str] = None,
+        w=100,
+        step=30,
+        loess_span=0.4,
+        gamma=1.5,
+        n_points=200,
+        copy: bool = False,
 ):
     """\
     Estimates local critical transition index along the trajectory.
@@ -839,7 +840,7 @@ def critical_transition(
             mat = mat.iloc[adata.obs.t[mat.index].argsort().values, :]
 
             def slide_path(i):
-                cls = mat.index[i : (i + w)]
+                cls = mat.index[i: (i + w)]
                 cor_gene = mat.loc[cls, :].corr(method="pearson").values
                 cor_cell = mat.loc[cls, :].T.corr(method="pearson").values
                 R_gene = np.nanmean(
@@ -884,16 +885,18 @@ def critical_transition(
             cell_stats = pd.concat(cell_stats, axis=1)
             cell_stats = cell_stats.T.groupby(level=0).mean().T
             cell_stats["t"] = adata.obs.loc[cell_stats.index, "t"]
-            global rmgcv
-            m = rmgcv.gam(
-                Formula("ci~s(t,bs='ts')"),
-                data=cell_stats,
-                gamma=gamma,
-            )
 
-            cell_stats["fit"] = rmgcv.predict_gam(m)
+            l = loess(cell_stats.t, cell_stats.ci, span=loess_span)
+            pred = l.predict(cell_stats.t, stderror=True)
+
+            cell_stats["fit"] = pred.values
+
+            lspaced_stats = pd.DataFrame({"t":np.linspace(cell_stats["t"].min(), cell_stats["t"].max(), n_points)})
+            pred = l.predict(lspaced_stats.t, stderror=True)
+            lspaced_stats["fit"] = pred.values
+
             del cell_stats["t"]
-            return stats, cell_stats
+            return stats, cell_stats, lspaced_stats
 
         res = list(map(critical_milestone, leaves))
 
@@ -901,10 +904,12 @@ def critical_transition(
 
         res_slide = dict(zip(milestones, [r[0] for r in res]))
 
-        return cell_stats, res_slide
+        res_lspaced = dict(zip(milestones, [r[2] for r in res]))
+
+        return cell_stats, res_slide, res_lspaced
 
     if n_map == 1:
-        df, res_slide = critical_map(0, gamma, loess_span)
+        df, res_slide, res_lspaced = critical_map(0, gamma, loess_span)
     else:
         # TODO: adapt multimapping
         stats = Parallel(n_jobs=n_jobs)(
@@ -914,9 +919,9 @@ def critical_transition(
         res_slides = pd.concat(stats)
 
     if name in adata.uns:
-        adata.uns[name]["critical transition"] = res_slide
+        adata.uns[name]["critical transition"] = {"LOESS": res_slide, "eLOESS": res_lspaced}
     else:
-        adata.uns[name] = {"critical transition": res_slide}
+        adata.uns[name] = {"critical transition": {"LOESS": res_slide, "eLOESS": res_lspaced}}
 
     adata.obs.loc[df.index, name + " CI"] = df.ci.values
 
@@ -928,10 +933,10 @@ def critical_transition(
         "    .uns['"
         + name
         + "']['critical transition'], df containing local critical transition index per window of cells.\n"
-        "    .obs['"
+          "    .obs['"
         + name
         + " CI'], local critical transition index projected onto cells.\n"
-        "    .obs['"
+          "    .obs['"
         + name
         + " CI fitted'], GAM fit of local critical transition index projected onto cells."
     )
