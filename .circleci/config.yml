@@ -13,7 +13,7 @@ commands:
     steps:
       - run: |
           # `|| :` is used to avoid exit when there is no changed file which matches the pattern.
-          changed_files=$(bash ./ci/get_changed_files.sh "<< parameters.pattern >>" || :)
+          changed_files=$(bash ./.circleci/check_diff.sh "<< parameters.pattern >>" || :)
           num_changed_files=$(echo "$changed_files" | grep -v -e '^\s*$' | wc -l || :)
           if [[ $num_changed_files -eq 0 ]] ; then
             echo "Halt due to no changed file"
