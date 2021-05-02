@@ -55,8 +55,8 @@ def test_fork(
     xticks = ax.get_xticks()
     xticks = [str(int(xt)) if xt.is_integer() else str(xt) for xt in np.abs(xticks)]
     ax.set_xticklabels(xticks)
-    
-    if show==False:
+
+    if show == False:
         return ax
-    
+
     savefig_or_show("test_fork", show=show, save=save)

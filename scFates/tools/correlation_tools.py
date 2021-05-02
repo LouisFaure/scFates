@@ -702,18 +702,18 @@ def synchro_path(
 
 
 def critical_transition(
-        adata: AnnData,
-        root_milestone,
-        milestones,
-        n_map=1,
-        n_jobs=None,
-        layer: Optional[str] = None,
-        w=100,
-        step=30,
-        loess_span=0.4,
-        gamma=1.5,
-        n_points=200,
-        copy: bool = False,
+    adata: AnnData,
+    root_milestone,
+    milestones,
+    n_map=1,
+    n_jobs=None,
+    layer: Optional[str] = None,
+    w=100,
+    step=30,
+    loess_span=0.4,
+    gamma=1.5,
+    n_points=200,
+    copy: bool = False,
 ):
     """\
     Estimates local critical transition index along the trajectory.
@@ -840,7 +840,7 @@ def critical_transition(
             mat = mat.iloc[adata.obs.t[mat.index].argsort().values, :]
 
             def slide_path(i):
-                cls = mat.index[i: (i + w)]
+                cls = mat.index[i : (i + w)]
                 cor_gene = mat.loc[cls, :].corr(method="pearson").values
                 cor_cell = mat.loc[cls, :].T.corr(method="pearson").values
                 R_gene = np.nanmean(
@@ -891,7 +891,13 @@ def critical_transition(
 
             cell_stats["fit"] = pred.values
 
-            lspaced_stats = pd.DataFrame({"t":np.linspace(cell_stats["t"].min(), cell_stats["t"].max(), n_points)})
+            lspaced_stats = pd.DataFrame(
+                {
+                    "t": np.linspace(
+                        cell_stats["t"].min(), cell_stats["t"].max(), n_points
+                    )
+                }
+            )
             pred = l.predict(lspaced_stats.t, stderror=True)
             lspaced_stats["fit"] = pred.values
 
@@ -919,9 +925,14 @@ def critical_transition(
         res_slides = pd.concat(stats)
 
     if name in adata.uns:
-        adata.uns[name]["critical transition"] = {"LOESS": res_slide, "eLOESS": res_lspaced}
+        adata.uns[name]["critical transition"] = {
+            "LOESS": res_slide,
+            "eLOESS": res_lspaced,
+        }
     else:
-        adata.uns[name] = {"critical transition": {"LOESS": res_slide, "eLOESS": res_lspaced}}
+        adata.uns[name] = {
+            "critical transition": {"LOESS": res_slide, "eLOESS": res_lspaced}
+        }
 
     adata.obs.loc[df.index, name + " CI"] = df.ci.values
 
@@ -933,10 +944,10 @@ def critical_transition(
         "    .uns['"
         + name
         + "']['critical transition'], df containing local critical transition index per window of cells.\n"
-          "    .obs['"
+        "    .obs['"
         + name
         + " CI'], local critical transition index projected onto cells.\n"
-          "    .obs['"
+        "    .obs['"
         + name
         + " CI fitted'], GAM fit of local critical transition index projected onto cells."
     )
