@@ -59,12 +59,13 @@ def critical_transition(
         )
         fork = np.array(img.vs["name"], dtype=int)[fork]
         fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
-
+    
+    fig, ax = plt.subplots()
     for p, df in adata.uns[name]["critical transition"].items():
         col = mlsc[adata.obs.milestones.cat.categories == p][0]
-        plt.scatter(df.t, df.ci, c=col)
-        plt.plot(df.t, df.lowess, c=col)
-        plt.fill_between(
+        ax.scatter(df.t, df.ci, c=col,zorder=10)
+        ax.plot(df.t, df.lowess, c=col)
+        ax.fill_between(
             df.t.values.tolist(),
             df.ll.tolist(),
             df.ul.tolist(),
@@ -72,9 +73,15 @@ def critical_transition(
             edgecolor=col,
             facecolor=col,
         )
-        plt.xlabel("pseudotime")
-        plt.ylabel("critical index")
+        ax.set_xlabel("pseudotime")
+        ax.set_ylabel("critical index")
         if len(milestones) > 1:
-            plt.axvline(fork_t, color="black")
+            ax.axvline(fork_t, color="black")
+            
+   
+    
 
     savefig_or_show("critical_transition", show=show, save=save)
+    
+    if show==False:
+        return ax
