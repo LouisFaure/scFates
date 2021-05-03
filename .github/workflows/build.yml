@@ -1,21 +1,19 @@
-name: Build
+name: Build and Test
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: push
 
 jobs:
-  build:
+  build_and_test:
 
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.7,3.8]
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -24,10 +22,8 @@ jobs:
       run: |
         sudo apt-get clean && sudo apt-get update
         sudo apt-get install -y r-base r-cran-mgcv
-        pip install --upgrade pip
-        pip install -r requirements.txt
         pip install cmake pytest mock git+https://github.com/j-bac/elpigraph-python.git
+        pip install .
     - name: Test with pytest
       run: |
-        pip install .
         pytest -s scFates/tests/test_wo_plots.py
