@@ -66,6 +66,7 @@ Bifurcation analysis
 .. autosummary::
     :toctree: .
 
+    tl.module_inclusion
     tl.slide_cells
     tl.slide_cors
     tl.synchro_path
