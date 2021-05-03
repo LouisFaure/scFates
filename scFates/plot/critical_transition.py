@@ -61,7 +61,7 @@ def critical_transition(
         fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
 
     fig, ax = plt.subplots()
-    for p, df in adata.uns[name]["critical transition"].items():
+    for p, df in adata.uns[name]["critical transition"]["LOESS"].items():
         col = mlsc[adata.obs.milestones.cat.categories == p][0]
         ax.scatter(df.t, df.ci, c=col, zorder=10)
         ax.plot(df.t, df.lowess, c=col)
