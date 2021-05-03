@@ -664,8 +664,11 @@ def get_activation(data):
 
     wins = pd.DataFrame(
         {
-            "start": [step * i for i in range(nwin * steps)] + subtree.t.min(),
-            "end": [step * i for i in range(nwin * steps)] + subtree.t.min() + window,
+            "start": np.array([step * i for i in range(nwin * steps)])
+            + subtree.t.min(),
+            "end": np.array([step * i for i in range(nwin * steps)])
+            + subtree.t.min()
+            + window,
         }
     )
     wins = wins.loc[wins.end < subtree.t.max()]
