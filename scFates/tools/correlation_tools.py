@@ -705,17 +705,74 @@ def module_inclusion(
     adata,
     root_milestone,
     milestones,
-    w=300,
-    step=30,
-    n_perm=10,
-    n_jobs=1,
-    alp=5,
-    autocor_cut=0.95,
-    iterations=15,
-    n_map=1,
+    w: int = 300,
+    step: int = 30,
+    n_perm: int = 10,
+    n_map: int = 1,
+    n_jobs: int = 1,
+    alp: int = 5,
+    autocor_cut: float = 0.95,
+    iterations: int = 15,
     parallel_mode: Union["window", "mappings"] = "window",
     identify_early_features: bool = True,
+    layer=None,
+    perm: bool = False,
+    winp: int = 10,
+    copy: bool = False,
 ):
+    """\
+    Estimates the pseudotime onset of a feature within its fate-specific module.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    w
+        local window, in number of cells, to estimate correlations.
+    step
+        steps, in number of cells, between local windows.
+    n_perm
+        number of permutations used to estimate the background local correlations.
+    n_map
+        number of probabilistic cells projection to use for estimates.
+    n_jobs
+        number of cpu processes to perform estimates (per mapping).
+    alp
+        parameter regulating stringency of inclusion event.
+    autocor_cut
+        cutoff on correlation of inclusion times between sequential iterations of the algorithm to stop it.
+    iterations
+        maximum number of iterations of the algorithm.
+    parallel_mode
+        whether to run in parallel over the windows of cells or the mappings.
+    identify_early_features
+        classify a feature as early if its inclusion pseudotime is before the bifurcation
+    layer
+        adata layer to use for estimates.
+    perm
+        do local estimates for locally permuted expression matrix.
+    winp
+        window of permutation in cells.
+    copy
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns subsetted or else subset (keeping only
+        significant features) and add fields to `adata`:
+
+        `.uns['root_milestone->milestoneA<>milestoneB']['module_inclusion']`
+            Dataframes ontaining inclusion timing for each gene (rows) in each probabilistic cells projection (columns).
+        `.uns['root_milestone->milestoneA<>milestoneB']['fork']`
+            Updated with 'inclusion' pseudotime column and 'module column if `identify_early_features=True`'
+    """
+
+    adata = adata.copy() if copy else adata
 
     logg.info("Calculating onset of features within their own module", reset=True)
 
@@ -806,7 +863,7 @@ def module_inclusion(
             cors = [r[0] for r in res]
             cors_p = [r[1] for r in res]
 
-            def corEvlo(cors, cors_p, logW):
+            def corEvol(cors, cors_p, logW):
                 cor_Ps = []
                 for i in range(len(cors)):
                     cor, cor_p = cors[i], cors_p[i]
@@ -853,7 +910,7 @@ def module_inclusion(
             i = 0
             auto_cor = 0
             while (autocor < autocor_cut) & (i <= iterations):
-                pMat = np.vstack(corEvlo(cors, cors_p, logW)).T
+                pMat = np.vstack(corEvol(cors, cors_p, logW)).T
                 sws = [switch_point(pMat[i, :], alp) for i in range(pMat.shape[0])]
                 sws = np.vstack(sws)
                 logW = pd.DataFrame(sws, index=geneset)
@@ -905,13 +962,9 @@ def module_inclusion(
 
     adata.uns[name]["module_inclusion"] = matSwitch
 
-    updated = ""
+    updated = "."
     if identify_early_features:
-        updated = (
-            "\n    .uns['"
-            + name
-            + "']['fork'] has been updated with the column 'module'."
-        )
+        updated = " and 'module'."
         fork = list(
             set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
                 img.get_shortest_paths(str(root), str(leaves[1]))[0]
@@ -942,9 +995,14 @@ def module_inclusion(
         "added \n"
         "    .uns['"
         + name
-        + "']['module_inclusion'], dict composed of milestone specifc dataframes containing inclusion timing for each gene (rows) in each probabilistic cells projection (columns)."
+        + "']['module_inclusion'], milestone specific dataframes containing inclusion timing for each gene in each probabilistic cells projection.\n"
+        + "    .uns['"
+        + name
+        + "']['fork'] has been updated with the column 'inclusion'"
         + updated
     )
+
+    return adata if copy else None
 
 
 def critical_transition(
