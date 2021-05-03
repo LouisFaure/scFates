@@ -701,6 +701,252 @@ def synchro_path(
     return adata if copy else None
 
 
+def module_inclusion(
+    adata,
+    root_milestone,
+    milestones,
+    w=300,
+    step=30,
+    n_perm=10,
+    n_jobs=1,
+    alp=5,
+    autocor_cut=0.95,
+    iterations=15,
+    n_map=1,
+    parallel_mode: Union["window", "mappings"] = "window",
+    identify_early_features: bool = True,
+):
+
+    logg.info("Calculating onset of features within their own module", reset=True)
+
+    graph = adata.uns["graph"]
+
+    edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
+    img = igraph.Graph()
+    img.add_vertices(
+        np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
+    )
+    img.add_edges(edges)
+
+    uns_temp = adata.uns.copy()
+
+    if "milestones_colors" in adata.uns:
+        mlsc = adata.uns["milestones_colors"].copy()
+
+    dct = graph["milestones"]
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+
+    leaves = list(map(lambda leave: dct[leave], milestones))
+    root = dct[root_milestone]
+
+    name = root_milestone + "->" + "<>".join(milestones)
+
+    def onset_map(m):
+        df = adata.uns["pseudotime_list"][str(m)]
+        edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
+        img = igraph.Graph()
+        img.add_vertices(
+            np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
+        )
+        img.add_edges(edges)
+
+        def run_path(milestone):
+            geneset = adata.uns[name]["fork"].index[
+                adata.uns[name]["fork"].branch == milestone
+            ]
+            cells = getpath(
+                img,
+                root,
+                graph["tips"],
+                adata.uns["graph"]["milestones"][milestone],
+                graph,
+                df,
+            )
+            cells = cells.sort_values("t").index
+
+            mat = pd.DataFrame(
+                adata[cells, geneset].X.A, index=cells, columns=geneset
+            ).T
+
+            ww = np.arange(0, len(cells) - w, step)
+            logW = pd.DataFrame(1, index=geneset, columns=range(len(ww)))
+
+            def slide_cor(i):
+                cls0 = cells[ww[i] : min(ww[i] + w - 1, len(cells))]
+                mat_1 = mat[cls0]
+                mat_2 = mat_1.copy()
+                mat_2[mat_2 != 0] = 1
+                mat_2 = mat_2.dot(mat_2.T)
+                mat_2[mat_2 < 10] = 0
+                mat_2[mat_2 >= 10] = 1
+                cor = mat_1.T.corr(method="spearman") * mat_2
+
+                def perm_mat():
+                    mat_perm = mat[cls0].apply(np.random.permutation, axis=0).values
+                    mat_perm = pd.DataFrame(mat_perm, columns=cls0)
+                    mat_perm_2 = mat_perm.copy()
+                    mat_perm_2[mat_perm_2 != 0] = 1
+                    mat_perm_2 = mat_perm_2.dot(mat_perm_2.T)
+                    mat_perm_2[mat_perm_2 < 10] = 0
+                    mat_perm_2[mat_perm_2 >= 10] = 1
+                    return mat_perm.T.corr(method="spearman") * mat_perm_2
+
+                allperm = [perm_mat() for i in range(n_perm)]
+
+                return cor, allperm
+
+            from joblib import Parallel, delayed
+
+            res = Parallel(n_jobs=n_jobs)(
+                delayed(slide_cor)(i)
+                for i in tqdm(range(len(ww)), disable=n_map > 1, file=sys.stdout)
+            )
+
+            cors = [r[0] for r in res]
+            cors_p = [r[1] for r in res]
+
+            def corEvlo(cors, cors_p, logW):
+                cor_Ps = []
+                for i in range(len(cors)):
+                    cor, cor_p = cors[i], cors_p[i]
+                    corTrue = (cor.T * logW.iloc[:, i]).mean(axis=0)
+                    cor_control = [
+                        (cor_p.T.values * logW.iloc[:, i].values).mean(axis=0)
+                        for cor_p in cor_p
+                    ]
+                    cor_Ps = cor_Ps + [
+                        np.array(
+                            [
+                                sum(
+                                    cor_c + np.random.uniform(0, 0.01, len(cor_c))
+                                    >= corTrue
+                                    for cor_c in cor_control
+                                )
+                            ]
+                        )
+                        / len(cor_control)
+                    ]
+                return cor_Ps
+
+            logList = []
+            autocor = 0
+
+            def switch_point(r, alp):
+                def logL(j):
+                    v = 0
+                    if j >= 2:
+                        v = v
+                    if j <= len(r):
+                        v = v + sum(
+                            -alp * r[j : len(r)] + np.log(alp / (1 - np.exp(-alp)))
+                        )
+
+                    return v
+
+                switch_point = np.argmax([logL(j) for j in range(len(r) + 1)])
+                n = len([logL(j) for j in range(len(r) + 1)])
+                return np.concatenate(
+                    [np.repeat(0, switch_point), np.repeat(1, n - switch_point - 1)]
+                )
+
+            i = 0
+            auto_cor = 0
+            while (autocor < autocor_cut) & (i <= iterations):
+                pMat = np.vstack(corEvlo(cors, cors_p, logW)).T
+                sws = [switch_point(pMat[i, :], alp) for i in range(pMat.shape[0])]
+                sws = np.vstack(sws)
+                logW = pd.DataFrame(sws, index=geneset)
+                logList = logList + [logW]
+
+                if i > 0:
+                    autocor = np.corrcoef(
+                        logList[i - 1].idxmax(axis=1), logList[i].idxmax(axis=1)
+                    )[1][0]
+
+                i = i + 1
+
+            incl_t = pd.Series(np.nan, index=logW.index)
+            logW = logW.loc[logW.sum(axis=1) != 0]
+
+            incl_t[logW.index] = [
+                adata.obs.t[cells[(pos * (step - 1)) : (pos * (step - 1) + w)]].mean()
+                for pos in logW.idxmax(axis=1)
+            ]
+            return incl_t
+
+        return [run_path(milestone) for milestone in milestones]
+
+    n_jobs_map = 1
+    parallel_mode = "mappings"
+    if parallel_mode == "mappings":
+        n_jobs_map = n_jobs
+        n_jobs = 1
+
+    stats = Parallel(n_jobs=n_jobs_map)(
+        delayed(onset_map)(i)
+        for i in tqdm(
+            range(n_map),
+            disable=n_map == 1,
+            file=sys.stdout,
+            desc="    multi mapping: ",
+        )
+    )
+
+    matSwitch = dict(
+        zip(
+            milestones,
+            [
+                pd.concat([s[0] for s in stats], axis=1),
+                pd.concat([s[1] for s in stats], axis=1),
+            ],
+        )
+    )
+
+    adata.uns[name]["module_inclusion"] = matSwitch
+
+    updated = ""
+    if identify_early_features:
+        updated = (
+            "\n    .uns['"
+            + name
+            + "']['fork'] has been updated with the column 'module'."
+        )
+        fork = list(
+            set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
+                img.get_shortest_paths(str(root), str(leaves[1]))[0]
+            )
+        )
+        fork = np.array(img.vs["name"], dtype=int)[fork]
+        fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
+
+        included = pd.concat([s[0] for s in stats], axis=1).mean(axis=1)
+        dfA = included[~np.isnan(included)].sort_values()
+        gA = dfA.index[dfA < fork_t]
+
+        included = pd.concat([s[1] for s in stats], axis=1).mean(axis=1)
+        dfB = included[~np.isnan(included)].sort_values()
+        gB = dfB.index[dfB < fork_t]
+
+        adata.uns[name]["fork"].loc[dfB.index, "inclusion"] = dfB.values
+        adata.uns[name]["fork"].loc[dfA.index, "inclusion"] = dfA.values
+
+        adata.uns[name]["fork"]["module"] = np.nan
+        adata.uns[name]["fork"].loc[dfB.index, "module"] = "late"
+        adata.uns[name]["fork"].loc[dfA.index, "module"] = "late"
+        adata.uns[name]["fork"].loc[gB, "module"] = "early"
+        adata.uns[name]["fork"].loc[gA, "module"] = "early"
+
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added \n"
+        "    .uns['"
+        + name
+        + "']['module_inclusion'], dict composed of milestone specifc dataframes containing inclusion timing for each gene (rows) in each probabilistic cells projection (columns)."
+        + updated
+    )
+
+
 def critical_transition(
     adata: AnnData,
     root_milestone,
