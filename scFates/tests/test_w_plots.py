@@ -206,7 +206,7 @@ def test_pipeline():
         loess_span=0.5,
     )
 
-    CI_lowess = adata.uns["80->25<>19"]["critical transition"]["25"]["lowess"][
+    CI_lowess = adata.uns["80->25<>19"]["critical transition"]["LOESS"]["25"]["lowess"][
         :5
     ].values
 
@@ -273,6 +273,6 @@ def test_pipeline():
 
     assert np.allclose(
         CI_corr,
-        [-0.01677734, -0.0424511, -0.09958371, -0.19341488, -0.42026877],
+        [-0.01154921, -0.03707902, -0.09560204, -0.20573824, -0.43346539],
         rtol=1e-2,
     )
