@@ -307,11 +307,13 @@ def trajectory(
     vals = pd.Series(
         _get_color_values(adata, color_seg, layer=layer_seg)[0], index=adata.obs_names
     )
-    R = adata.uns["graph"]["R"][~np.isnan(vals), :]  # in case of subsetted tree
+    R = pd.DataFrame(adata.uns["graph"]["R"],index=adata.uns["graph"]["cells_fitted"])
+    R = R.loc[adata.obs_names]
     vals = vals[~np.isnan(vals)]
+    R = R.loc[vals.index]
 
     def get_nval(i):
-        return np.average(vals, weights=R[:, i])
+        return np.average(vals, weights=R.loc[:, i])
 
     node_vals = np.array(list(map(get_nval, range(R.shape[1]))))
     seg_val = node_vals[np.array(edges)].mean(axis=1)
