@@ -987,10 +987,7 @@ def module_inclusion(
     matSwitch = dict(
         zip(
             milestones,
-            [
-                pd.concat([s[0] for s in stats], axis=1),
-                pd.concat([s[1] for s in stats], axis=1),
-            ],
+            [pd.concat([s[i] for s in stats], axis=1) for i in range(len(leaves))],
         )
     )
 
@@ -1002,31 +999,34 @@ def module_inclusion(
 
     updated = "."
     if perm == False:
-        fork = list(
-            set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
-                img.get_shortest_paths(str(root), str(leaves[1]))[0]
+        common_seg = list(
+            set.intersection(
+                *list(
+                    map(
+                        lambda l: set(img.get_shortest_paths(str(root), str(l))[0]),
+                        leaves,
+                    )
+                )
             )
         )
-        fork = np.array(img.vs["name"], dtype=int)[fork]
-        fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
+        common_seg = np.array(img.vs["name"], dtype=int)[common_seg]
+        fork_t = adata.uns["graph"]["pp_info"].loc[common_seg, "time"].max()
 
-        included = pd.concat([s[0] for s in stats], axis=1).mean(axis=1)
-        dfA = included[~np.isnan(included)].sort_values()
-        gA = dfA.index[dfA < fork_t]
+        g_early = []
+        dfs = []
+        for i in range(len(leaves)):
+            included = pd.concat([s[i] for s in stats], axis=1).mean(axis=1)
+            df = included[~np.isnan(included)].sort_values()
+            adata.uns[name]["fork"].loc[df.index, "inclusion"] = df.values
+            g_early = g_early + [df.index[df < fork_t]]
+            dfs = dfs + [df]
 
-        included = pd.concat([s[1] for s in stats], axis=1).mean(axis=1)
-        dfB = included[~np.isnan(included)].sort_values()
-        gB = dfB.index[dfB < fork_t]
-
-        adata.uns[name]["fork"].loc[dfB.index, "inclusion"] = dfB.values
-        adata.uns[name]["fork"].loc[dfA.index, "inclusion"] = dfA.values
-    if identify_early_features:
-        updated = " and 'module'."
-        adata.uns[name]["fork"]["module"] = np.nan
-        adata.uns[name]["fork"].loc[dfB.index, "module"] = "late"
-        adata.uns[name]["fork"].loc[dfA.index, "module"] = "late"
-        adata.uns[name]["fork"].loc[gB, "module"] = "early"
-        adata.uns[name]["fork"].loc[gA, "module"] = "early"
+        if identify_early_features:
+            updated = " and 'module'."
+            adata.uns[name]["fork"]["module"] = np.nan
+            for df, g_e in zip(dfs, g_early):
+                adata.uns[name]["fork"].loc[df.index, "module"] = "late"
+                adata.uns[name]["fork"].loc[g_e, "module"] = "early"
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
