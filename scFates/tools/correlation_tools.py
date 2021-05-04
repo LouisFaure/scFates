@@ -599,14 +599,16 @@ def synchro_path(
         permut = False
         stats = Parallel(n_jobs=n_jobs)(
             delayed(synchro_map)(i)
-            for i in tqdm(range(n_map), desc="    multi mapping ")
+            for i in tqdm(range(n_map), file=sys.stdout, desc="    multi mapping ")
         )
         allcor_r = pd.concat(stats)
         if perm:
             permut = True
             stats = Parallel(n_jobs=n_jobs)(
                 delayed(synchro_map)(i)
-                for i in tqdm(range(n_map), desc="    multi mapping permutations")
+                for i in tqdm(
+                    range(n_map), file=sys.stdout, desc="    multi mapping permutations"
+                )
             )
             allcor_p = pd.concat(stats)
             allcor = pd.concat([allcor_r, allcor_p], keys=["real", "permuted"])
@@ -808,7 +810,7 @@ def module_inclusion(
         )
         img.add_edges(edges)
 
-        def run_path(milestone):
+        def onset_milestone(milestone):
             geneset = adata.uns[name]["fork"].index[
                 adata.uns[name]["fork"].branch == milestone
             ]
@@ -822,15 +824,44 @@ def module_inclusion(
             )
             cells = cells.sort_values("t").index
 
-            mat = pd.DataFrame(
-                adata[cells, geneset].X.A, index=cells, columns=geneset
-            ).T
+            if layer is None:
+                if sparse.issparse(adata.X):
+                    mat = pd.DataFrame(
+                        adata[cells, geneset].X.A, index=cells, columns=geneset
+                    )
+                else:
+                    mat = pd.DataFrame(
+                        adata[cells, geneset].X, index=cells, columns=geneset
+                    )
+            else:
+                if sparse.issparse(adata.layers[layer]):
+                    mat = pd.DataFrame(
+                        adata[cells, geneset].layers[layer].A,
+                        index=cells,
+                        columns=geneset,
+                    )
+                else:
+                    mat = pd.DataFrame(
+                        adata[cells, geneset].layers[layer],
+                        index=cells,
+                        columns=genesets,
+                    )
 
+            if perm:
+                winperm = np.min([winp, mat.shape[0]])
+                for i in np.arange(0, mat.shape[0] - winperm, winperm):
+                    mat.iloc[i : (i + winperm), :] = (
+                        mat.iloc[i : (i + winperm), :]
+                        .apply(np.random.permutation, axis=0)
+                        .values
+                    )
+
+            mat = mat.T
             ww = np.arange(0, len(cells) - w, step)
             logW = pd.DataFrame(1, index=geneset, columns=range(len(ww)))
 
             def slide_cor(i):
-                cls0 = cells[ww[i] : min(ww[i] + w - 1, len(cells))]
+                cls0 = mat.columns[ww[i] : min(ww[i] + w - 1, len(cells))]
                 mat_1 = mat[cls0]
                 mat_2 = mat_1.copy()
                 mat_2[mat_2 != 0] = 1
@@ -853,11 +884,14 @@ def module_inclusion(
 
                 return cor, allperm
 
-            from joblib import Parallel, delayed
-
             res = Parallel(n_jobs=n_jobs)(
                 delayed(slide_cor)(i)
-                for i in tqdm(range(len(ww)), disable=n_map > 1, file=sys.stdout)
+                for i in tqdm(
+                    range(len(ww)),
+                    disable=n_map > 1,
+                    file=sys.stdout,
+                    desc="    leave " + milestone,
+                )
             )
 
             cors = [r[0] for r in res]
@@ -932,10 +966,9 @@ def module_inclusion(
             ]
             return incl_t
 
-        return [run_path(milestone) for milestone in milestones]
+        return [onset_milestone(milestone) for milestone in milestones]
 
     n_jobs_map = 1
-    parallel_mode = "mappings"
     if parallel_mode == "mappings":
         n_jobs_map = n_jobs
         n_jobs = 1
@@ -960,11 +993,14 @@ def module_inclusion(
         )
     )
 
-    adata.uns[name]["module_inclusion"] = matSwitch
+    perm_str = "_perm" if perm else ""
+    if perm:
+        identify_early_features = False
+
+    adata.uns[name]["module_inclusion" + perm_str] = matSwitch
 
     updated = "."
-    if identify_early_features:
-        updated = " and 'module'."
+    if perm == False:
         fork = list(
             set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
                 img.get_shortest_paths(str(root), str(leaves[1]))[0]
@@ -983,7 +1019,8 @@ def module_inclusion(
 
         adata.uns[name]["fork"].loc[dfB.index, "inclusion"] = dfB.values
         adata.uns[name]["fork"].loc[dfA.index, "inclusion"] = dfA.values
-
+    if identify_early_features:
+        updated = " and 'module'."
         adata.uns[name]["fork"]["module"] = np.nan
         adata.uns[name]["fork"].loc[dfB.index, "module"] = "late"
         adata.uns[name]["fork"].loc[dfA.index, "module"] = "late"
@@ -995,7 +1032,9 @@ def module_inclusion(
         "added \n"
         "    .uns['"
         + name
-        + "']['module_inclusion'], milestone specific dataframes containing inclusion timing for each gene in each probabilistic cells projection.\n"
+        + "']['module_inclusion"
+        + perm_str
+        + "'], milestone specific dataframes containing inclusion timing for each gene in each probabilistic cells projection.\n"
         + "    .uns['"
         + name
         + "']['fork'] has been updated with the column 'inclusion'"
@@ -1153,7 +1192,7 @@ def critical_transition(
                 R_cell = np.nanmean(
                     np.abs(cor_cell[np.triu_indices(cor_cell.shape[0], k=1)])
                 )
-                return [adata.obs.t[cls].max(), R_gene / R_cell, cls]
+                return [adata.obs.t[cls].mean(), R_gene / R_cell, cls]
 
             stats = Parallel(n_jobs=n_jobs)(
                 delayed(slide_path)(i)

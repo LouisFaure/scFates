@@ -6,7 +6,9 @@ import igraph
 import numpy as np
 
 
-def module_inclusion(adata, root_milestone, milestones, bins, branch, figsize=(6, 5)):
+def module_inclusion(
+    adata, root_milestone, milestones, bins, branch, figsize=(6, 5), perm=False
+):
 
     graph = adata.uns["graph"]
 
@@ -31,7 +33,8 @@ def module_inclusion(adata, root_milestone, milestones, bins, branch, figsize=(6
 
     name = root_milestone + "->" + "<>".join(milestones)
 
-    matSwitch = adata.uns[name]["module_inclusion"]
+    perm_str = "_perm" if perm else ""
+    matSwitch = adata.uns[name]["module_inclusion" + perm_str]
 
     fork = list(
         set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
