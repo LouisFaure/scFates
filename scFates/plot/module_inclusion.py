@@ -65,6 +65,8 @@ def module_inclusion(
         xticklabels=np.round(sg, 2),
         cmap=gg,
         ax=ax,
+        vmin=0,
+        vmax=1,
         cbar_kws={"shrink": 0.3, "anchor": (0, 0)},
     )
     ax.set_xlabel("pseudotime")

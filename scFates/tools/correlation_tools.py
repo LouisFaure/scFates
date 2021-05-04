@@ -586,6 +586,7 @@ def synchro_path(
                         tqdm(
                             np.arange(0, mat.shape[0] - w, step),
                             disable=n_map > 1,
+                            file=sys.stdout,
                             desc="    leave " + str(keys[vals == leave][0]),
                         ),
                     )
