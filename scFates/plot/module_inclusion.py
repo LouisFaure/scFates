@@ -72,7 +72,7 @@ def module_inclusion(adata, root_milestone, milestones, bins, branch, figsize=(6
     ax.axvline(x=hm.shape[1], color="k", linewidth=2)
 
     ax.axvline(
-        fork_t / (matSwitch["Granule"].max().max() / bins),
+        fork_t / (matSwitch[branch].max().max() / bins),
         color="k",
         linestyle="dashed",
     )

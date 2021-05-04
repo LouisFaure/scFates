@@ -1263,6 +1263,7 @@ def criticality_drivers(
     adata: AnnData,
     root_milestone,
     milestones,
+    t_span,
     confidence_level: float = 0.95,
     layer: Optional[str] = None,
     device="cpu",
@@ -1282,6 +1283,8 @@ def criticality_drivers(
         tip defining progenitor branch.
     milestones
         tips defining the progenies branches.
+    t_span
+        restrict correlations to a window of pseudotime
     confidence_level
         correlation confidence interval.
     layer
@@ -1312,13 +1315,21 @@ def criticality_drivers(
     name = root_milestone + "->" + "<>".join(milestones)
     obs_name = name + " CI fitted"
 
-    X = adata[~np.isnan(adata.obs[obs_name])].X
-    CI = adata[~np.isnan(adata.obs[obs_name])].obs[obs_name].values
+    if t_span is None:
+        cells = adata.obs_names[~np.isnan(adata.obs[obs_name])]
+    else:
+        cells = adata.obs_names[
+            (~np.isnan(adata.obs[obs_name]))
+            & (adata.obs.t > t_span[0])
+            & (adata.obs.t < t_span[1])
+        ]
+
+    CI = adata[cells].obs[obs_name].values
 
     if layer is None:
-        X = adata[~np.isnan(adata.obs[obs_name])].X
+        X = adata[cells].X
     else:
-        X = adata[~np.isnan(adata.obs[obs_name])].layers[layer]
+        X = adata[cells].layers[layer]
 
     if device == "cpu":
         from .utils import cor_mat_cpu

@@ -26,4 +26,4 @@ jobs:
         pip install .
     - name: Test with pytest
       run: |
-        pytest -s scFates/tests/test_wo_plots.py
+        pytest -s scFates/tests/test_w_plots.py
