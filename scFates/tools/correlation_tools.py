@@ -1263,7 +1263,7 @@ def criticality_drivers(
     adata: AnnData,
     root_milestone,
     milestones,
-    t_span,
+    t_span=None,
     confidence_level: float = 0.95,
     layer: Optional[str] = None,
     device="cpu",
