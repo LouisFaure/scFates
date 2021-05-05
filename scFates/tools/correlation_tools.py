@@ -713,7 +713,7 @@ def module_inclusion(
     n_perm: int = 10,
     n_map: int = 1,
     n_jobs: int = 1,
-    alp: int = 5,
+    alp: int = 10,
     autocor_cut: float = 0.95,
     iterations: int = 15,
     parallel_mode: Union["window", "mappings"] = "window",
