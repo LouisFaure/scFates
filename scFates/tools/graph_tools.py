@@ -988,7 +988,7 @@ def cleanup(
     return adata if copy else None
 
 
-def root(adata: AnnData, root: int, copy: bool = False):
+def root(adata: AnnData, root: Union[int, str], copy: bool = False):
     """\
     Define the root of the trajectory.
 
@@ -997,7 +997,7 @@ def root(adata: AnnData, root: int, copy: bool = False):
     adata
         Annotated data matrix.
     root
-        Id of the tip of the fork to be considered as a root.
+        Either an Id (int) of the tip of the fork to be considered as a root. Or a key (str) from obs (such as CytoTRACE) for automatic selection.
     copy
         Return a copy instead of writing to adata.
     Returns
@@ -1021,6 +1021,18 @@ def root(adata: AnnData, root: int, copy: bool = False):
         )
 
     graph = adata.uns["graph"]
+
+    if type(root) == str:
+        logg.info(
+            "automatic root selection using .obs['" + root + "'] values", time=False
+        )
+        avgs = list(
+            map(
+                lambda n: np.average(adata.obs[root], weights=graph["R"][:, n]),
+                range(graph["R"].shape[1]),
+            )
+        )
+        root = np.argmax(np.array(avgs))
 
     from sklearn.metrics import pairwise_distances
 
@@ -1081,7 +1093,11 @@ def root(adata: AnnData, root: int, copy: bool = False):
 
     adata.uns["graph"] = graph
 
-    logg.info("root selected", time=False, end=" " if settings.verbosity > 2 else "\n")
+    logg.info(
+        "node " + str(root) + " selected as a root",
+        time=False,
+        end=" " if settings.verbosity > 2 else "\n",
+    )
     logg.hint(
         "added\n"
         "    .uns['graph']['root'] selected root.\n"
@@ -1103,6 +1119,8 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
         Annotated data matrix.
     roots
         list of tips or forks to be considered a roots.
+    meeting
+         node ID of the meeting point fo the two converging paths.
     copy
         Return a copy instead of writing to adata.
     Returns

@@ -26,6 +26,7 @@ def graph(
     color_cells: Union[str, None] = None,
     tips: bool = True,
     forks: bool = True,
+    nodes: Optional[List] = [],
     ax=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -49,6 +50,8 @@ def graph(
         display tip ids.
     forks
         display fork ids.
+    nodes
+        display any node id.
     ax
         Add plot to existing ax
     show
@@ -125,6 +128,17 @@ def graph(
             ax.annotate(
                 fork,
                 (proj[fork, 0], proj[fork, 1]),
+                ha="center",
+                va="center",
+                xytext=(-8, 8),
+                textcoords="offset points",
+                bbox=bbox,
+            )
+    if nodes:
+        for node in nodes:
+            ax.annotate(
+                node,
+                (proj[node, 0], proj[node, 1]),
                 ha="center",
                 va="center",
                 xytext=(-8, 8),
@@ -307,7 +321,7 @@ def trajectory(
     vals = pd.Series(
         _get_color_values(adata, color_seg, layer=layer_seg)[0], index=adata.obs_names
     )
-    R = pd.DataFrame(adata.uns["graph"]["R"],index=adata.uns["graph"]["cells_fitted"])
+    R = pd.DataFrame(adata.uns["graph"]["R"], index=adata.uns["graph"]["cells_fitted"])
     R = R.loc[adata.obs_names]
     vals = vals[~np.isnan(vals)]
     R = R.loc[vals.index]
