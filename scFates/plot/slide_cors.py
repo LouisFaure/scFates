@@ -107,6 +107,10 @@ def slide_cors(
 
     if win_keep is not None:
         freqs = [freqs[i] for i in win_keep]
+        corA = corA.iloc[:, win_keep]
+        corB = corB.iloc[:, win_keep]
+        corA.columns = np.arange(len(win_keep)).astype(str)
+        corB.columns = np.arange(len(win_keep)).astype(str)
     nwin = len(freqs)
     fig, axs = plt.subplots(2, nwin, figsize=(nwin * 3, 6))
 

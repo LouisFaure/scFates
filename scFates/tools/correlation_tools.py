@@ -987,7 +987,14 @@ def module_inclusion(
     matSwitch = dict(
         zip(
             milestones,
-            [pd.concat([s[i] for s in stats], axis=1) for i in range(len(leaves))],
+            [
+                pd.concat(
+                    [s[i] for s in stats],
+                    axis=1,
+                    keys=np.arange(len([s[i] for s in stats])).astype(str),
+                )
+                for i in range(len(leaves))
+            ],
         )
     )
 
