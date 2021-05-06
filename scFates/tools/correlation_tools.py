@@ -515,7 +515,8 @@ def synchro_path(
         genesets = np.concatenate([genesetA, genesetB])
 
         def synchro_milestone(leave):
-            cells = getpath(img, root, graph["tips"], leave, graph, df).index
+            cells = getpath(img, root, graph["tips"], leave, graph, df)
+            cells = cells.sort_values("t").index
 
             if layer is None:
                 if sparse.issparse(adata.X):
@@ -539,8 +540,6 @@ def synchro_path(
                         index=cells,
                         columns=genesets,
                     )
-
-            mat = mat.iloc[adata.obs.t[mat.index].argsort().values, :]
 
             if permut == True:
                 winperm = np.min([winp, mat.shape[0]])
@@ -688,6 +687,24 @@ def synchro_path(
 
     adata.uns = uns_temp
 
+    allcor = dict(
+        zip(
+            allcor.index.levels[0],
+            [
+                dict(
+                    zip(
+                        allcor.loc[l1].index.levels[0],
+                        [
+                            allcor.loc[l1].loc[l2]
+                            for l2 in allcor.loc[l1].index.levels[0]
+                        ],
+                    )
+                )
+                for l1 in allcor.index.levels[0]
+            ],
+        )
+    )
+
     adata.uns[name]["synchro"] = allcor
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
@@ -695,7 +712,7 @@ def synchro_path(
         "added \n"
         "    .uns['"
         + name
-        + "']['syncho'], mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.\n"
+        + "']['synchro'], mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.\n"
         "    .obs['inter_cor "
         + name
         + "'], loess fit of inter-module mean local gene-gene correlations prior to bifurcation."
