@@ -68,9 +68,9 @@ def module_inclusion(
         .values
     )
 
-    c_mil = np.array(mlsc)[
-        np.argwhere(adata.obs.milestones.cat.categories == milestones)
-    ]
+    c_mil = np.array(mlsc)[np.argwhere(adata.obs.milestones.cat.categories == branch)][
+        0
+    ][0]
     gg = LinearSegmentedColormap.from_list("", ["lightgrey", c_mil])
 
     # Set up the matplotlib figure

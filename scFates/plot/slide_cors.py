@@ -80,11 +80,11 @@ def slide_cors(
                     (bif["branch"] == milestones[1]).values
                     & (bif["module"] == "early").values
                 ]
-        corA = adata.uns[name]["corAB"].loc[milestones[0]].copy()
-        corB = adata.uns[name]["corAB"].loc[milestones[1]].copy()
+        corA = adata.uns[name]["corAB"][milestones[0]].copy()
+        corB = adata.uns[name]["corAB"][milestones[1]].copy()
     elif len(milestones) == 1:
-        corA = adata.uns[name]["corAB"].loc["A"].copy()
-        corB = adata.uns[name]["corAB"].loc["B"].copy()
+        corA = adata.uns[name]["corAB"]["A"].copy()
+        corB = adata.uns[name]["corAB"]["B"].copy()
 
     groupsA = np.ones(corA.shape[0])
     groupsA[corA.index.isin(genesetB)] = 2

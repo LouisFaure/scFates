@@ -403,7 +403,9 @@ def slide_cors(
     corAB.columns = [str(c) for c in corAB.columns]
 
     adata.uns = uns_temp
-    adata.uns[name]["corAB"] = corAB
+    adata.uns[name]["corAB"] = dict(
+        zip(corAB.index.levels[0], [corAB.loc[l] for l in corAB.index.levels[0]])
+    )
 
     logg.hint(
         "added \n" "    .uns['" + name + "']['corAB'], gene-gene correlation modules."
