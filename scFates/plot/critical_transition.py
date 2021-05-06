@@ -10,6 +10,7 @@ def critical_transition(
     adata: AnnData,
     root_milestone,
     milestones,
+    col: Union[str, None] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -62,8 +63,8 @@ def critical_transition(
 
     fig, ax = plt.subplots()
     for p, df in adata.uns[name]["critical transition"]["LOESS"].items():
-        col = mlsc[adata.obs.milestones.cat.categories == p][0]
-        ax.scatter(df.t, df.ci, c=col, zorder=10)
+        col = mlsc[adata.obs.milestones.cat.categories == p][0] if col is None else col
+        ax.plot(df.t, df.ci, "+", c=col, zorder=10, alpha=0.3)
         ax.plot(df.t, df.lowess, c=col)
         ax.fill_between(
             df.t.values.tolist(),
