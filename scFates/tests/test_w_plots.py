@@ -165,7 +165,7 @@ def test_pipeline():
     scf.tl.slide_cells(adata, root_milestone="80", milestones=["25"], win=200)
 
     scf.tl.slide_cors(adata, root_milestone="80", milestones=["25", "19"])
-    corAB = adata.uns["80->25<>19"]["corAB"].loc["19"].iloc[0, :5].values
+    corAB = adata.uns["80->25<>19"]["corAB"]["19"].iloc[0, :5].values
 
     scf.tl.slide_cors(
         adata,
