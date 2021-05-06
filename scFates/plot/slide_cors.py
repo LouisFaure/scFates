@@ -125,6 +125,7 @@ def slide_cors(
             s=10,
             c=freq[np.argsort(freq)],
             cmap=gr,
+            rasterized=True,
         )
         axs[0, i].grid(b=None)
         axs[0, i].set_xticks([])
@@ -146,6 +147,7 @@ def slide_cors(
                 corB.loc[genesets[j], str(i)],
                 color=c_mil[j],
                 alpha=0.5,
+                rasterized=True,
             )
         rep = (
             np.corrcoef(groupsA, corA.iloc[:, i])[0][1]

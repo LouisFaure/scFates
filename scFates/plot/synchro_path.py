@@ -107,11 +107,7 @@ def synchro_path(
                 nmaps = res.n_map.unique()
                 if len(nmaps) == 1:
                     axs[i].plot(
-                        res.t.values,
-                        res[cc],
-                        "+",
-                        c=col,
-                        alpha=0.5,
+                        res.t.values, res[cc], "+", c=col, alpha=0.5, rasterized=True
                     )
                 else:
                     for m in nmaps:
@@ -120,12 +116,9 @@ def synchro_path(
                             res.loc[res.n_map == m][cc],
                             c=col,
                             alpha=0.1,
+                            rasterized=True,
                         )
-                axs[i].plot(
-                    res.t.values,
-                    lowess,
-                    c=col,
-                )
+                axs[i].plot(res.t.values, lowess, c=col, rasterized=True)
                 axs[i].fill_between(
                     res.t.values.tolist(),
                     ll.tolist(),
@@ -133,6 +126,7 @@ def synchro_path(
                     alpha=0.33,
                     edgecolor=col,
                     facecolor=col,
+                    rasterized=True,
                 )
                 axs[i].axvline(fork_t, color="black")
                 axs[i].axhline(0, linestyle="dashed", color="grey", zorder=0)
