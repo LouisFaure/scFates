@@ -712,6 +712,7 @@ def module_inclusion(
     step: int = 30,
     n_perm: int = 10,
     n_map: int = 1,
+    map_cutoff: float = 0.8,
     n_jobs: int = 1,
     alp: int = 10,
     autocor_cut: float = 0.95,
@@ -742,8 +743,10 @@ def module_inclusion(
         number of permutations used to estimate the background local correlations.
     n_map
         number of probabilistic cells projection to use for estimates.
+    map_cutoff
+        proportion of mapping in which inclusion pseudotimne was found for a given feature to keep it.
     n_jobs
-        number of cpu processes to perform estimates (per mapping).
+        number of cpu processes to perform estimates.
     alp
         parameter regulating stringency of inclusion event.
     autocor_cut
@@ -1001,6 +1004,10 @@ def module_inclusion(
     perm_str = "_perm" if perm else ""
     if perm:
         identify_early_features = False
+
+    for m in milestones:
+        props = 1 - np.isnan(matSwitch[m]).sum(axis=1) / n_map
+        matSwitch[m] = matSwitch[m].loc[props > map_cutoff]
 
     adata.uns[name]["module_inclusion" + perm_str] = matSwitch
 
