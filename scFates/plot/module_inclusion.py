@@ -1,3 +1,4 @@
+from typing import Union
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import hex2color
@@ -7,7 +8,14 @@ import numpy as np
 
 
 def module_inclusion(
-    adata, root_milestone, milestones, bins, branch, figsize=(6, 5), perm=False
+    adata,
+    root_milestone,
+    milestones,
+    bins: int,
+    branch: str,
+    figsize: tuple = (6, 5),
+    max_t: Union["fork", "max"] = "max",
+    perm: bool = False,
 ):
 
     graph = adata.uns["graph"]
@@ -44,8 +52,10 @@ def module_inclusion(
     fork = np.array(img.vs["name"], dtype=int)[fork]
     fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
 
-    sg = np.linspace(0, matSwitch[branch].max().max(), bins)
+    maxt = fork_t if max_t == "fork" else matSwitch[branch].max().max()
+    sg = np.linspace(0, maxt, bins)
     sort = matSwitch[branch].mean(axis=1).sort_values()
+    sort = sort[sort < maxt] if max_t == "fork" else sort
     sort = sort[~np.isnan(sort)].index
     matSwitch[branch] = matSwitch[branch].loc[sort]
     hm = np.vstack(
@@ -54,7 +64,7 @@ def module_inclusion(
         .values
     )
 
-    gg = LinearSegmentedColormap.from_list("", ["lightgrey", "#787F3A"])
+    gg = LinearSegmentedColormap.from_list("", ["lightgrey", "#006400"])
 
     # Set up the matplotlib figure
     f, ax = plt.subplots(figsize=figsize)
@@ -76,8 +86,9 @@ def module_inclusion(
     ax.axvline(x=0, color="k", linewidth=2)
     ax.axvline(x=hm.shape[1], color="k", linewidth=2)
 
-    ax.axvline(
-        fork_t / (matSwitch[branch].max().max() / bins),
-        color="k",
-        linestyle="dashed",
-    )
+    if max_t == "max":
+        ax.axvline(
+            fork_t / (matSwitch[branch].max().max() / bins),
+            color="k",
+            linestyle="dashed",
+        )

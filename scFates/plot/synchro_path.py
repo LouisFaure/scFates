@@ -74,7 +74,7 @@ def synchro_path(
     fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
 
     allcor = adata.uns[name]["synchro"]
-    runs = pd.DataFrame(allcor.to_records())["level_0"].unique()
+    runs = ["real", "permuted"] if len(list(allcor.keys())) == 2 else ["real"]
 
     fig, axs = plt.subplots(3, len(runs), figsize=(len(runs) * 6, 6))
     fig.subplots_adjust(hspace=0.05, wspace=0.025, top=0.95)
@@ -90,10 +90,11 @@ def synchro_path(
 
     axs = axs.ravel(order="F")
 
-    for r in range(len(runs)):
+    for run in runs:
         for cc in ["corAA", "corBB", "corAB"]:
             for mil in milestones:
-                res = allcor.loc[runs[r]].loc[mil]
+                res = allcor[run][mil]
+                res.sort_values("t", inplace=True)
                 l = loess(res.t, res[cc], span=loess_span)
                 l.fit()
                 pred = l.predict(res.t, stderror=True)
@@ -103,13 +104,23 @@ def synchro_path(
                 ll = conf.lower
                 ul = conf.upper
                 col = mlsc[adata.obs.milestones.cat.categories == mil][0]
-                axs[i].plot(
-                    res.t.values,
-                    res[cc],
-                    "+",
-                    c=col,
-                    alpha=0.5,
-                )
+                nmaps = res.n_map.unique()
+                if len(nmaps) == 1:
+                    axs[i].plot(
+                        res.t.values,
+                        res[cc],
+                        "+",
+                        c=col,
+                        alpha=0.5,
+                    )
+                else:
+                    for m in nmaps:
+                        axs[i].plot(
+                            res.loc[res.n_map == m].t,
+                            res.loc[res.n_map == m][cc],
+                            c=col,
+                            alpha=0.1,
+                        )
                 axs[i].plot(
                     res.t.values,
                     lowess,
