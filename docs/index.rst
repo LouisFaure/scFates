@@ -1,13 +1,11 @@
-|PyPi| |Doc Badge| |CircleCI Badge| |TravisCI Badge| |codecov Badge| |License| |black|
+|PyPi| |Doc Badge| |Build Badge| |codecov Badge| |License| |black|
 
 .. |PyPi| image:: https://img.shields.io/pypi/v/scFates.svg
     :target: https://pypi.python.org/pypi/scFates/
 .. |Doc Badge| image:: https://readthedocs.org/projects/scfates/badge/?version=latest
     :target: https://scfates.readthedocs.io/en/latest/
-.. |CircleCI Badge| image:: https://circleci.com/gh/LouisFaure/scFates.svg?style=shield
-    :target: https://circleci.com/gh/LouisFaure/scFates
-.. |TravisCI Badge| image:: https://api.travis-ci.com/LouisFaure/scFates.svg?branch=master
-    :target: https://travis-ci.com/github/LouisFaure/scFates
+.. |Build Badge| image:: https://github.com/LouisFaure/scFates/actions/workflows/build.yml/badge.svg
+    :target: https://github.com/LouisFaure/scFates/actions/workflows/build.yml
 .. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/LouisFaure/scFates
 .. |License| image:: https://img.shields.io/github/license/LouisFaure/scFates
