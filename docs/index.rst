@@ -39,16 +39,24 @@ Analysis key steps
 - identify branch-specific early activating features and probe their correlations prior to bifurcation.
 
 .. toctree::
+   :caption: Main
    :maxdepth: 2
    :hidden:
 
    installation
+   api
+   release_notes
+   references
+
+.. toctree::
+   :caption: Walkthroughs
+   :maxdepth: 2
+   :hidden:
+
    Basic_pseudotime_analysis
    Advanced_bifurcation_analysis
    Conversion_from_CellRank_pipeline
    Critical_Transition
-   api
-   references
 
 .. _scanpy: https://scanpy.readthedocs.io/
 .. _crestree: https://github.com/hms-dbmi/crestree
