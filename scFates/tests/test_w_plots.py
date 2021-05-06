@@ -195,7 +195,7 @@ def test_pipeline():
     scf.pl.synchro_path(
         adata, root_milestone="80", milestones=["25", "19"], loess_span=0.5
     )
-    syncAB = adata.uns["80->25<>19"]["synchro"]["corAB"].values[:5]
+    syncAB = adata.uns["80->25<>19"]["synchro"]["real"]["25"]["corAB"].values[:5]
 
     scf.tl.critical_transition(
         adata,

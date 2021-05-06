@@ -1,10 +1,12 @@
-from typing import Union
+from typing import Union, Optional
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import hex2color
 import seaborn as sns
 import igraph
 import numpy as np
+
+from scanpy.plotting._utils import savefig_or_show
 
 
 def module_inclusion(
@@ -16,6 +18,8 @@ def module_inclusion(
     figsize: tuple = (6, 5),
     max_t: Union["fork", "max"] = "max",
     perm: bool = False,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
 ):
 
     graph = adata.uns["graph"]
@@ -64,7 +68,10 @@ def module_inclusion(
         .values
     )
 
-    gg = LinearSegmentedColormap.from_list("", ["lightgrey", "#006400"])
+    c_mil = np.array(mlsc)[
+        np.argwhere(adata.obs.milestones.cat.categories == milestones)
+    ]
+    gg = LinearSegmentedColormap.from_list("", ["lightgrey", c_mil])
 
     # Set up the matplotlib figure
     f, ax = plt.subplots(figsize=figsize)
@@ -92,3 +99,8 @@ def module_inclusion(
             color="k",
             linestyle="dashed",
         )
+
+    if show == False:
+        return axs
+
+    savefig_or_show("module_inclusion", show=show, save=save)
