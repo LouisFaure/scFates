@@ -1,4 +1,4 @@
-FROM rapidsai/rapidsai:0.17-cuda11.0-runtime-ubuntu18.04
+FROM rapidsai/rapidsai:0.18-cuda11.0-runtime-ubuntu20.04
 
 SHELL ["conda", "run", "-n", "rapids", "/bin/bash", "-c"]
 
@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends eog cmake gcc p
 
 ARG CACHEBUST=1
 
-RUN pip install git+https://github.com/LouisFaure/scFates && git clone https://github.com/LouisFaure/scFates && mv scFates/docs/notebooks/* . && rm -r scFates/
+RUN pip install scFates && git clone https://github.com/LouisFaure/scFates_notebooks
 
 CMD ["/bin/bash"]
 

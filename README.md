@@ -85,11 +85,13 @@ tree. Package is installed in an R session with the following command:
 ## GPU dependencies (optional)
 
 If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, for that you will need
-[Rapids 0.17](https://rapids.ai/) installed.
+[Rapids 0.18](https://rapids.ai/) installed. For that you will need a distinct conda environment:
+
+    conda create -n rapids-0.18 -c rapidsai -c nvidia -c conda-forge -c defaults rapids=0.18 python=3.8 cudatoolkit=11.0
 
 ## Docker container
 
-scFates can be run on a [Docker container](https://hub.docker.com/repository/docker/louisfaure/scfates) based on Rapids 0.17 container,
+scFates can be run on a [Docker container](https://hub.docker.com/repository/docker/louisfaure/scfates) based on Rapids 0.18 container,
 which provide a gpu enabled environment with Jupyter Lab. Use the following command:
 
     docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
