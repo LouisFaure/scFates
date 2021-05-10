@@ -729,6 +729,7 @@ def module_inclusion(
     milestones,
     w: int = 300,
     step: int = 30,
+    pseudotime_offset: Union["all", float] = "all",
     n_perm: int = 10,
     n_map: int = 1,
     map_cutoff: float = 0.8,
@@ -824,6 +825,19 @@ def module_inclusion(
 
     name = root_milestone + "->" + "<>".join(milestones)
 
+    common_seg = list(
+        set.intersection(
+            *list(
+                map(
+                    lambda l: set(img.get_shortest_paths(str(root), str(l))[0]),
+                    leaves,
+                )
+            )
+        )
+    )
+    common_seg = np.array(img.vs["name"], dtype=int)[common_seg]
+    fork_t = adata.uns["graph"]["pp_info"].loc[common_seg, "time"].max()
+
     def onset_map(m):
         df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
@@ -845,6 +859,10 @@ def module_inclusion(
                 graph,
                 df,
             )
+
+            if pseudotime_offset != "all":
+                cells = cells.loc[cells.t < (fork_t + pseudotime_offset)]
+
             cells = cells.sort_values("t").index
 
             if layer is None:
