@@ -132,9 +132,10 @@ def slide_cors(
         axs[0, i].set_yticks([])
 
     c_mil = (
-        np.array(mlsc)[
-            np.argwhere(adata.obs.milestones.cat.categories.isin(milestones))
-        ].flatten()
+        [
+            np.array(mlsc)[adata.obs.milestones.cat.categories == miles]
+            for miles in milestones
+        ]
         if len(milestones) == 2
         else ["tab:blue", "tab:red"]
     )
