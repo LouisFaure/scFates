@@ -16,6 +16,7 @@ def synchro_path(
     root_milestone,
     milestones,
     loess_span=0.2,
+    max_t: Union[float, None] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -165,6 +166,8 @@ def synchro_path(
 
                 axs[i].grid(b=None)
 
+            if max_t is not None:
+                axs[i].set_xlim([0, max_t])
             i = i + 1
 
     if show == False:
