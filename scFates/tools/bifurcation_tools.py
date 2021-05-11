@@ -21,13 +21,12 @@ import statsmodels.formula.api as sm
 
 from scipy import sparse
 
-from joblib import delayed, Parallel
+from joblib import delayed
 from tqdm import tqdm
 
 from .. import logging as logg
 from .. import settings
-from .utils import getpath
-
+from .utils import getpath, ProgressParallel
 
 try:
     from rpy2.robjects import pandas2ri, Formula
@@ -206,15 +205,13 @@ def test_fork(
 
         data = list(zip([brcells] * len(Xgenes), Xgenes))
 
-        stat = Parallel(n_jobs=n_jobs)(
-            delayed(gt_fun)(data[d])
-            for d in tqdm(
-                range(len(data)),
-                disable=n_map > 1,
-                file=sys.stdout,
-                desc="    differential expression",
-            )
-        )
+        stat = ProgressParallel(
+            n_jobs=n_jobs,
+            use_tqdm=n_map == 1,
+            total=len(data),
+            file=sys.stdout,
+            desc="    Differential expression",
+        )(delayed(gt_fun)(data[d]) for d in range(len(data)))
 
         fork_stat = fork_stat + [
             pd.DataFrame(stat, index=genes, columns=milestones + ["de_p"])
@@ -245,15 +242,14 @@ def test_fork(
 
             data = list(zip([subtree] * len(Xgenes), Xgenes))
 
-            stat = Parallel(n_jobs=n_jobs)(
-                delayed(test_upreg)(data[d])
-                for d in tqdm(
-                    range(len(data)),
-                    disable=n_map > 1,
-                    file=sys.stdout,
-                    desc="    leave " + str(keys[vals == leave][0]),
-                )
-            )
+            stat = ProgressParallel(
+                n_jobs=n_jobs,
+                use_tqdm=n_map == 1,
+                total=len(data),
+                file=sys.stdout,
+                desc="    upreg " + str(keys[vals == leave][0]),
+            )(delayed(test_upreg)(data[d]) for d in range(len(data)))
+
             stat = pd.DataFrame(stat, index=topgenes, columns=["up_A", "up_p"])
             leaves_stat = leaves_stat + [stat]
 
@@ -579,15 +575,13 @@ def activation(
 
             data = list(zip([subtree] * len(Xgenes), Xgenes))
 
-            acti.loc[genes] = Parallel(n_jobs=n_jobs)(
-                delayed(get_activation)(data[d])
-                for d in tqdm(
-                    range(len(data)),
-                    disable=n_map > 1,
-                    file=sys.stdout,
-                    desc="    leave " + str(keys[vals == leave][0]),
-                )
-            )
+            acti.loc[genes] = ProgressParallel(
+                n_jobs=n_jobs,
+                total=len(data),
+                use_tqdm=n_map == 1,
+                file=sys.stdout,
+                desc="    to " + str(keys[vals == leave][0]),
+            )(delayed(get_activation)(data[d]) for d in range(len(data)))
 
         allact = allact + [acti]
 

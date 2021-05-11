@@ -6,8 +6,7 @@ import igraph
 from anndata import AnnData
 from scipy import sparse
 
-from joblib import delayed, Parallel
-from tqdm import tqdm
+from joblib import delayed
 from functools import partial
 from statsmodels.stats.weightstats import DescrStatsW
 from skmisc.loess import loess
@@ -17,7 +16,7 @@ from statsmodels.stats.multitest import multipletests
 import warnings
 from .. import logging as logg
 from .. import settings
-from .utils import getpath
+from .utils import getpath, ProgressParallel
 
 import sys
 
@@ -580,38 +579,35 @@ def synchro_path(
                     }
                 )
 
-            return pd.concat(
-                list(
-                    map(
-                        slide_path,
-                        tqdm(
-                            np.arange(0, mat.shape[0] - w, step),
-                            disable=n_map > 1,
-                            file=sys.stdout,
-                            desc="    leave " + str(keys[vals == leave][0]),
-                        ),
-                    )
-                ),
-                axis=1,
-            ).T
+            ww = np.arange(0, mat.shape[0] - w, step)
+
+            res = ProgressParallel(
+                n_jobs=n_jobs,
+                total=len(ww),
+                use_tqdm=n_map == 1,
+                file=sys.stdout,
+                desc="    to " + str(keys[vals == leave][0]),
+            )(delayed(slide_path)(i) for i in ww)
+
+            return pd.concat(res, axis=1).T
 
         return pd.concat(list(map(synchro_milestone, leaves)), keys=milestones)
 
     if n_map > 1:
         permut = False
-        stats = Parallel(n_jobs=n_jobs)(
-            delayed(synchro_map)(i)
-            for i in tqdm(range(n_map), file=sys.stdout, desc="    multi mapping ")
-        )
+        stats = ProgressParallel(
+            n_jobs=n_jobs, total=n_map, file=sys.stdout, desc="    multi mapping"
+        )(delayed(synchro_map)(i) for i in range(n_map))
         allcor_r = pd.concat(stats)
         if perm:
             permut = True
-            stats = Parallel(n_jobs=n_jobs)(
-                delayed(synchro_map)(i)
-                for i in tqdm(
-                    range(n_map), file=sys.stdout, desc="    multi mapping permutations"
-                )
-            )
+
+            stats = ProgressParallel(
+                n_jobs=n_jobs,
+                total=n_map,
+                file=sys.stdout,
+                desc="    multi mapping permutations",
+            )(delayed(synchro_map)(i) for i in range(n_map))
             allcor_p = pd.concat(stats)
             allcor = pd.concat([allcor_r, allcor_p], keys=["real", "permuted"])
         else:
@@ -925,15 +921,13 @@ def module_inclusion(
 
                 return cor, allperm
 
-            res = Parallel(n_jobs=n_jobs)(
-                delayed(slide_cor)(i)
-                for i in tqdm(
-                    range(len(ww)),
-                    disable=n_map > 1,
-                    file=sys.stdout,
-                    desc="    leave " + milestone,
-                )
-            )
+            res = ProgressParallel(
+                n_jobs=n_jobs,
+                total=len(ww),
+                use_tqdm=n_map == 1,
+                file=sys.stdout,
+                desc="    to " + milestone,
+            )(delayed(slide_cor)(i) for i in range(len(ww)))
 
             cors = [r[0] for r in res]
             cors_p = [r[1] for r in res]
@@ -1014,15 +1008,13 @@ def module_inclusion(
         n_jobs_map = n_jobs
         n_jobs = 1
 
-    stats = Parallel(n_jobs=n_jobs_map)(
-        delayed(onset_map)(i)
-        for i in tqdm(
-            range(n_map),
-            disable=n_map == 1,
-            file=sys.stdout,
-            desc="    multi mapping: ",
-        )
-    )
+    stats = ProgressParallel(
+        n_jobs=n_jobs_map,
+        total=n_map,
+        use_tqdm=n_map > 1,
+        file=sys.stdout,
+        desc="    multi mapping",
+    )(delayed(onset_map)(i) for i in range(n_map))
 
     matSwitch = dict(
         zip(
@@ -1246,15 +1238,15 @@ def critical_transition(
                 )
                 return [adata.obs.t[cls].mean(), R_gene / R_cell, cls]
 
-            stats = Parallel(n_jobs=n_jobs)(
-                delayed(slide_path)(i)
-                for i in tqdm(
-                    np.arange(0, mat.shape[0] - w, step),
-                    disable=n_map > 1,
-                    file=sys.stdout,
-                    desc="    leave " + str(keys[vals == leave][0]),
-                )
-            )
+            wins = np.arange(0, mat.shape[0] - w, step)
+
+            stats = ProgressParallel(
+                n_jobs=n_jobs,
+                total=len(wins),
+                use_tqdm=n_map == 1,
+                file=sys.stdout,
+                desc="    to " + str(keys[vals == leave][0]),
+            )(delayed(slide_path)(i) for i in wins)
 
             cells_l = [s[2] for s in stats]
             stats = pd.DataFrame([[s[0], s[1]] for s in stats], columns=("t", "ci"))

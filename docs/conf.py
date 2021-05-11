@@ -35,6 +35,7 @@ MOCK_MODULES = [
     "phenograph",
     "sklearn.preprocessing",
     "cellrank",
+    "tqdm",
 ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
