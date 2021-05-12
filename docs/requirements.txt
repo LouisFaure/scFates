@@ -5,10 +5,11 @@ sphinx_autodoc_typehints<=1.6
 sphinxext-opengraph
 sphinx-copybutton
 matplotlib==3.3.1
-sphinx>=1.7
+sphinx==3.5.4
 docutils==0.15.2
 readthedocs-sphinx-ext
-nbsphinx>=0.7
+Jinja2==2.11.3
+nbsphinx==0.8.5
 ipython
 anndata
 numpy
