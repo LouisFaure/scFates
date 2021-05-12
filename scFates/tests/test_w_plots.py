@@ -155,6 +155,9 @@ def test_pipeline():
 
     scf.tl.module_inclusion(adata, root_milestone="80", milestones=["25", "19"])
     mod_inc = adata.uns["80->25<>19"]["module_inclusion"]["19"]["0"].values
+    scf.pl.module_inclusion(
+        adata, root_milestone="80", milestones=["25", "19"], bins=12, branch="19"
+    )
 
     scf.tl.activation(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
     activation = adata.uns["80->25<>19"]["fork"].activation.values
