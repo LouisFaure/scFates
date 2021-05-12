@@ -12,6 +12,7 @@ from matplotlib import patches
 from scipy import sparse
 
 from typing import Union, Optional, List
+from typing_extensions import Literal
 from scanpy.plotting._utils import savefig_or_show
 
 from .. import logging as logg
@@ -22,13 +23,13 @@ from .trajectory import trajectory
 def trends(
     adata: AnnData,
     features=None,
-    highlight_features: Union[List, "A", "fdr"] = "A",
+    highlight_features: Union[List, Literal["A", "fdr"]] = "A",
     n_features: int = 10,
     root_milestone: Union[None, str] = None,
     milestones: Union[None, str] = None,
-    module: Union[None, "early", "late"] = None,
+    module: Union[None, Literal["early", "late"]] = None,
     branch: Union[None, str] = None,
-    annot: Union[None, "seg", "milestones"] = None,
+    annot: Union[None, Literal["seg", "milestones"]] = None,
     title: str = "",
     feature_cmap: str = "RdBu_r",
     pseudo_cmap: str = "viridis",
@@ -37,7 +38,9 @@ def trends(
     heatmap_space: float = 0.5,
     offset_names: float = 0.15,
     fontsize: float = 9,
-    ordering: Union["pearson", "spearman", "quantile", "max", None] = "pearson",
+    ordering: Union[
+        None, Literal["pearson", "spearman", "quantile", "max"]
+    ] = "pearson",
     ord_thre=0.7,
     filter_complex: bool = False,
     complex_thre: float = 0.7,

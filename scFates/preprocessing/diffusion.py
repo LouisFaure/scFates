@@ -51,9 +51,12 @@ def diffusion(
     adata : anndata.AnnData
         if `copy=True` it returns AnnData, else it update field to `adata`:
 
-        `.obsm['X_diffusion']` if `multiscale = False`, diffusion space.
-        `.obsm['X_multiscale_diffusion']` if `multiscale = True`, multiscale diffusion space.
-        `.uns['diffusion']` dict containing results from Palantir.
+        `.obsm['X_diffusion']`
+            if `multiscale = False`, diffusion space.
+        `.obsm['X_multiscale_diffusion']`
+            if `multiscale = True`, multiscale diffusion space.
+        `.uns['diffusion']`
+            dict containing results from Palantir.
     """
 
     logg.info("Running Diffusion maps ", reset=True)

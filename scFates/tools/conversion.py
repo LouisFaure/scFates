@@ -1,3 +1,4 @@
+from typing_extensions import Literal
 import numpy as np
 import cellrank as cr
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ def cellrank_to_tree(
     adata,
     time,
     Nodes: int,
-    method: Union["ppt", "epg"] = "ppt",
+    method: Literal["ppt", "epg"] = "ppt",
     ppt_lambda=20,
     auto_root=True,
     reassign_pseudotime=True,
@@ -35,7 +36,7 @@ def cellrank_to_tree(
     Nodes
         Number of nodes that compose the principal graph.
     method
-        If `ppt`, uses simpleppt approach, `ppt_lambda` and `ppt_sigma` are the
+        If ppt, uses simpleppt approach, `ppt_lambda` and `ppt_sigma` are the
         parameters controlling the algorithm. If `epg`, uses ComputeElasticPrincipalTree
         function from elpigraph python package, `epg_lambda` `epg_mu` and `epg_trimmingradius`
         are the parameters controlling the algorithm.

@@ -1,4 +1,5 @@
 from typing import Union, Optional, List
+from typing_extensions import Literal
 
 import numpy as np
 import pandas as pd
@@ -704,7 +705,7 @@ def module_inclusion(
     alp: int = 10,
     autocor_cut: float = 0.95,
     iterations: int = 15,
-    parallel_mode: Union["window", "mappings"] = "window",
+    parallel_mode: Literal["window", "mappings"] = "window",
     identify_early_features: bool = True,
     layer=None,
     perm: bool = False,

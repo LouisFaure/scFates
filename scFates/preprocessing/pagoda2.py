@@ -277,11 +277,16 @@ def find_overdispersed(
     adata : anndata.AnnData
         if `copy=True` it returns or else add fields to `adata`:
 
-         .var['res'], residuals of GAM fit.
-         .var['lp'], p-value.
-         .var['lpa'], BH adjusted p-value.
-         .var['qv'], percentile of qui-squared distribution.
-         .var['highly_variable'], feature is over-dispersed.
+         .var['res']
+             residuals of GAM fit.
+         .var['lp']
+             p-value.
+         .var['lpa']
+             BH adjusted p-value.
+         .var['qv']
+             percentile of qui-squared distribution.
+         .var['highly_variable']
+             feature is over-dispersed.
 
     """
 

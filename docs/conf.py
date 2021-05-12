@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 # -- General configuration ------------------------------------------------
 
-needs_sphinx = "1.7"
+needs_sphinx = "2.0"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -75,6 +75,7 @@ extensions = [
     "readthedocs_ext.readthedocs",
     "sphinx_copybutton",
     "nbsphinx",
+    "scanpydoc",
 ]
 
 ogp_site_url = "https://scfates.readthedocs.io/"
@@ -85,7 +86,8 @@ autosummary_generate = True
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
-napoleon_use_rtype = False
+napoleon_use_rtype = True  # having a separate entry generally helps readability
+napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 
 intersphinx_mapping = dict(
@@ -129,7 +131,7 @@ for nb in notebooks:
 
 # -- Options for HTML output ----------------------------------------------
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "scanpydoc"
 html_theme_options = {
     "titles_only": True,
     "logo_only": True,
@@ -141,6 +143,14 @@ html_theme_options = {
     "titles_only": False,
 }
 
+html_context = dict(
+    display_github=True,  # Integrate GitHub
+    github_user="LouisFaure",  # Username
+    github_repo="scFates",  # Repo name
+    github_version="master",  # Version
+    conf_py_path="/docs/",  # Path in the checkout to the docs root
+)
+
 html_show_sphinx = False
 html_logo = "_static/scFates_Logo.svg"
 html_static_path = ["_static"]
@@ -149,75 +159,3 @@ html_extra_path = ["_extra"]
 
 def setup(app):
     app.add_css_file("custom.css")
-
-
-# -- Prettier Param docs --------------------------------------------
-
-from typing import Dict, List, Tuple
-from docutils import nodes
-from sphinx import addnodes
-from sphinx.domains.python import PyTypedField, PyObject
-from sphinx.environment import BuildEnvironment
-
-
-class PrettyTypedField(PyTypedField):
-    list_type = nodes.definition_list
-
-    def make_field(
-        self,
-        types: Dict[str, List[nodes.Node]],
-        domain: str,
-        items: Tuple[str, List[nodes.inline]],
-        env: BuildEnvironment = None,
-    ) -> nodes.field:
-        def makerefs(rolename, name, node):
-            return self.make_xrefs(rolename, domain, name, node, env=env)
-
-        def handle_item(
-            fieldarg: str, content: List[nodes.inline]
-        ) -> nodes.definition_list_item:
-            head = nodes.term()
-            head += makerefs(self.rolename, fieldarg, addnodes.literal_strong)
-            fieldtype = types.pop(fieldarg, None)
-            if fieldtype is not None:
-                head += nodes.Text(" : ")
-                if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
-                    (text_node,) = fieldtype  # type: nodes.Text
-                    head += makerefs(
-                        self.typerolename, text_node.astext(), addnodes.literal_emphasis
-                    )
-                else:
-                    head += fieldtype
-
-            body_content = nodes.paragraph("", "", *content)
-            body = nodes.definition("", body_content)
-
-            return nodes.definition_list_item("", head, body)
-
-        fieldname = nodes.field_name("", self.label)
-        if len(items) == 1 and self.can_collapse:
-            fieldarg, content = items[0]
-            bodynode = handle_item(fieldarg, content)
-        else:
-            bodynode = self.list_type()
-            for fieldarg, content in items:
-                bodynode += handle_item(fieldarg, content)
-        fieldbody = nodes.field_body("", bodynode)
-        return nodes.field("", fieldname, fieldbody)
-
-
-# replace matching field types with ours
-PyObject.doc_field_types = [
-    PrettyTypedField(
-        ft.name,
-        names=ft.names,
-        typenames=ft.typenames,
-        label=ft.label,
-        rolename=ft.rolename,
-        typerolename=ft.typerolename,
-        can_collapse=ft.can_collapse,
-    )
-    if isinstance(ft, PyTypedField)
-    else ft
-    for ft in PyObject.doc_field_types
-]
