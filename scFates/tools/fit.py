@@ -18,11 +18,10 @@ import warnings
 
 from joblib import delayed, Parallel
 from tqdm import tqdm
-from scipy import sparse
 
 from .. import logging as logg
 from .. import settings
-from .utils import getpath
+from .utils import getpath, get_X
 
 
 try:
@@ -173,14 +172,14 @@ def fit(
         )
         img.add_edges(edges)
 
-        temp = pd.concat(
+        subtree = pd.concat(
             list(map(lambda tip: getpath(img, root, tips, tip, graph, df), tips)),
             axis=0,
         )
         if root2 is not None:
-            temp = pd.concat(
+            subtree = pd.concat(
                 [
-                    temp,
+                    subtree,
                     pd.concat(
                         list(
                             map(
@@ -192,21 +191,12 @@ def fit(
                     ),
                 ]
             )
-        temp = temp[["t", "branch"]]
-        temp["gamma"] = gamma
-        # temp = temp[~temp.index.duplicated(keep='first')]
-        if layer is None:
-            if sparse.issparse(adata.X):
-                Xgenes = adata[temp.index, genes].X.A.T.tolist()
-            else:
-                Xgenes = adata[temp.index, genes].X.T.tolist()
-        else:
-            if sparse.issparse(adata.layers[layer]):
-                Xgenes = adata[temp.index, genes].layers[layer].A.T.tolist()
-            else:
-                Xgenes = adata[temp.index, genes].layers[layer].T.tolist()
+        subtree = subtree[["t", "branch"]]
+        subtree["gamma"] = gamma
 
-        data = list(zip([temp] * len(Xgenes), Xgenes))
+        Xgenes = get_X(adata, subtree.index, genes, layer, togenelist=True)
+
+        data = list(zip([subtree] * len(Xgenes), Xgenes))
 
         stat = Parallel(n_jobs=n_jobs)(
             delayed(gt_fun)(data[d])

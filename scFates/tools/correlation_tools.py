@@ -16,7 +16,7 @@ from statsmodels.stats.multitest import multipletests
 import warnings
 from .. import logging as logg
 from .. import settings
-from .utils import getpath, ProgressParallel
+from .utils import getpath, ProgressParallel, get_X
 
 import sys
 
@@ -366,16 +366,7 @@ def slide_cors(
         ]
     genesets = np.concatenate([genesetA, genesetB])
 
-    if layer is None:
-        if sparse.issparse(adata.X):
-            X = adata[:, genesets].X.A
-        else:
-            X = adata[:, genesets].X
-    else:
-        if sparse.issparse(adata.layers[layer]):
-            X = adata[:, genesets].layers[layer].A
-        else:
-            X = adata[:, genesets].layers[layer]
+    X = get_X(adata, adata.obs_names, genesets, layer)
 
     X = pd.DataFrame(X, index=adata.obs_names, columns=genesets)
     X_r = X.rank(axis=0)
@@ -519,28 +510,8 @@ def synchro_path(
             cells = getpath(img, root, graph["tips"], leave, graph, df)
             cells = cells.sort_values("t").index
 
-            if layer is None:
-                if sparse.issparse(adata.X):
-                    mat = pd.DataFrame(
-                        adata[cells, genesets].X.A, index=cells, columns=genesets
-                    )
-                else:
-                    mat = pd.DataFrame(
-                        adata[cells, genesets].X, index=cells, columns=genesets
-                    )
-            else:
-                if sparse.issparse(adata.layers[layer]):
-                    mat = pd.DataFrame(
-                        adata[cells, genesets].layers[layer].A,
-                        index=cells,
-                        columns=genesets,
-                    )
-                else:
-                    mat = pd.DataFrame(
-                        adata[cells, genesets].layers[layer],
-                        index=cells,
-                        columns=genesets,
-                    )
+            X = get_X(adata, cells, genesets, layer)
+            mat = pd.DataFrame(X, index=cells, columns=genesets)
 
             if permut == True:
                 winperm = np.min([winp, mat.shape[0]])
@@ -861,28 +832,8 @@ def module_inclusion(
 
             cells = cells.sort_values("t").index
 
-            if layer is None:
-                if sparse.issparse(adata.X):
-                    mat = pd.DataFrame(
-                        adata[cells, geneset].X.A, index=cells, columns=geneset
-                    )
-                else:
-                    mat = pd.DataFrame(
-                        adata[cells, geneset].X, index=cells, columns=geneset
-                    )
-            else:
-                if sparse.issparse(adata.layers[layer]):
-                    mat = pd.DataFrame(
-                        adata[cells, geneset].layers[layer].A,
-                        index=cells,
-                        columns=geneset,
-                    )
-                else:
-                    mat = pd.DataFrame(
-                        adata[cells, geneset].layers[layer],
-                        index=cells,
-                        columns=genesets,
-                    )
+            X = get_X(adata, cells, geneset, layer)
+            mat = pd.DataFrame(X, index=cells, columns=geneset)
 
             if perm:
                 winperm = np.min([winp, mat.shape[0]])
@@ -1201,28 +1152,8 @@ def critical_transition(
         def critical_milestone(leave):
             cells = getpath(img, root, graph["tips"], leave, graph, df).index
 
-            if layer is None:
-                if sparse.issparse(adata.X):
-                    mat = pd.DataFrame(
-                        adata[cells].X.A, index=cells, columns=adata.var_names
-                    )
-                else:
-                    mat = pd.DataFrame(
-                        adata[cells].X, index=cells, columns=adata.var_names
-                    )
-            else:
-                if sparse.issparse(adata.layers[layer]):
-                    mat = pd.DataFrame(
-                        adata[cells].layers[layer].A,
-                        index=cells,
-                        columns=adata.var_names,
-                    )
-                else:
-                    mat = pd.DataFrame(
-                        adata[cells].layers[layer],
-                        index=cells,
-                        columns=adata.var_names,
-                    )
+            X = get_X(adata, cells, adata.var_names, layer)
+            mat = pd.DataFrame(X, index=cells, columns=adata.var_names)
 
             mat = mat.iloc[adata.obs.t[mat.index].argsort().values, :]
 

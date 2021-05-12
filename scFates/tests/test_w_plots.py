@@ -153,6 +153,9 @@ def test_pipeline():
     )
     branch_spe = adata.uns["80->25<>19"]["fork"].branch.values
 
+    scf.tl.module_inclusion(adata, root_milestone="80", milestones=["25", "19"])
+    mod_inc = adata.uns["80->25<>19"]["module_inclusion"]["19"]["0"].values
+
     scf.tl.activation(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
     activation = adata.uns["80->25<>19"]["fork"].activation.values
 
@@ -252,6 +255,7 @@ def test_pipeline():
     assert signi_fdr_nonscaled == 0
     assert signi_fdr_rescaled == 5
     assert np.all(branch_spe == ["19", "19", "25"])
+    assert np.allclose(mod_inc, [0.01487196, 0.01487196], rtol=1e-2)
     assert np.allclose(activation, [4.42785624, 4.61626781, 0.31774091], rtol=1e-2)
     assert np.allclose(cell_freq_sum, 187.5316, rtol=1e-2)
     assert np.allclose(

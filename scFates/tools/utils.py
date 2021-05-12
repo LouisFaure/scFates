@@ -2,6 +2,25 @@ from numba import cuda, njit, prange
 import math
 from tqdm import tqdm
 from joblib import Parallel
+from scipy import sparse
+
+
+def get_X(adata, cells, genes, layer, togenelist=False):
+    if layer is None:
+        if sparse.issparse(adata.X):
+            X = adata[cells, genes].X.A
+        else:
+            X = adata[cells, genes].X
+    else:
+        if sparse.issparse(adata.layers[layer]):
+            X = adata[cells, genes].layers[layer].A
+        else:
+            X = adata[cells, genes].layers[layer]
+
+    if togenelist:
+        return X.T.tolist()
+    else:
+        return X
 
 
 class ProgressParallel(Parallel):

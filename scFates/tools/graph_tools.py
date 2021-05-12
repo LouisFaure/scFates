@@ -338,33 +338,8 @@ def tree_ppt(
     seed: Optional[int] = None,
 ):
 
-    if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
-        use_rep = f"X_{use_rep}"
+    X = get_data(adata, use_rep, ndims_rep)
 
-    if (
-        (use_rep not in adata.layers.keys())
-        & (use_rep not in adata.obsm.keys())
-        & (use_rep != "X")
-    ):
-        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
-        n_pcs = None if use_rep == "X" else n_pcs
-
-    if use_rep == "X":
-        ndims_rep = None
-        if sparse.issparse(adata.X):
-            X = DataFrame(adata.X.A, index=adata.obs_names)
-        else:
-            X = DataFrame(adata.X, index=adata.obs_names)
-    elif use_rep in adata.layers.keys():
-        if sparse.issparse(adata.layers[use_rep]):
-            X = DataFrame(adata.layers[use_rep].A, index=adata.obs_names)
-        else:
-            X = DataFrame(adata.layers[use_rep], index=adata.obs_names)
-    elif use_rep in adata.obsm.keys():
-        X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
-
-    if ndims_rep is not None:
-        X = X.iloc[:, :ndims_rep]
     X_t = X.values.T
 
     # if seed is not None:
@@ -615,32 +590,7 @@ def tree_epg(
     verbose: bool = True,
 ):
 
-    if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
-        use_rep = f"X_{use_rep}"
-
-    if (
-        (use_rep not in adata.layers.keys())
-        & (use_rep not in adata.obsm.keys())
-        & (use_rep != "X")
-    ):
-        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
-        n_pcs = None if use_rep == "X" else n_pcs
-
-    if use_rep == "X":
-        if sparse.issparse(adata.X):
-            X = DataFrame(adata.X.A, index=adata.obs_names)
-        else:
-            X = DataFrame(adata.X, index=adata.obs_names)
-    elif use_rep in adata.layers.keys():
-        if sparse.issparse(adata.layers[use_rep]):
-            X = DataFrame(adata.layers[use_rep].A, index=adata.obs_names)
-        else:
-            X = DataFrame(adata.layers[use_rep], index=adata.obs_names)
-    elif use_rep in adata.obsm.keys():
-        X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
-
-    if ndims_rep is not None:
-        X = X.iloc[:, :ndims_rep]
+    X = get_data(adata, use_rep, ndims_rep)
 
     if seed is not None:
         np.random.seed(seed)
@@ -750,32 +700,7 @@ def curve_epg(
     verbose: bool = True,
 ):
 
-    if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
-        use_rep = f"X_{use_rep}"
-
-    if (
-        (use_rep not in adata.layers.keys())
-        & (use_rep not in adata.obsm.keys())
-        & (use_rep != "X")
-    ):
-        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
-        n_pcs = None if use_rep == "X" else n_pcs
-
-    if use_rep == "X":
-        if sparse.issparse(adata.X):
-            X = DataFrame(adata.X.A, index=adata.obs_names)
-        else:
-            X = DataFrame(adata.X, index=adata.obs_names)
-    elif use_rep in adata.layers.keys():
-        if sparse.issparse(adata.layers[use_rep]):
-            X = DataFrame(adata.layers[use_rep].A, index=adata.obs_names)
-        else:
-            X = DataFrame(adata.layers[use_rep], index=adata.obs_names)
-    elif use_rep in adata.obsm.keys():
-        X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
-
-    if ndims_rep is not None:
-        X = X.iloc[:, :ndims_rep]
+    X = get_data(adata, use_rep, ndims_rep)
 
     if seed is not None:
         np.random.seed(seed)
@@ -1326,9 +1251,34 @@ def getpath(adata, root_milestone, milestones):
     return pd.concat(list(map(gatherpath, leaves)), axis=0)
 
 
-def round_base_10(x):
-    if x < 0:
-        return 0
-    elif x == 0:
-        return 10
-    return 10 ** np.ceil(np.log10(x))
+def get_data(adata, use_rep, ndims_rep):
+
+    if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
+        use_rep = f"X_{use_rep}"
+
+    if (
+        (use_rep not in adata.layers.keys())
+        & (use_rep not in adata.obsm.keys())
+        & (use_rep != "X")
+    ):
+        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
+        n_pcs = None if use_rep == "X" else n_pcs
+
+    if use_rep == "X":
+        ndims_rep = None
+        if sparse.issparse(adata.X):
+            X = DataFrame(adata.X.A, index=adata.obs_names)
+        else:
+            X = DataFrame(adata.X, index=adata.obs_names)
+    elif use_rep in adata.layers.keys():
+        if sparse.issparse(adata.layers[use_rep]):
+            X = DataFrame(adata.layers[use_rep].A, index=adata.obs_names)
+        else:
+            X = DataFrame(adata.layers[use_rep], index=adata.obs_names)
+    elif use_rep in adata.obsm.keys():
+        X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
+
+    if ndims_rep is not None:
+        X = X.iloc[:, :ndims_rep]
+
+    return X

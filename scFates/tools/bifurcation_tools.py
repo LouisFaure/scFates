@@ -19,14 +19,12 @@ from functools import reduce
 from statsmodels.stats.multitest import multipletests
 import statsmodels.formula.api as sm
 
-from scipy import sparse
-
 from joblib import delayed
 from tqdm import tqdm
 
 from .. import logging as logg
 from .. import settings
-from .utils import getpath, ProgressParallel
+from .utils import getpath, ProgressParallel, get_X
 
 try:
     from rpy2.robjects import pandas2ri, Formula
@@ -192,16 +190,7 @@ def test_fork(
                     - brcells.loc[brcells.i == i].t.min()
                 )
 
-        if layer is None:
-            if sparse.issparse(adata.X):
-                Xgenes = adata[brcells.index, genes].X.A.T.tolist()
-            else:
-                Xgenes = adata[brcells.index, genes].X.T.tolist()
-        else:
-            if sparse.issparse(adata.layers[layer]):
-                Xgenes = adata[brcells.index, genes].layers[layer].A.T.tolist()
-            else:
-                Xgenes = adata[brcells.index, genes].layers[layer].T.tolist()
+        Xgenes = get_X(adata, brcells.index, genes, layer, togenelist=True)
 
         data = list(zip([brcells] * len(Xgenes), Xgenes))
 
@@ -229,16 +218,7 @@ def test_fork(
 
             topgenes = topleave[topleave == leave].index
 
-            if layer is None:
-                if sparse.issparse(adata.X):
-                    Xgenes = adata[subtree.index, topgenes].X.A.T.tolist()
-                else:
-                    Xgenes = adata[subtree.index, topgenes].X.T.tolist()
-            else:
-                if sparse.issparse(adata.layers[layer]):
-                    Xgenes = adata[subtree.index, topgenes].layers[layer].A.T.tolist()
-                else:
-                    Xgenes = adata[subtree.index, topgenes].layers[layer].T.tolist()
+            Xgenes = get_X(adata, subtree.index, topgenes, layer, togenelist=True)
 
             data = list(zip([subtree] * len(Xgenes), Xgenes))
 
@@ -561,16 +541,9 @@ def activation(
 
             wf = warnings.filters.copy()
             warnings.filterwarnings("ignore")
-            if layer is None:
-                if sparse.issparse(adata.X):
-                    Xgenes = adata[subtree.index, genes].X.A.T.tolist()
-                else:
-                    Xgenes = adata[subtree.index, genes].X.T.tolist()
-            else:
-                if sparse.issparse(adata.layers[layer]):
-                    Xgenes = adata[subtree.index, genes].layers[layer].A.T.tolist()
-                else:
-                    Xgenes = adata[subtree.index, genes].layers[layer].T.tolist()
+
+            Xgenes = get_X(adata, subtree.index, genes, layer, togenelist=True)
+
             warnings.filters = wf
 
             data = list(zip([subtree] * len(Xgenes), Xgenes))

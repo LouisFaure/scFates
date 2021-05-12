@@ -20,12 +20,11 @@ import warnings
 
 from joblib import delayed, Parallel
 from tqdm import tqdm
-from scipy import sparse
 
 from .. import logging as logg
 from .. import settings
 from ..plot.test_association import test_association as plot_test_association
-from .utils import getpath
+from .utils import getpath, get_X
 
 
 try:
@@ -211,16 +210,7 @@ def test_association(
             )
         )
 
-    if layer is None:
-        if sparse.issparse(adata.X):
-            Xgenes = adata[cells, genes].X.A.T.tolist()
-        else:
-            Xgenes = adata[cells, genes].X.T.tolist()
-    else:
-        if sparse.issparse(adata.layers[layer]):
-            Xgenes = adata[cells, genes].layers[layer].A.T.tolist()
-        else:
-            Xgenes = adata[cells, genes].layers[layer].T.tolist()
+    Xgenes = get_X(adata, cells, genes, layer, togenelist=True)
 
     logg.info("test features for association with the trajectory", reset=True, end="\n")
 
