@@ -1,4 +1,4 @@
-FROM rapidsai/rapidsai:0.18-cuda11.0-runtime-ubuntu20.04
+FROM rapidsai/rapidsai:0.19-cuda11.0-runtime-ubuntu20.04
 
 SHELL ["conda", "run", "-n", "rapids", "/bin/bash", "-c"]
 
@@ -8,7 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends eog cmake gcc p
 
 ARG CACHEBUST=1
 
-RUN pip install scFates && git clone https://github.com/LouisFaure/scFates_notebooks
+RUN pip install git+https://github.com/j-bac/elpigraph-python.git
+RUN pip install scFates --ignore-installed
+RUN git clone https://github.com/LouisFaure/scFates_notebooks
 
 CMD ["/bin/bash"]
 

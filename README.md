@@ -85,9 +85,12 @@ tree. Package is installed in an R session with the following command:
 ## GPU dependencies (optional)
 
 If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, for that you will need
-[Rapids 0.18](https://rapids.ai/) installed. For that you will need a distinct conda environment:
+[Rapids](https://rapids.ai/) installed. This can be easily done via a dedicated conda environment:
 
-    conda create -n rapids-0.18 -c rapidsai -c nvidia -c conda-forge -c defaults rapids=0.18 python=3.8 cudatoolkit=11.0
+    conda create -n scFates-gpu -c rapidsai -c nvidia -c conda-forge -c defaults rapids=0.19 python=3.8 cudatoolkit=11.0 -y
+    conda activate scFates-gpu
+    pip install git+https://github.com/j-bac/elpigraph-python.git
+    pip install scFates --ignore-installed
 
 ## Docker container
 
