@@ -58,10 +58,9 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     if n_map == 1:
         df_l = [map_cells(graph, multi=False)]
     else:
-        df_l = Parallel(n_jobs=n_jobs)(
-            delayed(map_cells)(graph=graph, multi=True)
-            for m in tqdm(range(n_map), file=sys.stdout, desc="    mappings")
-        )
+        df_l = ProgressParallel(
+            n_jobs=n_jobs, total=n_map, file=sys.stdout, desc="    mappings"
+        )(delayed(map_cells)(graph=graph, multi=True) for m in range(n_map))
 
     # formatting cell projection data
 
