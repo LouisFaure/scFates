@@ -1,4 +1,4 @@
-from typing import Union, Optional, List
+from typing import Union, Optional, List, Iterable
 from typing_extensions import Literal
 
 import numpy as np
@@ -6,6 +6,7 @@ import pandas as pd
 import igraph
 from anndata import AnnData
 from scipy import sparse
+import itertools
 
 from joblib import delayed
 from functools import partial
@@ -409,6 +410,8 @@ def synchro_path(
     adata: AnnData,
     root_milestone,
     milestones,
+    genesetA: Optional[Iterable] = None,
+    genesetB: Optional[Iterable] = None,
     n_map=1,
     n_jobs=None,
     layer: Optional[str] = None,
@@ -489,7 +492,12 @@ def synchro_path(
 
     name = root_milestone + "->" + "<>".join(milestones)
 
-    bif = adata.uns[name]["fork"]
+    if genesetA is None:
+        bif = adata.uns[name]["fork"]
+        genesetA = bif.index[(bif.module == "early") & (bif.branch == milestones[0])]
+        genesetB = bif.index[(bif.module == "early") & (bif.branch == milestones[1])]
+
+    genesets = np.concatenate([genesetA, genesetB])
 
     if n_map == 1:
         logg.info("    single mapping")
@@ -502,10 +510,6 @@ def synchro_path(
             np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
         )
         img.add_edges(edges)
-
-        genesetA = bif.index[(bif.module == "early") & (bif.branch == milestones[0])]
-        genesetB = bif.index[(bif.module == "early") & (bif.branch == milestones[1])]
-        genesets = np.concatenate([genesetA, genesetB])
 
         def synchro_milestone(leave):
             cells = getpath(img, root, graph["tips"], leave, graph, df)
@@ -675,7 +679,10 @@ def synchro_path(
         )
     )
 
-    adata.uns[name]["synchro"] = allcor
+    if name in adata.uns:
+        adata.uns[name]["synchro"] = allcor
+    else:
+        adata.uns[name] = {"synchro": allcor}
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -689,6 +696,88 @@ def synchro_path(
     )
 
     return adata if copy else None
+
+
+def synchro_path_multi(
+    adata: AnnData, root_milestone, milestones, copy=False, **kwargs
+):
+    """\
+    Estimates pseudotime trends of local intra- and inter-module correlations of fates-specific modules.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    kwargs
+        arguments to pass to tl.synchro_path.
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns subsetted or else subset (keeping only
+        significant features) and add fields to `adata`:
+
+        `.uns['root_milestone->milestoneA<>milestoneB']['synchro']`
+            Dataframe containing mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.
+        `.obs['intercor root_milestone->milestoneA<>milestoneB']`
+            loess fit of inter-module mean local gene-gene correlations prior to bifurcation
+
+    """
+
+    adata = adata.copy() if copy else adata
+
+    logg.info("computing local correlations", reset=True)
+
+    graph = adata.uns["graph"]
+
+    edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
+    img = igraph.Graph()
+    img.add_vertices(
+        np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
+    )
+    img.add_edges(edges)
+
+    uns_temp = adata.uns.copy()
+
+    if "milestones_colors" in adata.uns:
+        mlsc = adata.uns["milestones_colors"].copy()
+
+    dct = graph["milestones"]
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+
+    leaves = list(map(lambda leave: dct[leave], milestones))
+    root = dct[root_milestone]
+
+    name = root_milestone + "->" + "<>".join(milestones)
+
+    bif = adata.uns[name]["fork"]
+
+    genesets = dict(
+        zip(
+            milestones,
+            [
+                bif.index[(bif.module == "early") & (bif.branch == m)]
+                for m in milestones
+            ],
+        )
+    )
+
+    pairs = list(itertools.combinations(milestones, 2))
+
+    for m_pair in pairs:
+        synchro_path(
+            adata,
+            root_milestone,
+            m_pair,
+            genesetA=genesets[m_pair[0]],
+            genesetB=genesets[m_pair[1]],
+            **kwargs
+        )
 
 
 def module_inclusion(
