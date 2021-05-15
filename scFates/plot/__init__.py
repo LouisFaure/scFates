@@ -8,3 +8,4 @@ from .synchro_path import synchro_path
 from .test_fork import test_fork
 from .module_inclusion import module_inclusion
 from .critical_transition import critical_transition
+from .linearity_deviation import linearity_deviation
