@@ -95,6 +95,12 @@ def test_pipeline():
 
     scf.pl.test_association(adata)
 
+    scf.tl.linearity_deviation(adata, start_milestone="80", end_milestone="29")
+
+    lindev = adata.var["80->29_rss"].values[:5]
+
+    scf.pl.linearity_deviation(adata, start_milestone="80", end_milestone="29")
+
     scf.tl.fit(adata_2, layer="scaled")
     scf.tl.fit(adata)
     fitted = adata.layers["fitted"][0, :5]
@@ -250,6 +256,11 @@ def test_pipeline():
     assert df.shape[0] == 877
     assert np.allclose(
         A, [0.01329398, 0.17759706, 0.1007363, 0.14490752, 0.07136825], rtol=1e-2
+    )
+    assert np.allclose(
+        lindev,
+        [0.31511654, -0.94609691, 0.16721359, -0.53114662, 0.28442143],
+        rtol=1e-2,
     )
     assert nsigni == 5
     assert np.allclose(

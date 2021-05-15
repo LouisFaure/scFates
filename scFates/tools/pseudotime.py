@@ -2,10 +2,12 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
-from joblib import delayed, Parallel
+from joblib import delayed
 from tqdm import tqdm
 import sys
 import igraph
+
+from .utils import ProgressParallel
 
 from .. import logging as logg
 from .. import settings
@@ -273,11 +275,14 @@ def refine_pseudotime(
         )
         ms_data = palantir.utils.determine_multiscale_space(dm_res)
 
-    pseudotimes = Parallel(n_jobs=n_jobs)(
+    pseudotimes = ProgressParallel(
+        n_jobs=n_jobs,
+        file=sys.stdout,
+        desc="    ",
+        total=len(adata.uns["graph"]["pp_seg"].n.values),
+    )(
         delayed(palantir_on_seg)(adata, seg=s, ms_data=ms_data)
-        for s in tqdm(
-            adata.uns["graph"]["pp_seg"].n.values.astype(str), file=sys.stdout
-        )
+        for s in adata.uns["graph"]["pp_seg"].n.values.astype(str)
     )
 
     g = igraph.Graph(directed=True)

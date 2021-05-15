@@ -60,7 +60,7 @@ def linearity_deviation(
     graph = adata.uns["graph"]
 
     def lindev_map(m):
-        df = adata.uns["pseudotime_list"][str(m)]
+        df = adata.uns["pseudotime_list"][str(m)].copy()
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
         img.add_vertices(
@@ -93,7 +93,7 @@ def linearity_deviation(
         ] = "putative progenies"
 
         if m == 0:
-            adata.obs = df
+            adata.obs[name + "_lindev_sel"] = df[name + "_lindev_sel"]
 
         progenitors = adata.obs_names[
             df[name + "_lindev_sel"] == "putative progenitors"
@@ -143,6 +143,8 @@ def linearity_deviation(
     )(delayed(lindev_map)(m) for m in range(n_map))
 
     if plot:
+        import scanpy as sc
+
         sc.pl.embedding(adata, basis=basis, color=name + "_lindev_sel")
 
     adata.var[name + "_rss"] = np.nanmean(np.vstack(rss), axis=0)
