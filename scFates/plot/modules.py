@@ -27,7 +27,7 @@ def modules(
     **kwargs,
 ):
     """\
-    Display the milestone graph in PAGA style.
+    Plot the mean expression of the early and late modules.
 
     Parameters
     ----------

@@ -48,6 +48,7 @@ Pseudotime analysis
     tl.test_association
     tl.fit
     tl.cluster
+    tl.linearity_deviation
 
 Bifurcation analysis
 --------------------
@@ -94,6 +95,7 @@ Plot
     pl.test_association
     pl.single_trend
     pl.trends
+    pl.linearity_deviation
 
 **Bifurcation & correlation analysis**
 

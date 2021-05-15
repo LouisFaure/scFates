@@ -33,5 +33,9 @@ References
     *CellRank for directed single-cell fate mapping*,
     `biorxiv <https://www.biorxiv.org/content/10.1101/2020.10.19.345983v2>`__.
 
+.. [Kameneva21] Kameneva *et al. (2021)*
+    *Single-cell transcriptomics of human embryos identifies multiple sympathoblast lineages with potential implications for neuroblastoma origin*,
+    `Nature Genetics <https://www.nature.com/articles/s41588-021-00818-x>`__.
+
 .. image:: _static/scFates_logo_dark.png
    :width: 1%

@@ -17,26 +17,40 @@ def linearity_deviation(
     start_milestone,
     end_milestone,
     percentiles=[20, 80],
-    n_jobs=1,
-    n_map=1,
-    plot=False,
-    basis="X_umap",
-    copy=False,
-    **kwargs
+    n_jobs: int = 1,
+    n_map: int = 1,
+    plot: bool = False,
+    basis: str = "X_umap",
+    copy: bool = False,
 ):
     """\
-    Estimates pseudotime trends of local intra- and inter-module correlations of fates-specific modules.
+    Identifies genes that specifically characterize a given transition but not the progenitors neither the progenies.
+
+    This approach has been developped in the following study [Kameneva21]_.
+    Designed to test whether a bridge/transition is the result of a doublet population only, this test checks if a gene expression occuring in the transition/bridge could be explained by a linear mixture of expressions of that gene in progenitors and progenies. The gene expression profile of each cell of the bridge is modeled as a linear combination of mean gene expression profiles in progenitors and progenies.
+
+    For each gene in each cell in bridge is calculated the magnitude of the residuals not explained by the model. The mean residuals across all cells in the transition/bridge is then normalized to the standard deviation of the expression of a given gene. The obtained normalized mean residual values is used to prioritize the genes with distinctive expression patterns in the bridge population.
 
     Parameters
     ----------
     adata
         Annotated data matrix.
-    root_milestone
+    start_milestone
         tip defining progenitor branch.
-    milestones
-        tips defining the progenies branches.
-    kwargs
-        arguments to pass to tl.synchro_path.
+    end_milestone
+        tips defining the progeny branch.
+    percentiles
+        pseudotime percentiles to define the progenitor and progeny populations
+    n_jobs
+        number of cpu processes used to perform the test.
+    n_map
+        number of cell mappings from which to do the test.
+    plot
+        plot the cells selection according to percentiles.
+    basis
+        basis to use in case of plotting
+    copy
+        Return a copy instead of writing to adata.
 
     Returns
     -------
@@ -44,10 +58,10 @@ def linearity_deviation(
         if `copy=True` it returns subsetted or else subset (keeping only
         significant features) and add fields to `adata`:
 
-        `.uns['root_milestone->milestoneA<>milestoneB']['synchro']`
-            Dataframe containing mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.
-        `.obs['intercor root_milestone->milestoneA<>milestoneB']`
-            loess fit of inter-module mean local gene-gene correlations prior to bifurcation
+        `.var['A->B_rss']`
+            pearson residuals of the linear fit.
+        `.obs['A->B_lindev_sel']`
+            cell selections used for the test.
 
     """
 
@@ -153,7 +167,7 @@ def linearity_deviation(
     logg.hint(
         "added \n"
         "    .var['" + name + "_rss'], pearson residuals of the linear fit.\n"
-        "    .obs['" + name + "'_lindev_sel'], cell selections used for the test."
+        "    .obs['" + name + "_lindev_sel'], cell selections used for the test."
     )
 
     return adata if copy else None
