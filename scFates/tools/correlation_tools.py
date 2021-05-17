@@ -787,6 +787,7 @@ def module_inclusion(
     w: int = 300,
     step: int = 30,
     pseudotime_offset: Union["all", float] = "all",
+    module: Literal["all", "early"] = "all",
     n_perm: int = 10,
     n_map: int = 1,
     map_cutoff: float = 0.8,
@@ -816,6 +817,10 @@ def module_inclusion(
         local window, in number of cells, to estimate correlations.
     step
         steps, in number of cells, between local windows.
+    pseudotime_offset
+        restrict the cell selection up to a pseudotime offset after the fork
+    module
+        restrict the gene selection to already classified early genes.
     n_perm
         number of permutations used to estimate the background local correlations.
     n_map
@@ -905,6 +910,12 @@ def module_inclusion(
         img.add_edges(edges)
 
         def onset_milestone(milestone):
+            sel = adata.uns[name]["fork"].branch == milestone
+            sel = (
+                sel & (adata.uns[name]["fork"].module == "early")
+                if module == "early"
+                else sel
+            )
             geneset = adata.uns[name]["fork"].index[
                 adata.uns[name]["fork"].branch == milestone
             ]
