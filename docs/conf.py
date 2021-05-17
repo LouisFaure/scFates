@@ -76,6 +76,7 @@ extensions = [
     "sphinx_copybutton",
     "nbsphinx",
     "scanpydoc",
+    "docutils",
 ]
 
 ogp_site_url = "https://scfates.readthedocs.io/"
@@ -94,6 +95,10 @@ intersphinx_mapping = dict(
     python=("https://docs.python.org/3", None),
     anndata=("https://anndata.readthedocs.io/en/latest/", None),
     scanpy=("https://scanpy.readthedocs.io/en/latest/", None),
+    cuml=("https://docs.rapids.ai/api/cuml/stable/", None),
+    sklearn=("https://scikit-learn.org/stable/", None),
+    cugraph=("https://docs.rapids.ai/api/cugraph/stable/", None),
+    scipy=("https://docs.scipy.org/doc/scipy/reference/", None),
 )
 
 templates_path = ["_templates"]

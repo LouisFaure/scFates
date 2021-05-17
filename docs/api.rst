@@ -71,6 +71,7 @@ Bifurcation analysis
     tl.slide_cells
     tl.slide_cors
     tl.synchro_path
+    tl.synchro_path_multi
     tl.critical_transition
     tl.criticality_drivers
 

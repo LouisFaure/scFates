@@ -702,7 +702,7 @@ def synchro_path_multi(
     adata: AnnData, root_milestone, milestones, copy=False, **kwargs
 ):
     """\
-    Estimates pseudotime trends of local intra- and inter-module correlations of fates-specific modules.
+    Wrappers that call `tl.synchro_path` on the pairwise combination of all selected branches.
 
     Parameters
     ----------

@@ -6,7 +6,7 @@ sphinxext-opengraph
 sphinx-copybutton
 matplotlib==3.3.1
 sphinx==3.5.4
-docutils==0.15.2
+docutils==0.17.1
 readthedocs-sphinx-ext
 Jinja2==2.11.3
 nbsphinx==0.8.5
