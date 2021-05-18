@@ -247,7 +247,7 @@ def trajectory(
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     g.vs[:]["name"] = [v.index for v in g.vs]
 
-    tips = graph["tips"]
+    miles_ids = np.concatenate([graph["tips"], graph["forks"]])
 
     if root_milestone is not None:
         dct = graph["milestones"]
@@ -340,6 +340,10 @@ def trajectory(
     sm = ScalarMappable(
         norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
     )
+
+    lines = [lines[i] for i in np.argsort(seg_val)]
+    seg_val = seg_val[np.argsort(seg_val)]
+
     lc = matplotlib.collections.LineCollection(
         lines, colors="k", linewidths=7.5 * scale_path, zorder=100
     )
@@ -396,20 +400,23 @@ def trajectory(
         linewidths=5 * scale_path,
         zorder=104,
     )
+
+    miles_ids = miles_ids[np.isin(miles_ids, proj.index)]
+
     ax.scatter(
-        proj.loc[tips, 0],
-        proj.loc[tips, 1],
+        proj.loc[miles_ids, 0],
+        proj.loc[miles_ids, 1],
         zorder=103,
         c="k",
         s=200 * scale_path,
     )
     ax.add_collection(lc)
 
-    tip_val = node_vals[tips]
+    tip_val = node_vals[miles_ids]
 
     ax.scatter(
-        proj.loc[tips, 0],
-        proj.loc[tips, 1],
+        proj.loc[miles_ids, 0],
+        proj.loc[miles_ids, 1],
         zorder=105,
         c=sm.to_rgba(tip_val),
         s=140 * scale_path,
