@@ -22,6 +22,7 @@ def modules(
     color: str = "milestones",
     show_traj: bool = False,
     layer: Optional[str] = None,
+    smooth: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs,
@@ -148,32 +149,42 @@ def modules(
     adata_c.obsm["X_early"] = X_early.values
     adata_c.obsm["X_late"] = X_late.values
 
+    if smooth:
+        adata_c.obsm["X_early"] = adata_c.obsp["connectivities"].dot(
+            adata_c.obsm["X_early"]
+        )
+        adata_c.obsm["X_late"] = adata_c.obsp["connectivities"].dot(
+            adata_c.obsm["X_late"]
+        )
+
     axs, _, _, _ = setup_axes(panels=[0, 1])
 
-    sc.pl.scatter(
-        adata_c[cells],
-        basis="early",
-        color=color,
-        legend_loc="none",
-        title="",
-        show=False,
-        ax=axs[0],
-        **kwargs,
-    )
     if show_traj:
         plot_trajectory(
             adata_c,
             basis="early",
             root_milestone=root_milestone,
             milestones=milestones,
+            color_cells=color,
             show=False,
-            alpha=0,
             title="",
+            legend_loc="none",
+            ax=axs[0],
+            **kwargs,
+        )
+    else:
+        sc.pl.embedding(
+            adata_c[cells],
+            basis="early",
+            color=color,
+            legend_loc="none",
+            title="",
+            show=False,
             ax=axs[0],
             **kwargs,
         )
 
-    sc.pl.scatter(
+    sc.pl.embedding(
         adata_c[cells],
         basis="late",
         color=color,
@@ -188,31 +199,5 @@ def modules(
     axs[0].set_ylabel("early " + milestones[1])
     axs[1].set_xlabel("late " + milestones[0])
     axs[1].set_ylabel("late " + milestones[1])
-
-    if all([sum(early_1) != 0, sum(early_2) != 0]):
-        axs[0].set_xlim(
-            0,
-            X_early.loc[cells].values[:, 0].max()
-            + X_early.loc[cells].values[:, 0].max() / 10,
-        )
-        axs[0].set_ylim(
-            0,
-            X_early.loc[cells].values[:, 1].max()
-            + X_early.loc[cells].values[:, 1].max() / 10,
-        )
-    if all([sum(late_1) != 0, sum(late_2) != 0]):
-        axs[1].set_xlim(
-            0,
-            X_late.loc[cells].values[:, 0].max()
-            + X_late.loc[cells].values[:, 0].max() / 10,
-        )
-        axs[1].set_ylim(
-            0,
-            X_late.loc[cells].values[:, 1].max()
-            + X_late.loc[cells].values[:, 1].max() / 10,
-        )
-
-    if show == False:
-        return tuple(axs)
 
     savefig_or_show("modules", show=show, save=save)
