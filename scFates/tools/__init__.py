@@ -3,9 +3,8 @@ from .pseudotime import pseudotime, refine_pseudotime, rename_milestones
 from .test_association import test_association
 from .fit import fit
 from .cluster import cluster
+from .slide_cors import slide_cells, slide_cors
 from .correlation_tools import (
-    slide_cells,
-    slide_cors,
     synchro_path,
     synchro_path_multi,
     module_inclusion,
