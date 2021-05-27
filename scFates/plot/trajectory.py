@@ -145,6 +145,8 @@ def graph(
                 textcoords="offset points",
                 bbox=bbox,
             )
+    if show == False:
+        return ax
 
     savefig_or_show("graph", show=show, save=save)
 

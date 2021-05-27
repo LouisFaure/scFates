@@ -14,8 +14,6 @@ def slide_cors(
     adata: AnnData,
     root_milestone,
     milestones,
-    genesetA: Union[None, list] = None,
-    genesetB: Union[None, list] = None,
     col: Union[None, list] = None,
     basis: str = "umap",
     win_keep: Union[None, list] = None,
@@ -68,30 +66,27 @@ def slide_cors(
     freqs = adata.uns[name]["cell_freq"]
     nwin = len(freqs)
 
-    if len(milestones) == 2:
-        if "fork" in adata.uns[name]:
-            bif = adata.uns[name]["fork"]
-            if genesetA is None and genesetB is None:
-                genesetA = bif.index[
-                    (bif["branch"] == milestones[0]).values
-                    & (bif["module"] == "early").values
-                ]
-                genesetB = bif.index[
-                    (bif["branch"] == milestones[1]).values
-                    & (bif["module"] == "early").values
-                ]
-        corA = adata.uns[name]["corAB"][milestones[0]].copy()
-        corB = adata.uns[name]["corAB"][milestones[1]].copy()
-    elif len(milestones) == 1:
-        corA = adata.uns[name]["corAB"]["A"].copy()
-        corB = adata.uns[name]["corAB"]["B"].copy()
+    corAB = adata.uns[name]["corAB"].copy()
+
+    genesetA = corAB[milestones[0]]["genesetA"].index
+    genesetB = corAB[milestones[0]]["genesetB"].index
+
+    corA = pd.concat(adata.uns[name]["corAB"][milestones[0]])
+    corB = pd.concat(adata.uns[name]["corAB"][milestones[1]])
 
     groupsA = np.ones(corA.shape[0])
-    groupsA[corA.index.isin(genesetB)] = 2
+    groupsA[len(genesetA) :] = 2
     groupsB = np.ones(corA.shape[0])
-    groupsB[corA.index.isin(genesetA)] = 2
+    groupsB[: len(genesetA)] = 2
 
     gr = LinearSegmentedColormap.from_list("greyreds", ["lightgrey", "black"])
+
+    if win_keep is not None:
+        freqs = [freqs[i] for i in win_keep]
+        corA = corA.iloc[:, win_keep]
+        corB = corB.iloc[:, win_keep]
+        corA.columns = np.arange(len(win_keep)).astype(str)
+        corB.columns = np.arange(len(win_keep)).astype(str)
 
     maxlim = (
         np.max(
@@ -105,12 +100,6 @@ def slide_cors(
         + 0.01
     )
 
-    if win_keep is not None:
-        freqs = [freqs[i] for i in win_keep]
-        corA = corA.iloc[:, win_keep]
-        corB = corB.iloc[:, win_keep]
-        corA.columns = np.arange(len(win_keep)).astype(str)
-        corB.columns = np.arange(len(win_keep)).astype(str)
     nwin = len(freqs)
     fig, axs = plt.subplots(2, nwin, figsize=(nwin * 3, 6))
 
@@ -144,8 +133,8 @@ def slide_cors(
     for i in range(nwin):
         for j in range(2):
             axs[1, i].scatter(
-                corA.loc[genesets[j], str(i)],
-                corB.loc[genesets[j], str(i)],
+                corA.loc[groupsB == (j + 1), str(i)],
+                corB.loc[groupsB == (j + 1), str(i)],
                 color=c_mil[j],
                 alpha=0.5,
                 rasterized=True,
