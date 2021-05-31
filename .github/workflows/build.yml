@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7,3.8]
+        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v2
@@ -25,6 +25,7 @@ jobs:
       run: |
         sudo apt-get clean && sudo apt-get update
         sudo apt-get install -y r-base r-cran-mgcv
+        pip install rpy2
         pip install coverage cmake pytest mock git+https://github.com/j-bac/elpigraph-python.git
         pip install .
     - name: Test with pytest

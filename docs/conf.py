@@ -9,7 +9,6 @@ import mock
 
 MOCK_MODULES = [
     "scanpy",
-    "rpy2",
     "joblib",
     "tqdm",
     "scikit-misc",
@@ -20,21 +19,17 @@ MOCK_MODULES = [
     "adjustText",
     "statsmodels.stats.multitest",
     "statsmodels.formula.api",
+    "statsmodels.api",
     "igraph",
     "statsmodels.stats.weightstats",
     "skmisc.loess",
     "statsmodels.stats.multitest",
-    "rpy2.robjects",
-    "rpy2.robjects.packages",
-    "rpy2.rinterface",
     "scanpy.plotting._utils",
     "scanpy.plotting._tools.scatterplots",
     "plotly.express",
     "plotly.graph_objects",
-    "elpigraph",
     "phenograph",
     "sklearn.preprocessing",
-    "cellrank",
     "tqdm",
 ]
 for mod_name in MOCK_MODULES:

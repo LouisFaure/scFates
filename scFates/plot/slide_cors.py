@@ -68,11 +68,16 @@ def slide_cors(
 
     corAB = adata.uns[name]["corAB"].copy()
 
-    genesetA = corAB[milestones[0]]["genesetA"].index
-    genesetB = corAB[milestones[0]]["genesetB"].index
-
-    corA = pd.concat(adata.uns[name]["corAB"][milestones[0]])
-    corB = pd.concat(adata.uns[name]["corAB"][milestones[1]])
+    if len(milestones) > 1:
+        genesetA = corAB[milestones[0]]["genesetA"].index
+        genesetB = corAB[milestones[0]]["genesetB"].index
+        corA = pd.concat(adata.uns[name]["corAB"][milestones[0]])
+        corB = pd.concat(adata.uns[name]["corAB"][milestones[1]])
+    else:
+        genesetA = corAB["A"]["genesetA"].index
+        genesetB = corAB["A"]["genesetB"].index
+        corA = pd.concat(adata.uns[name]["corAB"]["A"])
+        corB = pd.concat(adata.uns[name]["corAB"]["B"])
 
     groupsA = np.ones(corA.shape[0])
     groupsA[len(genesetA) :] = 2

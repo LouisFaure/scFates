@@ -7,21 +7,19 @@ Expression. R package version 1.0.2.
 
 from anndata import AnnData
 
-from rpy2.robjects import pandas2ri, Formula
-from rpy2.robjects.packages import importr
-import rpy2.rinterface
-
-pandas2ri.activate()
-
 import pandas as pd
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+from scipy.stats import t
+import statsmodels.api as sm
+
 
 from .. import logging as logg
 from .. import settings
+from ..tools.utils import get_SE, bh_adjust, importeR
 
 
 def filter_cells(
@@ -39,7 +37,7 @@ def filter_cells(
     adata
         Annotated data matrix.
     device
-        Run method on either `cpu` or on `gpu`.
+        Run gene and molecule counting on either `cpu` or on `gpu`.
     p_level
         Statistical confidence level for deviation from the main trend, used for cell filtering (default=min(1e-3,1/adata.shape[0]))
     subset
@@ -87,13 +85,26 @@ def filter_cells(
     )
 
     logg.info("    fitting RLM")
-    rMASS = importr("MASS")
-    rstats = importr("stats")
-    m = rMASS.rlm(Formula("log1p_n_genes_by_counts ~ log1p_total_counts"), data=df)
+
+    rlm_model = sm.RLM.from_formula(
+        "log1p_n_genes_by_counts ~ log1p_total_counts",
+        df,
+    ).fit()
 
     p_level = min(1e-3, 1 / adata.shape[0]) if p_level is None else p_level
+
+    SSE_line = ((df.log1p_n_genes_by_counts - rlm_model.predict()) ** 2).sum()
+    MSE = SSE_line / df.shape[0]
+    z = t.ppf((p_level / 2, 1 - p_level / 2), df.shape[0])
+
+    se = np.zeros(df.shape[0])
+    get_SE(MSE, df.log1p_total_counts.values, se)
     pr = pd.DataFrame(
-        rstats.predict(m, interval="prediction", level=1 - p_level, type="response"),
+        {
+            0: rlm_model.predict(),
+            1: rlm_model.predict() + se * z[0],
+            2: rlm_model.predict() + se * z[1],
+        },
         index=adata.obs_names,
     )
 
@@ -290,11 +301,19 @@ def find_overdispersed(
 
     """
 
+    rmgcv, rstats, Formula = importeR("finding overdispersed features")
+
+    if any(np.array(adata.X.sum(axis=0)).ravel() == 0):
+        logg.info(
+            "Cannot find overdispersed features if some are not expressed in any cell!",
+            reset=True,
+        )
+        return adata if copy else None
+
     logg.info("Finding overdispersed features", reset=True)
 
     adata = adata.copy() if copy else adata
 
-    rstats = importr("stats")
     if "pagoda2" in adata.layers:
         X = adata.layers["pagoda2"].copy()
     else:
@@ -310,14 +329,12 @@ def find_overdispersed(
     df = pd.DataFrame({"m": m, "v": v, "n_obs": n_obs}, index=adata.var_names)
 
     logg.info("    gam fitting")
-    rmgcv = importr("mgcv")
     m = rmgcv.gam(Formula("v~s(m,k=" + str(gam_k) + ")"), data=df)
     df["res"] = rstats.residuals(m, type="response")
     n_obs = df.n_obs
 
-    pagoda2 = importr("pagoda2")
     df["lp"] = rstats.pf(np.exp(df.res), n_obs, n_obs, lower_tail=False, log_p=True)
-    df["lpa"] = pagoda2.bh_adjust(df["lp"], log=True)
+    df["lpa"] = bh_adjust(df["lp"], log=True)
 
     n_cells = adata.shape[0]
     df["qv"] = (

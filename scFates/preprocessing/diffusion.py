@@ -1,4 +1,5 @@
 from anndata import AnnData
+from typing import Optional
 from scipy.sparse import csr_matrix, find, issparse
 import pandas as pd
 import numpy as np
@@ -44,6 +45,8 @@ def diffusion(
         Whether to perform PCA or not.
     n_pcs
         Number of PC components.
+    seed
+        Get reproducible results for the GPU implementation.
     copy
         Return a copy instead of writing to adata.
     Returns
@@ -69,8 +72,11 @@ def diffusion(
         res = run_diffusion_maps(
             data_df, n_components=n_components, knn=knn, alpha=alpha
         )
-    # code converted in GPU
+    # code converted in GPU, not reproducible!
     elif device == "gpu":
+        logg.warn(
+            "GPU implementation uses eigsh from cupy.sparse, which is not currently reproducible and can give unstable results!"
+        )
         import cupy as cp
         from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
         from cupyx.scipy.sparse.linalg import eigsh

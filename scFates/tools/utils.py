@@ -3,6 +3,9 @@ import math
 from tqdm import tqdm
 from joblib import Parallel
 from scipy import sparse
+import numpy as np
+import shutil
+from .. import logging as logg
 
 
 def get_X(adata, cells, genes, layer, togenelist=False):
@@ -190,3 +193,71 @@ def palantir_on_seg(adata, seg, ms_data):
         ms_data.loc[adata_sub.obs_names, :], adata_sub.obs.t.idxmin()
     )
     return pr.pseudotime
+
+
+@njit(parallel=True)
+def get_SE(MSE, x, se):
+    N = len(x)
+    xmean = x.mean()
+    xxmean = np.sum((x - xmean) ** 2)
+    for i in range(N):
+        se[i] = math.sqrt(MSE) * math.sqrt(1 + 1 / N + (x[i] - xmean) ** 2 / xxmean)
+
+
+def bh_adjust(x, log=False):
+    x.sort_values(ascending=True)
+    if log:
+        q = x.sort_values(ascending=True) + np.log(len(x) / (np.arange(len(x)) + 1))
+    else:
+        q = x.sort_values(ascending=True) * len(x) / (np.arange(len(x)) + 1)
+    return (q.reindex(index=q.index[::-1]).cummin())[x.index]
+
+
+def importeR(task):
+    try:
+        from rpy2.robjects import pandas2ri, Formula
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+        import rpy2.rinterface
+
+        pandas2ri.activate()
+        Rpy2 = True
+    except Exception as e:
+        Rpy2 = (
+            "rpy2 installatio nis necessary for "
+            + task
+            + '. \
+            \nPlease use "pip3 install rpy2" to install rpy2'
+        )
+        Formula = False
+
+    if not shutil.which("R"):
+        R = (
+            "R installation is necessary for "
+            + task
+            + ". \
+            \nPlease install R and try again"
+        )
+    else:
+        R = True
+
+    try:
+        rstats = importr("stats")
+    except Exception as e:
+        rstats = (
+            "R installation is necessary for "
+            + task
+            + ". \
+            \nPlease install R and try again"
+        )
+
+    try:
+        rmgcv = importr("mgcv")
+    except Exception as e:
+        rmgcv = (
+            'R package "mgcv" is necessary for '
+            + task
+            + ". \
+            \nPlease install gam from https://cran.r-project.org/web/packages/gam/ and try again"
+        )
+
+    return Rpy2, R, rstats, rmgcv, Formula

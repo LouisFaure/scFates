@@ -7,10 +7,8 @@ tqdm>=4.45.0
 PhenoGraph>=1.5.3
 numba>=0.51.2
 scipy>=1.4.1
-palantir>=0.2.1
 scanpy>=1.7.0
 packaging>=20.3
-rpy2>=3.3.3
 numpy>=1.18.1
 joblib<=0.16.0
 pandas>=1.1.1
@@ -23,5 +21,4 @@ pypandoc>=1.5
 python_igraph>=0.8.2
 cairocffi>=1.2.0
 typing_extensions
-cellrank>=1.3.0
 scikit-learn

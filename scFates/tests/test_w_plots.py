@@ -1,13 +1,6 @@
 import scFates as scf
 import scanpy as sc
 import numpy as np
-from mock import Mock
-
-
-def fake_palantir(adata, seg, ms_data):
-    mini = adata.obs.t.loc[adata.obs.seg == seg].min()
-    maxi = adata.obs.t.loc[adata.obs.seg == seg].max()
-    return (adata.obs.t.loc[adata.obs.seg == seg] - mini) / (maxi - mini)
 
 
 def test_pipeline():
@@ -54,9 +47,6 @@ def test_pipeline():
     )
     F_PC1_ppt_cpu = adata.uns["graph"]["F"][0, :5]
 
-    # scf.tl.tree(adata,Nodes=100,use_rep="pca",method="ppt",device="gpu",ppt_sigma=1,ppt_lambda=10000,seed=1)
-    # F_PC1_ppt_gpu = adata.uns['graph']['F'][0,:5]
-
     scf.pl.graph(adata)
 
     adata_2 = scf.tl.roots(
@@ -68,10 +58,6 @@ def test_pipeline():
     scf.tl.pseudotime(adata_2, n_map=2)
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
-
-    scf.tools.utils.palantir_on_seg = Mock(side_effect=fake_palantir)
-    scf.tl.refine_pseudotime(adata_2, ms_data="diffusion")
-    adata_temp = scf.tl.refine_pseudotime(adata, ms_data="diffusion", copy=True)
 
     obs_t = adata.obs.t[:5].values
 
@@ -177,7 +163,7 @@ def test_pipeline():
     scf.tl.slide_cells(adata, root_milestone="80", milestones=["25"], win=200)
 
     scf.tl.slide_cors(adata, root_milestone="80", milestones=["25", "19"])
-    corAB = adata.uns["80->25<>19"]["corAB"]["19"].iloc[0, :5].values
+    corAB = adata.uns["80->25<>19"]["corAB"]["19"]["genesetA"].iloc[0, :5].values
 
     scf.tl.slide_cors(
         adata,
@@ -188,13 +174,7 @@ def test_pipeline():
     )
 
     scf.pl.slide_cors(adata, root_milestone="80", milestones=["25", "19"])
-    scf.pl.slide_cors(
-        adata,
-        root_milestone="80",
-        milestones=["25"],
-        genesetA=adata.var_names[[0, 1]],
-        genesetB=adata.var_names[[2, 3]],
-    )
+    scf.pl.slide_cors(adata, root_milestone="80", milestones=["25"])
 
     scf.tl.synchro_path(
         adata,

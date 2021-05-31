@@ -251,7 +251,15 @@ def refine_pseudotime(
         `.obs['t_old']`
             previously assigned pseudotime.
     """
-    import palantir
+
+    try:
+        import palantir
+    except Exception as e:
+        raise Exception(
+            'palantir installation is necessary for pseudotime refinement. \
+            \nPlease use "pip3 install palantir" to install it'
+        )
+
     from .utils import palantir_on_seg
 
     adata = adata.copy() if copy else adata

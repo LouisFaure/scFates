@@ -5,18 +5,12 @@ omit =
     scFates/logging.py
     scFates/preprocessing/*
     scFates/plot/utils.py
+    scFates/tools/utils.py
+    scFates/tools/conversion.py
+
 [report]
 exclude_lines =
-    if device=="gpu":
     if copy:
     if device == "gpu":
-    def mst_gpu
-    def cor_mat_gpu
-    def norm_R_gpu
-    def process_R_gpu
-    def norm_R_cpu
-    def matmul
-    def process_R_cpu
     def palantir_on_seg
     except Exception as e:
-    def cdist_numba

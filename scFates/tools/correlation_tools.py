@@ -24,14 +24,6 @@ import sys
 
 sys.setrecursionlimit(10000)
 
-from rpy2.robjects import pandas2ri, Formula
-from rpy2.robjects.packages import importr
-import rpy2.rinterface
-
-pandas2ri.activate()
-
-rmgcv = importr("mgcv")
-
 
 def synchro_path(
     adata: AnnData,

@@ -19,15 +19,6 @@ from ..plot.trajectory import graph as plot_graph
 from .. import logging as logg
 from .. import settings
 
-try:
-    import elpigraph
-
-except Exception as e:
-    warnings.warn(
-        'ElPiGraph package is not installed \
-        \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
-    )
-
 
 def curve(
     adata: AnnData,
@@ -101,6 +92,14 @@ def curve(
         `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
+    try:
+        import elpigraph
+
+    except Exception as e:
+        warnings.warn(
+            'ElPiGraph package is not installed \
+            \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
+        )
 
     logg.info(
         "inferring a principal tree",
@@ -589,6 +588,15 @@ def tree_epg(
     seed: Optional[int] = None,
     verbose: bool = True,
 ):
+
+    try:
+        import elpigraph
+
+    except Exception as e:
+        warnings.warn(
+            'ElPiGraph package is not installed \
+            \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
+        )
 
     X = get_data(adata, use_rep, ndims_rep)
 

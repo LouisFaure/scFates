@@ -15,28 +15,38 @@ or the latest development version can be installed from GitHub_ using::
     pip install git+https://github.com/LouisFaure/scFates
 
 
-Python dependencies
-------------------
+Dependencies
+------------
 
-scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data.
-Elpigraph needs to be installed from its github repository with the following command::
+scFates installed via pip gives a base package that can perform tree fitting on adata objects, here is a list of dependencies needed for each related functions:
+
+- :func:`scFates.tl.tree`: ElPiGraph can be also used for learning a principal graph from the data (`method="epg"`). Elpigraph can be installed from its github repository with the following command::
 
     pip install git+https://github.com/j-bac/elpigraph-python.git
 
+- :func:`scFates.tl.refine_pseudotime`, :func:`scFates.pp.diffusion` in CPU mode: Require Palantir to be installed in order to function::
 
-R dependencies
---------------
+    pip install Palantir
 
-scFates rely on the R package *mgcv* to perform testing and fitting of the features on the peudotime
-tree. Package is installed in an R session with the following command::
+- :func:`scFates.tl.cellrank_to_tree`: Requires cellrank to be installed in order to function::
 
-    install.packages('mgcv')
+    pip install cellrank
+
+- :func:`scFates.pp.find_overdispersed`, :func:`scFates.tl.test_association`, :func:`scFates.tl.fit`, :func:`scFates.tl.test_fork`, :func:`scFates.tl.activation`: Require R package mgcv interfaced via python package rpy2::
+
+    pip install rpy2
+
+    install.packages('mgcv') # run in R session
+
 
 GPU dependencies (optional)
 ---------------------------
 
-If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions,
-the latest version of rapids framework is required (at least 0.17) it is recommanded to create a new conda environment::
+If you have a nvidia GPU, scFates can leverage CUDA computations for speedups for the following functions:
+
+:func:`scFates.pp.filter_cells`, :func:`scFates.pp.batch_correct`, :func:`scFates.pp.diffusion`, :func:`scFates.tl.tree`, :func:`scFates.tl.cluster`
+
+The latest version of rapids framework is required (at least 0.17) it is recommanded to create a new conda environment::
 
     conda create -n scFates-gpu -c rapidsai -c nvidia -c conda-forge -c defaults rapids=0.19 python=3.8 cudatoolkit=11.0 -y
     conda activate scFates-gpu

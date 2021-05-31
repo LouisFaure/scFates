@@ -8,7 +8,7 @@ verbosity = 3
 logfile = ""
 """Name of logfile. By default is set to '' and writes to standard output."""
 
-plot_prefix = "sctree_"
+plot_prefix = "scFates_"
 """Global prefix that is appended to figure filenames.
 """
 

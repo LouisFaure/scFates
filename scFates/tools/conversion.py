@@ -1,6 +1,5 @@
 from typing_extensions import Literal
 import numpy as np
-import cellrank as cr
 import matplotlib.pyplot as plt
 
 from .graph_tools import *
@@ -73,6 +72,13 @@ def cellrank_to_tree(
 
 
     """
+    try:
+        import cellrank as cr
+    except Exception as e:
+        raise Exception(
+            'cellrank installation is necessary for conversion. \
+            \nPlease use "pip3 install cellrank" to install it'
+        )
 
     logg.info(
         "Converting CellRank results to a principal tree",

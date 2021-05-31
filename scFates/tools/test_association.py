@@ -18,55 +18,16 @@ import igraph
 import warnings
 
 
-from joblib import delayed, Parallel
+from joblib import delayed
 from tqdm import tqdm
 
 from .. import logging as logg
 from .. import settings
 from ..plot.test_association import test_association as plot_test_association
-from .utils import getpath, get_X
+from .utils import getpath, get_X, ProgressParallel, importeR
 
-
-try:
-    from rpy2.robjects import pandas2ri, Formula
-    from rpy2.robjects.packages import importr
-    import rpy2.rinterface
-
-    pandas2ri.activate()
-except Exception as e:
-    warnings.warn(
-        'Cannot compute gene expression trends without installing rpy2. \
-        \nPlease use "pip3 install rpy2" to install rpy2'
-    )
-    print(e.__doc__)
-    print(e.message)
-
-
-if not shutil.which("R"):
-    warnings.warn(
-        "R installation is necessary for computing gene expression trends. \
-        \nPlease install R and try again"
-    )
-
-try:
-    rstats = importr("stats")
-except Exception as e:
-    warnings.warn(
-        "R installation is necessary for computing gene expression trends. \
-        \nPlease install R and try again"
-    )
-    print(e.__doc__)
-    print(e.message)
-
-try:
-    rmgcv = importr("mgcv")
-except Exception as e:
-    warnings.warn(
-        'R package "mgcv" is necessary for computing gene expression trends. \
-        \nPlease install gam from https://cran.r-project.org/web/packages/gam/ and try again'
-    )
-    print(e.__doc__)
-    print(e.message)
+Rpy2, R, rstats, rmgcv, Formula = importeR("testing feature association to the tree")
+check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 
 def test_association(
@@ -118,7 +79,7 @@ def test_association(
     st_cut
         cutoff on stability (fraction of mappings with significant (fdr,A) pair) of association; significance, significance if st > st_cut.
     reapply_filters
-        avoid recpmputation and reapply fitlers.
+        avoid recomputation and reapply fitlers.
     plot
         call scf.pl.test_associationa after the test.
     root
@@ -145,6 +106,12 @@ def test_association(
         `.uns['stat_assoc_list']`
             list of fitted features on the tree for all mappings.
     """
+
+    if any(check):
+        idx = np.argwhere(
+            [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
+        ).min()
+        raise Exception(np.array([Rpy2, R, rstats, rmgcv, Formula])[idx])
 
     adata = adata.copy() if copy else adata
 
@@ -226,15 +193,13 @@ def test_association(
             )
         )
 
-        stat = Parallel(n_jobs=n_jobs)(
-            delayed(gt_fun_exp)(data[d])
-            for d in tqdm(
-                range(len(data)),
-                disable=n_map > 1,
-                file=sys.stdout,
-                desc="    single mapping ",
-            )
-        )
+        stat = ProgressParallel(
+            n_jobs=n_jobs,
+            total=len(data),
+            file=sys.stdout,
+            use_tqdm=n_map == 1,
+            desc="    single mapping ",
+        )(delayed(gt_fun_exp)(data[d]) for d in range(len(data)))
         stat = pd.DataFrame(stat, index=genes, columns=["p_val", "A"])
         stat["fdr"] = multipletests(stat.p_val, method="bonferroni")[1]
         stat_assoc_l = stat_assoc_l + [stat]
