@@ -97,6 +97,7 @@ def test_fork(
     uns_temp = adata.uns.copy()
 
     dct = graph["milestones"]
+    dct_rev = dict(zip(dct.values(), dct.keys()))
 
     keys = np.array(list(dct.keys()))
     vals = np.array(list(dct.values()))
@@ -131,16 +132,15 @@ def test_fork(
         )
         img.add_edges(edges)
 
-        def get_branches(i):
-            x = vpath[i][1:]
-            segs = graph["pp_info"].loc[x, :].seg.unique()
-            df_sub = df.loc[df.seg.isin(segs), :].copy(deep=True)
-            df_sub.loc[:, "i"] = i
-            return df_sub
+        def get_branches(m):
+            leave = adata.uns["graph"]["milestones"][m]
+            ddf = getpath(img, root, adata.uns["graph"]["tips"], leave, graph, df)
+            ddf["i"] = adata.uns["graph"]["milestones"][m]
+            return ddf
 
-        brcells = pd.concat(
-            list(map(get_branches, range(len(vpath)))), axis=0, sort=False
-        )
+        brcells = pd.concat([get_branches(m) for m in milestones])
+        brcells = brcells.loc[brcells.index.drop_duplicates(False)]
+
         matw = None
         if matw is None:
             brcells["w"] = 1
@@ -170,9 +170,11 @@ def test_fork(
             desc="    Differential expression",
         )(delayed(gt_fun)(data[d]) for d in range(len(data)))
 
-        fork_stat = fork_stat + [
-            pd.DataFrame(stat, index=genes, columns=milestones + ["de_p"])
-        ]
+        stat = pd.concat(stat, axis=1).T
+        stat.index = genes
+        stat.columns = [dct_rev[c] for c in stat.columns[: len(milestones)]] + ["de_p"]
+
+        fork_stat = fork_stat + [stat]
 
         topleave = fork_stat[m].iloc[:, :-1].idxmax(axis=1).apply(lambda mil: dct[mil])
 
@@ -300,18 +302,18 @@ def gt_fun(data):
     #
 
     global rmgcv
-    global rstats
 
-    def gamfit(sdf):
-        m = rmgcv.gam(
-            Formula("exp ~ s(t)+s(t,by=as.factor(i))+as.factor(i)"),
-            data=sdf,
-            weights=sdf["w"],
-        )
-        return rmgcv.summary_gam(m)[3][1]
+    m = rmgcv.gam(
+        Formula("exp ~ s(t)+s(t,by=as.factor(i))+as.factor(i)"),
+        data=sdf,
+        weights=sdf["w"],
+    )
 
     Amps = sdf.groupby("i").apply(lambda x: np.mean(x.exp))
-    return (Amps - Amps.max()).tolist() + [gamfit(sdf)]
+    res = Amps - Amps.max()
+    res["de_p"] = rmgcv.summary_gam(m)[3][1]
+
+    return res
 
 
 def test_upreg(data):
