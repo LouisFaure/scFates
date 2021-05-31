@@ -68,24 +68,38 @@ or the latest development version can be installed from GitHub:
 
     pip install git+https://github.com/LouisFaure/scFates
 
-## Python dependencies
+Dependencies
+------------
 
-scFates gives the choice of between SimplePPT and ElPiGraph for learning a principal graph from the data.
-Elpigraph needs to be installed from its github repository with the following command:
+scFates installed via pip gives a base package that can perform tree fitting on adata objects, here is a list of dependencies needed for each related functions:
+
+-`tl.tree`: ElPiGraph can be also used for learning a principal graph from the data (`method="epg"`). Elpigraph can be installed from its github repository with the following command:
 
     pip install git+https://github.com/j-bac/elpigraph-python.git
 
-## R dependencies
+-`tl.refine_pseudotime`, `pp.diffusion` in CPU mode: Require Palantir to be installed in order to function:
 
-scFates rely on the R package *mgcv* to perform testing and fitting of the features on the peudotime
-tree. Package is installed in an R session with the following command:
+    pip install Palantir
 
-    install.packages('mgcv')
+-`tl.cellrank_to_tree`: Requires cellrank to be installed in order to function::
 
-## GPU dependencies (optional)
+    pip install cellrank
 
-If you have a nvidia GPU, scFates can leverage CUDA computations for speedups in some functions, for that you will need
-[Rapids](https://rapids.ai/) installed. This can be easily done via a dedicated conda environment:
+-`pp.find_overdispersed`, `tl.test_association`, `tl.fit`, `tl.test_fork`, `tl.activation`: Require R package mgcv interfaced via python package rpy2::
+
+    pip install rpy2
+
+    install.packages('mgcv') # run in R session
+
+
+GPU dependencies (optional)
+---------------------------
+
+If you have a nvidia GPU, scFates can leverage CUDA computations for speedups for the following functions:
+
+`pp.filter_cells`, `pp.batch_correct`, `pp.diffusion`, `tl.tree`, `tl.cluster`
+
+The latest version of rapids framework is required (at least 0.17) it is recommanded to create a new conda environment:
 
     conda create -n scFates-gpu -c rapidsai -c nvidia -c conda-forge -c defaults \
         rapids=0.19 python=3.8 cudatoolkit=11.0 -y
@@ -99,4 +113,4 @@ scFates can be run on a [Docker container](https://hub.docker.com/repository/doc
 which provide a gpu enabled environment with Jupyter Lab. Use the following command:
 
     docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-        louisfaure/scfates:version-{version.number}
+        louisfaure/scfates:latest
