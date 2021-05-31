@@ -4,6 +4,18 @@
 Release Notes
 =============
 
+Version 0.2.4 :small:`May 31, 2021`
+-----------------------------------
+
+As mentioned in the following `issue <https://github.com/LouisFaure/scFates/issues/3>`_, this release removes the need to install the following dependencies: Palantir, cellrank and rpy2.
+This allows for a faster installation of a base scFates package and avoid any possible issues caused by rpy2 and R conflicts.
+
+
+.. rubric:: Modifications/Improvements
+
+- :func:`scFates.pl.modules`: added `smooth` parameter for knn smoothing of the plotted values.
+- :func:`scFates.pl.trajectory`: better segment and fork coloring, now uses averaging weigthed by the soft assignment matrix R to generate values.
+
 Version 0.2.3 :small:`May 17, 2021`
 -----------------------------------
 
