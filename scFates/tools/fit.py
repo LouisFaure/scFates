@@ -16,12 +16,12 @@ import copy
 import igraph
 import warnings
 
-from joblib import delayed, Parallel
+from joblib import delayed
 from tqdm import tqdm
 
 from .. import logging as logg
 from .. import settings
-from .utils import getpath, get_X, importeR
+from .utils import getpath, get_X, importeR, ProgressParallel
 
 
 Rpy2, R, rstats, rmgcv, Formula = importeR("fitting associated features")
@@ -166,15 +166,13 @@ def fit(
 
         data = list(zip([subtree] * len(Xgenes), Xgenes))
 
-        stat = Parallel(n_jobs=n_jobs)(
-            delayed(gt_fun)(data[d])
-            for d in tqdm(
-                range(len(data)),
-                disable=n_map > 1,
-                file=sys.stdout,
-                desc="    single mapping ",
-            )
-        )
+        stat = ProgressParallel(
+            n_jobs=n_jobs,
+            total=len(data),
+            use_tqdm=n_map == 1,
+            file=sys.stdout,
+            desc="    single mapping ",
+        )(delayed(gt_fun)(data[d]) for d in range(len(data)))
 
         stat_assoc = stat_assoc + [stat]
 
