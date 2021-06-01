@@ -10,6 +10,7 @@ from .correlation_tools import (
     module_inclusion,
 )
 from .correlation_tools import critical_transition, criticality_drivers
-from .bifurcation_tools import test_fork, branch_specific, activation
+from .bifurcation_tools import test_fork, branch_specific
+from .activation import activation
 from .conversion import cellrank_to_tree
 from .linearity_deviation import linearity_deviation
