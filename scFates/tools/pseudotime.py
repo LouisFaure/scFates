@@ -55,6 +55,14 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
 
     graph = adata.uns["graph"]
 
+    reassign, recolor = False, False
+    if "milestones" in graph:
+        tmp_mil = adata.obs.milestones.cat.categories.copy()
+        if "milestones_colors" in adata.uns:
+            tmp_mil_col = adata.uns["milestones_colors"].copy()
+            recolor = True
+        reassign = True
+
     logg.info("projecting cells onto the principal graph", reset=True)
 
     if n_map == 1:
@@ -129,6 +137,11 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
             adata.obs.milestones.cat.categories.astype(int),
         )
     )
+
+    if reassign:
+        rename_milestones(adata, tmp_mil)
+        if recolor:
+            adata.uns["milestones_colors"] = tmp_mil_col
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
