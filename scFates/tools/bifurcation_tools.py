@@ -43,11 +43,14 @@ def test_fork(
 ):
 
     """\
-    Test for branch differential gene expression, and differential upregulation after bifurcation point.
+    Test for branch differential gene expression and differential upregulation from progenitor to terminal state.
 
-    First, differential gene expression between two branches is performed. Then,
-    the feature are tested to intify the ones with higher average expression
-    in one of the derivative branches compared to the progenitor branch.
+    First, differential gene expression between two branches is performed. This is performed by
+    comparing the full model :math:`g_{i} \\sim\ pseudotime*Branch` to the reduced one
+    :math:`g_{i} \\sim\ pseudotime` using F-test.
+
+    Then, each feature is tested for its upregulation along the path from progenitor to terminal state,
+    using the linear model :math:`g_{i} \sim\ pseudotime`.
 
 
     Parameters
