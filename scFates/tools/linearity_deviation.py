@@ -65,7 +65,7 @@ def linearity_deviation(
 
     """
 
-    logg.info("Estimatation of deviation from linearity", reset=True)
+    logg.info("Estimation of deviation from linearity", reset=True)
 
     adata = adata.copy() if copy else adata
 

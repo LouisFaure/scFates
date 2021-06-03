@@ -301,7 +301,7 @@ def find_overdispersed(
 
     """
 
-    rmgcv, rstats, Formula = importeR("finding overdispersed features")
+    Rpy2, R, rstats, rmgcv, Formula = importeR("finding overdispersed features")
 
     if any(np.array(adata.X.sum(axis=0)).ravel() == 0):
         logg.info(
