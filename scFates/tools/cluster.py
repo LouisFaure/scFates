@@ -1,5 +1,4 @@
 from typing import Optional, Tuple, Sequence, Type, Mapping, Any
-from packaging import version
 
 import numpy as np
 import pandas as pd
