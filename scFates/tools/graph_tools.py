@@ -18,6 +18,7 @@ from scipy import sparse
 from ..plot.trajectory import graph as plot_graph
 from .. import logging as logg
 from .. import settings
+from .utils import get_X
 
 
 def curve(
@@ -921,7 +922,9 @@ def cleanup(
     return adata if copy else None
 
 
-def root(adata: AnnData, root: Union[int, str], copy: bool = False):
+def root(
+    adata: AnnData, root: Union[int, str], layer: Optional = None, copy: bool = False
+):
     """\
     Define the root of the trajectory.
 
@@ -930,7 +933,9 @@ def root(adata: AnnData, root: Union[int, str], copy: bool = False):
     adata
         Annotated data matrix.
     root
-        Either an Id (int) of the tip of the fork to be considered as a root. Or a key (str) from obs (such as CytoTRACE) for automatic selection.
+        Either an Id (int) of the tip of the fork to be considered as a root. Or a key (str) from obs/X (such as CytoTRACE) for automatic selection.
+    layer
+        If key is in X, choose which layer to use for the averaging.
     copy
         Return a copy instead of writing to adata.
     Returns
@@ -956,12 +961,15 @@ def root(adata: AnnData, root: Union[int, str], copy: bool = False):
     graph = adata.uns["graph"]
 
     if type(root) == str:
-        logg.info(
-            "automatic root selection using .obs['" + root + "'] values", time=False
-        )
+        if root in adata.obs:
+            root_val = adata.obs[root]
+        if root in adata.var_names:
+            root_val = get_X(adata, adata.obs_names, root, layer).ravel()
+
+        logg.info("automatic root selection using " + root + " values", time=False)
         avgs = list(
             map(
-                lambda n: np.average(adata.obs[root], weights=graph["R"][:, n]),
+                lambda n: np.average(root_val, weights=graph["R"][:, n]),
                 range(graph["R"].shape[1]),
             )
         )
