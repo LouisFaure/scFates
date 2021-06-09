@@ -49,6 +49,7 @@ Pseudotime analysis
     tl.fit
     tl.cluster
     tl.linearity_deviation
+    tl.get_path
 
 Bifurcation analysis
 --------------------
