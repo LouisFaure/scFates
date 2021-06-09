@@ -108,6 +108,14 @@ def test_fork(
     leaves = list(map(lambda leave: dct[leave], milestones))
     root = dct[root_milestone]
 
+    check_t = [graph["root"]]
+    if "root2" in graph:
+        check_t = [*check_t, graph["root2"]]
+    check_t = [*check_t, *graph["forks"]]
+
+    if root not in check_t:
+        raise Exception("The root milestone chosen is neither the root nor a fork!")
+
     g = igraph.Graph.Adjacency((graph["B"] > 0).tolist(), mode="undirected")
     # Add edge weights and node labels.
     g.es["weight"] = graph["B"][graph["B"].nonzero()]
