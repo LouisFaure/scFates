@@ -152,7 +152,7 @@ def test_pipeline():
     )
 
     scf.tl.activation(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
-    activation = adata.uns["80->25<>19"]["fork"].activation.values
+    activation = adata.uns["80->25<>19"]["fork"].slope.values
 
     scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"])
     scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"], show_traj=True)
@@ -161,7 +161,7 @@ def test_pipeline():
     cell_freq_sum = adata.uns["80->25<>19"]["cell_freq"][0].sum()
 
     scf.tl.slide_cells(adata, root_milestone="80", milestones=["25"], win=200)
-
+    adata.uns["80->25<>19"]["fork"].loc["Etv1", "module"] = "early"
     scf.tl.slide_cors(adata, root_milestone="80", milestones=["25", "19"])
     corAB = adata.uns["80->25<>19"]["corAB"]["19"]["genesetA"].iloc[0, :5].values
 
@@ -250,16 +250,16 @@ def test_pipeline():
     assert signi_fdr_rescaled == 5
     assert np.all(branch_spe == ["19", "19", "25"])
     assert np.allclose(mod_inc, [0.01487196, 0.01487196], rtol=1e-2)
-    assert np.allclose(activation, [4.42785624, 4.61626781, 0.31774091], rtol=1e-2)
+    assert np.allclose(activation, [0.03350972, 0.01856113, 0.05883641], rtol=1e-2)
     assert np.allclose(cell_freq_sum, 187.5316, rtol=1e-2)
     assert np.allclose(
         corAB,
-        [-0.25072212, -0.2963759, -0.46956663, -0.15842558, -0.01394084],
+        [-0.19718103, -0.25194172, -0.47820323, -0.24967024, -0.06222028],
         rtol=1e-2,
     )
     assert np.allclose(
         syncAB,
-        [-0.33520381, -0.32288241, -0.33093774, -0.33303708, -0.35310308],
+        [-0.31113123, -0.28931709, -0.30131992, -0.31664843, -0.34292551],
         rtol=1e-2,
     )
 
