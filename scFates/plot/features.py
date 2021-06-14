@@ -410,11 +410,11 @@ def trends(
 
     axheatmap = add_frames(axheatmap, fitted_sorted.shape[0])
 
-    if highlight_features is "A":
+    if highlight_features == "A":
         highlight_features = (
             adata.var.A[features].sort_values(ascending=False)[:n_features].index
         )
-    elif highlight_features is "fdr":
+    elif highlight_features == "fdr":
         highlight_features = (
             adata.var.fdr[features].sort_values(ascending=True)[:n_features].index
         )
