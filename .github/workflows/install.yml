@@ -6,7 +6,7 @@ on:
       - 'scFates/**'
 
 jobs:
-  build_and_test:
+  install_and_load:
 
     runs-on: ubuntu-latest
     strategy:

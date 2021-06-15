@@ -8,11 +8,14 @@ from time import time as get_time
 from platform import python_version
 from anndata.logging import get_memory_usage
 from anndata.logging import print_memory_usage
+import logging
 
-if "rpy2" in modules:
+try:
     from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
 
     rpy2_logger.setLevel(logging.ERROR)
+except Exception:
+    pass
 
 _VERBOSITY_LEVELS_FROM_STRINGS = {"error": 0, "warn": 1, "info": 2, "hint": 3}
 
