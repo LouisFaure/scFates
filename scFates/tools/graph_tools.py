@@ -14,6 +14,7 @@ import warnings
 import itertools
 import math
 from scipy import sparse
+import simpleppt
 
 from ..plot.trajectory import graph as plot_graph
 from .. import logging as logg
@@ -249,6 +250,8 @@ def tree(
 
     adata = adata.copy() if copy else adata
 
+    X = get_data(adata, use_rep, ndims_rep)
+
     if Nodes is None:
         if adata.shape[0] * 2 > 2000:
             Nodes = 2000
@@ -267,11 +270,9 @@ def tree(
             + ", metric = "
             + ppt_metric
         )
-        tree_ppt(
-            adata,
+        ppt = simpleppt.ppt(
+            X,
             Nodes=Nodes,
-            use_rep=use_rep,
-            ndims_rep=ndims_rep,
             init=init,
             sigma=ppt_sigma,
             lam=ppt_lambda,
@@ -283,6 +284,18 @@ def tree(
             seed=seed,
         )
 
+        graph = {
+            "B": ppt["B"],
+            "R": ppt["R"],
+            "F": ppt["F"],
+            "tips": ppt["tips"],
+            "forks": ppt["forks"],
+            "cells_fitted": X.index.tolist(),
+            "metrics": ppt["metric"],
+        }
+
+        res = {"graph": graph, "ppt": ppt}
+
     elif method == "epg":
         logg.hint(
             "parameters used \n"
@@ -293,11 +306,9 @@ def tree(
             + ", lambda = "
             + str(epg_lambda)
         )
-        tree_epg(
-            adata,
+        res = tree_epg(
+            X,
             Nodes,
-            use_rep,
-            ndims_rep,
             init,
             epg_lambda,
             epg_mu,
@@ -308,270 +319,26 @@ def tree(
             epg_verbose,
         )
 
+    adata.uns.update(res)
+
     if plot:
         plot_graph(adata, basis)
-
-    return adata if copy else None
-
-
-def tree_ppt(
-    adata: AnnData,
-    Nodes: int = None,
-    use_rep: str = None,
-    ndims_rep: Optional[int] = None,
-    init: Optional[DataFrame] = None,
-    sigma: Optional[Union[float, int]] = 0.1,
-    lam: Optional[Union[float, int]] = 1,
-    metric: str = "euclidean",
-    nsteps: int = 50,
-    err_cut: float = 5e-3,
-    device: str = "cpu",
-    gpu_tbp: int = 16,
-    seed: Optional[int] = None,
-):
-
-    X = get_data(adata, use_rep, ndims_rep)
-
-    X_t = X.values.T
-
-    # if seed is not None:
-    #    np.random.seed(seed)
-
-    if device == "gpu":
-        import rmm
-
-        rmm.reinitialize(managed_memory=True)
-        assert rmm.is_initialized()
-        import cupy as cp
-        from cuml.metrics import pairwise_distances
-        from .utils import process_R_gpu, norm_R_gpu, cor_mat_gpu, mst_gpu, matmul
-
-        X_gpu = cp.asarray(X_t, dtype=np.float64)
-        W = cp.empty_like(X_gpu)
-        W.fill(1)
-
-        if init is None:
-            if seed is not None:
-                np.random.seed(seed)
-            F_mat_gpu = X_gpu[
-                :, np.random.choice(X.shape[0], size=Nodes, replace=False)
-            ]
-        else:
-            F_mat_gpu = cp.asarray(init.T)
-            M = init.T.shape[0]
-
-        iterator = tqdm(range(nsteps), file=sys.stdout, desc="    fitting")
-        for i in iterator:
-            R = pairwise_distances(X_gpu.T, F_mat_gpu.T, metric=metric)
-
-            threadsperblock = (gpu_tbp, gpu_tbp)
-            blockspergrid_x = math.ceil(R.shape[0] / threadsperblock[0])
-            blockspergrid_y = math.ceil(R.shape[1] / threadsperblock[1])
-            blockspergrid = (blockspergrid_x, blockspergrid_y)
-
-            process_R_gpu[blockspergrid, threadsperblock](R, sigma)
-            Rsum = R.sum(axis=1)
-            norm_R_gpu[blockspergrid, threadsperblock](R, Rsum)
-
-            d = pairwise_distances(F_mat_gpu.T, metric=metric)
-            mst = mst_gpu(d)
-            mat = mst + mst.T - cp.diag(cp.diag(mst.A))
-            B = (mat > 0).astype(int)
-
-            D = cp.identity(B.shape[0]) * B.sum(axis=0)
-            L = D - B
-            M = L * lam + cp.identity(R.shape[1]) * R.sum(axis=0)
-            old_F = F_mat_gpu
-
-            dotprod = cp.zeros((X_gpu.shape[0], R.shape[1]))
-            TPB = 16
-            threadsperblock = (gpu_tbp, gpu_tbp)
-            blockspergrid_x = math.ceil(dotprod.shape[0] / threadsperblock[0])
-            blockspergrid_y = math.ceil(dotprod.shape[1] / threadsperblock[1])
-            blockspergrid = (blockspergrid_x, blockspergrid_y)
-
-            matmul[blockspergrid, threadsperblock]((X_gpu * W), R, dotprod)
-
-            F_mat_gpu = cp.linalg.solve(M.T, dotprod.T).T
-
-            err = cp.max(
-                cp.sqrt((F_mat_gpu - old_F).sum(axis=0) ** 2)
-                / cp.sqrt((F_mat_gpu ** 2).sum(axis=0))
-            )
-            if err < err_cut:
-                iterator.close()
-                logg.info("    converged")
-                break
-
-        if i == (nsteps - 1):
-            logg.info("    inference not converged (error: " + str(err) + ")")
-
-        score = cp.array(
-            [
-                cp.sum((1 - cor_mat_gpu(F_mat_gpu, X_gpu)) * R) / R.shape[0],
-                sigma / R.shape[0] * cp.sum(R * cp.log(R)),
-                lam / 2 * cp.sum(d * B),
-            ]
-        )
-
-        ppt = [
-            X.index.tolist(),
-            cp.asnumpy(score),
-            cp.asnumpy(F_mat_gpu),
-            cp.asnumpy(R),
-            cp.asnumpy(B),
-            cp.asnumpy(L),
-            cp.asnumpy(d),
-            lam,
-            sigma,
-            nsteps,
-            metric,
-        ]
-    else:
-        from sklearn.metrics import pairwise_distances
-        from .utils import process_R_cpu, norm_R_cpu, cor_mat_cpu
-
-        X_cpu = np.asarray(X_t, dtype=np.float64)
-        W = np.empty_like(X_cpu)
-        W.fill(1)
-
-        if init is None:
-            if seed is not None:
-                np.random.seed(seed)
-            F_mat_cpu = X_cpu[
-                :, np.random.choice(X.shape[0], size=Nodes, replace=False)
-            ]
-        else:
-            F_mat_cpu = np.asarray(init.T)
-            Nodes = init.T.shape[0]
-
-        j = 1
-        err = 100
-
-        # while ((j <= nsteps) & (err > err_cut)):
-        iterator = tqdm(range(nsteps), file=sys.stdout, desc="    fitting")
-        for i in iterator:
-            R = pairwise_distances(X_cpu.T, F_mat_cpu.T, metric=metric)
-
-            process_R_cpu(R, sigma)
-            Rsum = R.sum(axis=1)
-            norm_R_cpu(R, Rsum)
-
-            d = pairwise_distances(F_mat_cpu.T, metric=metric)
-
-            csr = csr_matrix(np.triu(d, k=-1))
-            Tcsr = minimum_spanning_tree(csr)
-            mat = Tcsr.toarray()
-            mat = mat + mat.T - np.diag(np.diag(mat))
-            B = (mat > 0).astype(int)
-
-            D = (np.identity(B.shape[0])) * np.array(B.sum(axis=0))
-            L = D - B
-            M = L * lam + np.identity(R.shape[1]) * np.array(R.sum(axis=0))
-            old_F = F_mat_cpu
-
-            F_mat_cpu = np.linalg.solve(M.T, (np.dot(X_cpu * W, R)).T).T
-
-            err = np.max(
-                np.sqrt((F_mat_cpu - old_F).sum(axis=0) ** 2)
-                / np.sqrt((F_mat_cpu ** 2).sum(axis=0))
-            )
-
-            err = err.item()
-            if err < err_cut:
-                iterator.close()
-                logg.info("    converged")
-                break
-
-        if i == (nsteps - 1):
-            logg.info("    not converged (error: " + str(err) + ")")
-
-        score = [
-            np.sum((1 - cor_mat_cpu(F_mat_cpu, X_cpu)) * R) / R.shape[0],
-            sigma / R.shape[0] * np.sum(R * np.log(R)),
-            lam / 2 * np.sum(d * B),
-        ]
-
-        ppt = [
-            X.index.tolist(),
-            score,
-            F_mat_cpu,
-            R,
-            B,
-            L,
-            d,
-            lam,
-            sigma,
-            nsteps,
-            metric,
-        ]
-
-    names = [
-        "cells_fitted",
-        "score",
-        "F",
-        "R",
-        "B",
-        "L",
-        "d",
-        "lambda",
-        "sigma",
-        "nsteps",
-        "metric",
-    ]
-    ppt = dict(zip(names, ppt))
-
-    g = igraph.Graph.Adjacency((ppt["B"] > 0).tolist(), mode="undirected")
-
-    # remvoe lonely nodes
-    co_nodes = np.argwhere(np.array(g.degree()) > 0).ravel()
-    ppt["R"] = ppt["R"][:, co_nodes]
-    ppt["F"] = ppt["F"][:, co_nodes]
-    ppt["B"] = ppt["B"][co_nodes, :][:, co_nodes]
-    ppt["L"] = ppt["L"][co_nodes, :][:, co_nodes]
-    ppt["d"] = ppt["d"][co_nodes, :][:, co_nodes]
-
-    if len(co_nodes) < Nodes:
-        logg.info("    " + str(Nodes - len(co_nodes)) + " lonely nodes removed")
-
-    g = igraph.Graph.Adjacency((ppt["B"] > 0).tolist(), mode="undirected")
-    ppt["tips"] = np.argwhere(np.array(g.degree()) == 1).flatten()
-    ppt["forks"] = np.argwhere(np.array(g.degree()) > 2).flatten()
-
-    if len(ppt["tips"]) > 30:
-        logg.info("    more than 30 tips detected!")
-
-    graph = {
-        "B": ppt["B"],
-        "R": ppt["R"],
-        "F": ppt["F"],
-        "tips": ppt["tips"],
-        "forks": ppt["forks"],
-        "cells_fitted": X.index.tolist(),
-        "metrics": ppt["metric"],
-    }
-
-    adata.uns["graph"] = graph
-
-    adata.uns["ppt"] = ppt
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
-        "    .uns['ppt'], dictionnary containing inferred tree.\n"
+        "    .uns['" + method + "'], dictionnary containing inferred tree.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
         "    .uns['graph']['R'] soft assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'] coordinates of principal points in representation space."
     )
 
-    return adata
+    return adata if copy else None
 
 
 def tree_epg(
-    adata: AnnData,
+    X,
     Nodes: int = None,
-    use_rep: str = None,
-    ndims_rep: Optional[int] = None,
     init: Optional[DataFrame] = None,
     lam: Optional[Union[float, int]] = 0.01,
     mu: Optional[Union[float, int]] = 0.1,
@@ -590,8 +357,6 @@ def tree_epg(
             'ElPiGraph package is not installed \
             \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
         )
-
-    X = get_data(adata, use_rep, ndims_rep)
 
     if seed is not None:
         np.random.seed(seed)
@@ -671,19 +436,7 @@ def tree_epg(
 
     Tree[0]["Edges"] = list(Tree[0]["Edges"])
 
-    adata.uns["graph"] = graph
-    adata.uns["epg"] = Tree[0]
-
-    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint(
-        "added \n"
-        "    .uns['epg'] dictionnary containing inferred elastic tree generated from elpigraph.\n"
-        "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
-        "    .uns['graph']['F'] coordinates of principal points in representation space."
-    )
-
-    return adata
+    return {"graph": graph, "ppt": Tree[0]}
 
 
 def curve_epg(
@@ -918,133 +671,6 @@ def cleanup(
         "    graph cleaned", time=False, end=" " if settings.verbosity > 2 else "\n"
     )
     logg.hint("removed " + str(init_num - B.shape[0]) + " principal points")
-
-    return adata if copy else None
-
-
-def root(
-    adata: AnnData, root: Union[int, str], layer: Optional = None, copy: bool = False
-):
-    """\
-    Define the root of the trajectory.
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    root
-        Either an Id (int) of the tip of the fork to be considered as a root. Or a key (str) from obs/X (such as CytoTRACE) for automatic selection.
-    layer
-        If key is in X, choose which layer to use for the averaging.
-    copy
-        Return a copy instead of writing to adata.
-    Returns
-    -------
-    adata : anndata.AnnData
-        if `copy=True` it returns or else add fields to `adata`:
-
-        `.uns['graph']['root']`
-            selected root.
-        `.uns['graph']['pp_info']`
-            for each PP, its distance vs root and segment assignment.
-        `.uns['graph']['pp_seg']`
-            segments network information.
-    """
-
-    adata = adata.copy() if copy else adata
-
-    if "graph" not in adata.uns:
-        raise ValueError(
-            "You need to run `tl.tree` or `tl.curve` first to compute a princal graph before choosing a root."
-        )
-
-    graph = adata.uns["graph"]
-
-    if type(root) == str:
-        if root in adata.obs:
-            root_val = adata.obs[root]
-        if root in adata.var_names:
-            root_val = get_X(adata, adata.obs_names, root, layer).ravel()
-
-        logg.info("automatic root selection using " + root + " values", time=False)
-        avgs = list(
-            map(
-                lambda n: np.average(root_val, weights=graph["R"][:, n]),
-                range(graph["R"].shape[1]),
-            )
-        )
-        root = np.argmax(np.array(avgs))
-
-    from sklearn.metrics import pairwise_distances
-
-    d = 1e-6 + pairwise_distances(graph["F"].T, graph["F"].T, metric=graph["metrics"])
-
-    to_g = graph["B"] * d
-
-    csr = csr_matrix(to_g)
-
-    g = igraph.Graph.Adjacency((to_g > 0).tolist(), mode="undirected")
-    g.es["weight"] = to_g[to_g.nonzero()]
-
-    root_dist_matrix = shortest_path(csr, directed=False, indices=root)
-    pp_info = pd.DataFrame(
-        {"PP": g.vs.indices, "time": root_dist_matrix, "seg": np.zeros(csr.shape[0])}
-    )
-
-    nodes = np.argwhere(
-        np.apply_along_axis(arr=(csr > 0).todense(), axis=0, func1d=np.sum) != 2
-    ).flatten()
-    nodes = np.unique(np.append(nodes, root))
-
-    pp_seg = pd.DataFrame(columns=["n", "from", "to", "d"])
-    for node1, node2 in itertools.combinations(nodes, 2):
-        paths12 = g.get_shortest_paths(node1, node2)
-        paths12 = np.array([val for sublist in paths12 for val in sublist])
-
-        if np.sum(np.isin(nodes, paths12)) == 2:
-            fromto = np.array([node1, node2])
-            path_root = root_dist_matrix[[node1, node2]]
-            fro = fromto[np.argmin(path_root)]
-            to = fromto[np.argmax(path_root)]
-            pp_info.loc[paths12, "seg"] = pp_seg.shape[0] + 1
-            pp_seg = pp_seg.append(
-                pd.DataFrame(
-                    {
-                        "n": pp_seg.shape[0] + 1,
-                        "from": fro,
-                        "to": to,
-                        "d": shortest_path(csr, directed=False, indices=fro)[to],
-                    },
-                    index=[pp_seg.shape[0] + 1],
-                )
-            )
-
-    pp_seg["n"] = pp_seg["n"].astype(int).astype(str)
-    pp_seg["n"] = pp_seg["n"].astype(int).astype(str)
-
-    pp_seg["from"] = pp_seg["from"].astype(int)
-    pp_seg["to"] = pp_seg["to"].astype(int)
-
-    pp_info["seg"] = pp_info["seg"].astype(int).astype(str)
-    pp_info["seg"] = pp_info["seg"].astype(int).astype(str)
-
-    graph["pp_info"] = pp_info
-    graph["pp_seg"] = pp_seg
-    graph["root"] = root
-
-    adata.uns["graph"] = graph
-
-    logg.info(
-        "node " + str(root) + " selected as a root",
-        time=False,
-        end=" " if settings.verbosity > 2 else "\n",
-    )
-    logg.hint(
-        "added\n"
-        "    .uns['graph']['root'] selected root.\n"
-        "    .uns['graph']['pp_info'] for each PP, its distance vs root and segment assignment.\n"
-        "    .uns['graph']['pp_seg'] segments network information."
-    )
 
     return adata if copy else None
 
