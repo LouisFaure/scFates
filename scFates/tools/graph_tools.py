@@ -259,17 +259,6 @@ def tree(
             Nodes = int(adata.shape[0] / 2)
 
     if method == "ppt":
-        logg.hint(
-            "parameters used \n"
-            "    "
-            + str(Nodes)
-            + " principal points, sigma = "
-            + str(ppt_sigma)
-            + ", lambda = "
-            + str(ppt_lambda)
-            + ", metric = "
-            + ppt_metric
-        )
         ppt = simpleppt.ppt(
             X,
             Nodes=Nodes,
@@ -297,15 +286,6 @@ def tree(
         res = {"graph": graph, "ppt": ppt}
 
     elif method == "epg":
-        logg.hint(
-            "parameters used \n"
-            "    "
-            + str(Nodes)
-            + " principal points, mu = "
-            + str(epg_mu)
-            + ", lambda = "
-            + str(epg_lambda)
-        )
         res = tree_epg(
             X,
             Nodes,
@@ -357,6 +337,15 @@ def tree_epg(
             'ElPiGraph package is not installed \
             \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
         )
+    logg.hint(
+        "parameters used \n"
+        "    "
+        + str(Nodes)
+        + " principal points, mu = "
+        + str(mu)
+        + ", lambda = "
+        + str(lam)
+    )
 
     if seed is not None:
         np.random.seed(seed)
