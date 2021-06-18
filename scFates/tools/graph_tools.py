@@ -273,6 +273,8 @@ def tree(
             seed=seed,
         )
 
+        ppt = vars(ppt)
+
         graph = {
             "B": ppt["B"],
             "R": ppt["R"],
