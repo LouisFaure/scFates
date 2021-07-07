@@ -12,6 +12,6 @@ from .correlation_tools import (
 )
 from .correlation_tools import critical_transition, criticality_drivers
 from .bifurcation_tools import test_fork, branch_specific
-from .activation import activation
+from .activation import activation, activation_lm
 from .conversion import cellrank_to_tree
 from .linearity_deviation import linearity_deviation

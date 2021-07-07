@@ -152,7 +152,10 @@ def test_pipeline():
     )
 
     scf.tl.activation(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
-    activation = adata.uns["80->25<>19"]["fork"].slope.values
+    activation = adata.uns["80->25<>19"]["fork"].activation.values
+
+    scf.tl.activation_lm(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
+    activation_lm = adata.uns["80->25<>19"]["fork"].slope.values
 
     scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"])
     scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"], show_traj=True)
@@ -250,7 +253,8 @@ def test_pipeline():
     assert signi_fdr_rescaled == 5
     assert np.all(branch_spe == ["19", "19", "25"])
     assert np.allclose(mod_inc, [0.01487196, 0.01487196], rtol=1e-2)
-    assert np.allclose(activation, [0.03350972, 0.01856113, 0.05883641], rtol=1e-2)
+    assert np.allclose(activation, [4.42785624, 4.61626781, 0.31774091], rtol=1e-2)
+    assert np.allclose(activation_lm, [0.03350972, 0.01856113, 0.05883641], rtol=1e-2)
     assert np.allclose(cell_freq_sum, 187.5316, rtol=1e-2)
     assert np.allclose(
         corAB,
