@@ -49,7 +49,7 @@ def modules(
     save
         save the plot.
     kwargs
-        arguments to pass to scanpy functions pl.embedding
+        arguments to pass to :func:`scFates.pl.trajectory` if `show_traj=True`, else to :func:`scanpy.pl.embedding`
 
     Returns
     -------

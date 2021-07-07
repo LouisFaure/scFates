@@ -14,6 +14,27 @@ def test_fork(
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
+    """\
+    Plot results generated from tl.test_fork.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    col
+        color of the two sets of genes, by default to the color of the end milestones.
+    show
+        show the plot.
+    save
+        save the plot.
+
+    Returns
+    -------
+    If `show==False` a matrix of :class:`~matplotlib.axes.Axes`
+
+    """
 
     if "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"]) == 1:
         from . import palette_tools

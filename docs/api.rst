@@ -62,6 +62,7 @@ Bifurcation analysis
     tl.test_fork
     tl.branch_specific
     tl.activation
+    tl.activation_lm
 
 **Correlation analysis**
 
@@ -105,6 +106,8 @@ Plot
     :toctree: .
 
     pl.modules
+    pl.test_fork
     pl.slide_cors
     pl.synchro_path
     pl.critical_transition
+    pl.module_inclusion

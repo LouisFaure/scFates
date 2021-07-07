@@ -59,7 +59,7 @@ def graph(
     save
         save the plot.
     kwargs
-        arguments to pass to scanpy functions pl.embedding
+        arguments to pass to :func:`scanpy.pl.embedding`
 
     Returns
     -------
@@ -207,7 +207,7 @@ def trajectory(
     save
         save the plot.
     kwargs
-        arguments to pass to scanpy functions pl.scatter/pl.tsne/pl.umap
+        arguments to pass to :func:`scanpy.pl.embedding`.
 
     Returns
     -------

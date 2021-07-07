@@ -75,7 +75,7 @@ def test_association(
     fdr_cut
         FDR (Benjamini-Hochberg adjustment) cutoff on significance; significance if FDR < fdr_cut.
     A_cut
-        amplitude cutoff on significance; significance if A > A_cut.
+        amplitude is max of predicted value minus min of predicted value by GAM. significance if A > A_cut.
     st_cut
         cutoff on stability (fraction of mappings with significant (fdr,A) pair) of association; significance, significance if st > st_cut.
     reapply_filters

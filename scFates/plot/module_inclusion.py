@@ -7,6 +7,7 @@ import igraph
 import numpy as np
 
 from scanpy.plotting._utils import savefig_or_show
+from typing_extensions import Literal
 
 
 def module_inclusion(
@@ -16,11 +17,42 @@ def module_inclusion(
     bins: int,
     branch: str,
     figsize: tuple = (6, 5),
-    max_t: Union["fork", "max"] = "max",
+    max_t: Literal["fork", "max"] = "max",
     perm: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
+    """\
+    Plot results generated from tl.module_inclusion.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    bins
+        Number of bins to separate the pseudotime path.
+    branch
+        Which endpoint to focus on.
+    figsize
+        Size of the figure.
+    max_t
+        Until which pseudotime to limit the plot and binning.
+    perm
+        Show permutation results.
+    show
+        show the plot.
+    save
+        save the plot.
+
+    Returns
+    -------
+    If `show==False` a matrix of :class:`~matplotlib.axes.Axes`
+
+    """
 
     graph = adata.uns["graph"]
 

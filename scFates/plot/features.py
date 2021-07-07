@@ -110,7 +110,9 @@ def trends(
     save
         save the plot.
     save_genes
-        save list of genes following the order displayed o nthe heatmap.
+        save list of genes following the order displayed on the heatmap.
+    **kwargs
+        arguments passed to :func:`scFates.pl.trajectory` if `plot_emb=True`
 
     Returns
     -------

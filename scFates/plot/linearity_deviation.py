@@ -1,10 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from anndata import AnnData
+from typing import Optional, Union
+from scanpy.plotting._utils import savefig_or_show
 
 
 def linearity_deviation(
-    adata: AnnData, start_milestone, end_milestone, ntop_genes: int = 30
+    adata: AnnData,
+    start_milestone,
+    end_milestone,
+    ntop_genes: int = 30,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
 ):
 
     """\
@@ -15,32 +22,19 @@ def linearity_deviation(
     adata
         Annotated data matrix.
     start_milestone
-        tip defining progenitor branch.
+        tip defining the starting point of analysed segment.
     end_milestone
-        tips defining the progeny branch.
-    percentiles
-        pseudotime percentiles to define the progenitor and progeny populations
-    n_jobs
-        number of cpu processes used to perform the test.
-    n_map
-        number of cell mappings from which to do the test.
-    plot
-        plot the cells selection according to percentiles.
-    basis
-        basis to use in case of plotting
-    copy
-        Return a copy instead of writing to adata.
+        tip defining the end point of analysed segment.
+    ntop_genes
+        number of top genes to show.
+    show
+        show the plot.
+    save
+        save the plot.
 
     Returns
     -------
-    adata : anndata.AnnData
-        if `copy=True` it returns subsetted or else subset (keeping only
-        significant features) and add fields to `adata`:
-
-        `.var['A->B_rss']`
-            pearson residuals of the linear fit.
-        `.obs['A->B_lindev_sel']`
-            cell selections used for the test.
+    If `show==False` a matrix of :class:`~matplotlib.axes.Axes`
 
     """
 
@@ -66,3 +60,8 @@ def linearity_deviation(
 
     ax.set_xlabel("ranking")
     ax.set_ylabel("deviance from linearity")
+
+    savefig_or_show("linearity_transition", show=show, save=save)
+
+    if show == False:
+        return ax
