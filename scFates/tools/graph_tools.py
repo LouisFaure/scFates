@@ -285,10 +285,11 @@ def tree(
             "metrics": ppt["metric"],
         }
 
-        res = {"graph": graph, "ppt": ppt}
+        adata.uns["graph"] = graph
+        adata.uns["ppt"] = ppt
 
     elif method == "epg":
-        res = tree_epg(
+        graph, epg = tree_epg(
             X,
             Nodes,
             init,
@@ -300,8 +301,8 @@ def tree(
             seed,
             epg_verbose,
         )
-
-    adata.uns.update(res)
+        adata.uns["graph"] = graph
+        adata.uns["epg"] = epg
 
     if plot:
         plot_graph(adata, basis)
@@ -427,7 +428,7 @@ def tree_epg(
 
     Tree[0]["Edges"] = list(Tree[0]["Edges"])
 
-    return {"graph": graph, "ppt": Tree[0]}
+    return graph, Tree[0]
 
 
 def curve_epg(
