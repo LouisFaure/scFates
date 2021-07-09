@@ -4,6 +4,16 @@
 Release Notes
 =============
 
+Version 0.2.5 :small:`July 09, 2021`
+-----------------------------------
+
+.. rubric:: Addition/Changes
+
+- code for SimplePPT algorithm has been moved to a standalone python package `simpelppt <https://github.com/LouisFaure/simpleppt/>`_.
+- :func:`scFates.tl.activation_lm`, a more robust version of tl.activation, as it uses linear model to identify activation of feature prior to bifurcation.
+- :func:`scFates.tl.root` can now automatically select root from any feature expression.
+
+
 Version 0.2.4 :small:`May 31, 2021`
 -----------------------------------
 
