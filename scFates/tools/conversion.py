@@ -2,7 +2,7 @@ from typing_extensions import Literal
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .graph_tools import *
+from .graph_fitting import *
 from .pseudotime import *
 from .. import logging as logg
 from .. import settings

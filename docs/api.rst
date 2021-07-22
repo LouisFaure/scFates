@@ -32,10 +32,17 @@ Tree inference
 
     tl.tree
     tl.curve
-    tl.cleanup
-    tl.root
-    tl.roots
     tl.cellrank_to_tree
+
+Tree operations
+---------------
+
+.. autosummary::
+    :toctree: .
+
+    tl.cleanup
+    tl.subset_tree
+    tl.attach_tree
 
 Pseudotime analysis
 -------------------
@@ -43,6 +50,8 @@ Pseudotime analysis
 .. autosummary::
     :toctree: .
 
+    tl.root
+    tl.roots
     tl.pseudotime
     tl.refine_pseudotime
     tl.test_association
