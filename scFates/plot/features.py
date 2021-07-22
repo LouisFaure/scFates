@@ -29,7 +29,7 @@ def trends(
     milestones: Union[None, str] = None,
     module: Union[None, Literal["early", "late"]] = None,
     branch: Union[None, str] = None,
-    annot: Union[None, Literal["seg", "milestones"]] = None,
+    annot: Union[None, str] = None,
     title: str = "",
     feature_cmap: str = "RdBu_r",
     pseudo_cmap: str = "viridis",
@@ -301,24 +301,26 @@ def trends(
 
         annot_cmap = pd.concat(list(map(milestones_prog, seg_order)))
 
-    if annot == "seg":
-        color_key = "seg_colors"
-        if color_key not in adata.uns or len(adata.uns[color_key]) == 1:
-            from . import palette_tools
+    elif type(annot) == str:
+        if len(adata.obs[annot].unique()) > 1:
+            color_key = annot + "_colors"
+            if color_key not in adata.uns or len(adata.uns[color_key]) == 1:
+                from . import palette_tools
 
-            palette_tools._set_default_colors_for_categorical_obs(adata, "seg")
-
-        annot_cmap = pd.Series(
-            list(
-                map(
-                    lambda s: adata.uns["seg_colors"][
-                        adata.obs.seg.cat.categories == s
-                    ][0],
-                    adata.obs.seg[fitted_sorted.columns].values,
-                )
-            ),
-            index=fitted_sorted.columns,
-        )
+                palette_tools._set_default_colors_for_categorical_obs(adata, annot)
+            annot_cmap = pd.Series(
+                list(
+                    map(
+                        lambda c: adata.uns[color_key][
+                            adata.obs[annot].cat.categories == c
+                        ][0],
+                        adata.obs[annot][fitted_sorted.columns].values,
+                    )
+                ),
+                index=fitted_sorted.columns,
+            )
+    else:
+        annot = None
 
     fig, f_axs = plt.subplots(
         ncols=2,
