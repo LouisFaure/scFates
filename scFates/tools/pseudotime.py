@@ -138,10 +138,15 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
         )
     )
 
-    if reassign:
+    while reassign:
+        if "tmp_mil_col" not in locals():
+            break
+        if len(tmp_mil_col) != len(adata.obs.milestones.cat.categories):
+            break
         rename_milestones(adata, tmp_mil)
         if recolor:
             adata.uns["milestones_colors"] = tmp_mil_col
+        reassign = False
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
