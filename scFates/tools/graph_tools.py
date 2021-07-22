@@ -701,14 +701,8 @@ def getpath(adata, root_milestone, milestones):
     if "milestones_colors" in adata.uns:
         mlsc = adata.uns["milestones_colors"].copy()
 
-    dct = dict(
-        zip(
-            adata.obs.milestones.cat.categories.tolist(),
-            np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(int)),
-        )
-    )
-    keys = np.array(list(dct.keys()))
-    vals = np.array(list(dct.values()))
+    dct = adata.uns["graph"]["milestones"]
+    dct = dict(zip(dct.keys(), dct.values()))
 
     leaves = list(map(lambda leave: dct[leave], milestones))
     root = dct[root_milestone]
