@@ -65,7 +65,12 @@ def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
             from . import palette_tools
 
             palette_tools._set_default_colors_for_categorical_obs(adata, "milestones")
-        img.vs["color"] = adata.uns["milestones_colors"]
+        img.vs["color"] = [
+            np.array(adata.uns["milestones_colors"])[
+                adata.obs.milestones.cat.categories == dct[m]
+            ][0]
+            for m in img.vs["name"]
+        ]
     else:
         if cmap is None:
             cmap = "viridis"
