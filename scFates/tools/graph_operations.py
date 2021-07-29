@@ -264,7 +264,7 @@ def attach_tree(adata: AnnData, adata_branch: AnnData, use_rep: str):
     )
 
     adata = adata.concatenate(
-        adata_branch, batch_key=None, index_unique=None, uns_merge="first"
+        adata_branch, batch_key=None, index_unique=None, uns_merge="first", join="outer"
     )
 
     logg.info("    tree refitting")
