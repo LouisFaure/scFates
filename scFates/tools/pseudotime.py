@@ -56,7 +56,7 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     graph = adata.uns["graph"]
 
     reassign, recolor = False, False
-    if "milestones" in graph:
+    if "milestones" in adata.obs:
         tmp_mil = adata.obs.milestones.cat.categories.copy()
         if "milestones_colors" in adata.uns:
             tmp_mil_col = adata.uns["milestones_colors"].copy()
