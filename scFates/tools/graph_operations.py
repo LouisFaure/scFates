@@ -218,7 +218,12 @@ def subset_tree(
     return adata if copy else None
 
 
-def attach_tree(adata: AnnData, adata_branch: AnnData, use_rep: str):
+def attach_tree(
+    adata: AnnData,
+    adata_branch: AnnData,
+    use_rep: str,
+    linkage: Union[None, tuple] = None,
+):
     """\
     Attach a tree to another!
 
@@ -232,6 +237,9 @@ def attach_tree(adata: AnnData, adata_branch: AnnData, use_rep: str):
         Annotated data matrix containing cells and tree to attach to the adata.
     use_rep
         representation used to refit the tree, it is recommended to reuse the same as initially used.
+    linkage
+        Force the attachment of the two tree at a specific node (main tree, branch), the adjacency matrix will not be updated
+
     Returns
     -------
     adata : anndata.AnnData
@@ -259,6 +267,21 @@ def attach_tree(adata: AnnData, adata_branch: AnnData, use_rep: str):
         (np.zeros((R.shape[0], R2.shape[1])), R2)
     )
     R = np.concatenate((R, R2), axis=1)
+
+    if linkage is not None:
+        n_init = B.shape[0]
+        B2 = adata_branch.uns["graph"]["B"].copy()
+        B, B2 = (
+            np.concatenate((B, np.zeros((B2.shape[0], B.shape[1])))),
+            np.concatenate((np.zeros((B.shape[0], B2.shape[1])), B2)),
+        )
+        B = np.concatenate((B, B2), axis=1)
+        i, ib = linkage
+        B[i, n_init + ib] = 1
+        B[n_init + ib, i] = 1
+    else:
+        B = None
+
     newcells = np.concatenate(
         [np.array(graph["cells_fitted"]), adata_branch.uns["graph"]["cells_fitted"]]
     )
@@ -270,7 +293,7 @@ def attach_tree(adata: AnnData, adata_branch: AnnData, use_rep: str):
     logg.info("    tree refitting")
     F = np.dot(adata[newcells].obsm[use_rep].T, R) / R.sum(axis=0)
 
-    def run_ppt(F, adata, R):
+    def run_ppt(F, adata, R, B):
         d = pairwise_distances(F.T, metric=adata.uns["ppt"]["metric"])
 
         W = np.empty_like(adata.obsm[use_rep].T)
@@ -280,7 +303,8 @@ def attach_tree(adata: AnnData, adata_branch: AnnData, use_rep: str):
         Tcsr = minimum_spanning_tree(csr)
         mat = Tcsr.toarray()
         mat = mat + mat.T - np.diag(np.diag(mat))
-        B = (mat > 0).astype(int)
+        if linkage is None:
+            B = (mat > 0).astype(int)
 
         D = (np.identity(B.shape[0])) * np.array(B.sum(axis=0))
         L = D - B
@@ -291,16 +315,17 @@ def attach_tree(adata: AnnData, adata_branch: AnnData, use_rep: str):
         F = np.linalg.solve(M.T, (np.dot(adata[newcells].obsm[use_rep].T * W, R)).T).T
         return F, B, R
 
-    F, B, R = run_ppt(F, adata, R)
+    F, B, R = run_ppt(F, adata, R, B)
 
-    R = pairwise_distances(
-        adata[newcells].obsm["X_diff"], F.T, metric=adata.uns["ppt"]["metric"]
-    )
-    process_R_cpu(R, adata.uns["ppt"]["sigma"])
-    Rsum = R.sum(axis=1)
-    norm_R_cpu(R, Rsum)
+    if linkage is None:
+        R = pairwise_distances(
+            adata[newcells].obsm[use_rep], F.T, metric=adata.uns["ppt"]["metric"]
+        )
+        process_R_cpu(R, adata.uns["ppt"]["sigma"])
+        Rsum = R.sum(axis=1)
+        norm_R_cpu(R, Rsum)
 
-    F, B, R = run_ppt(F, adata, R)
+        F, B, R = run_ppt(F, adata, R, B)
 
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     tips = np.argwhere(np.array(g.degree()) == 1).flatten()
