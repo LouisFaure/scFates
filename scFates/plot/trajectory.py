@@ -14,9 +14,11 @@ import types
 
 from matplotlib.backend_bases import GraphicsContextBase, RendererBase
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, hex2color, rgb2hex
 from numba import njit
 import math
+
+from . import palette_tools
 
 
 def graph(
@@ -280,7 +282,6 @@ def trajectory(
             color_cells + "_colors" not in adata.uns
             or len(adata.uns[color_cells + "_colors"]) == 1
         ):
-            from . import palette_tools
 
             palette_tools._set_default_colors_for_categorical_obs(adata, color_cells)
 
@@ -320,31 +321,87 @@ def trajectory(
 
     lines = [[tuple(proj.loc[j]) for j in i] for i in edges]
 
-    vals = pd.Series(
-        _get_color_values(adata, color_seg, layer=layer_seg)[0], index=adata.obs_names
-    )
-    R = pd.DataFrame(adata.uns["graph"]["R"], index=adata.uns["graph"]["cells_fitted"])
-    R = R.loc[adata.obs_names]
-    vals = vals[~np.isnan(vals)]
-    R = R.loc[vals.index]
+    miles_ids = miles_ids[np.isin(miles_ids, proj.index)]
 
-    def get_nval(i):
-        return np.average(vals, weights=R.loc[:, i])
+    if color_seg == "milestones":
+        from matplotlib.colors import LinearSegmentedColormap
 
-    node_vals = np.array(list(map(get_nval, range(R.shape[1]))))
-    seg_val = node_vals[np.array(edges)].mean(axis=1)
+        rev_dict = dict(zip(graph["milestones"].values(), graph["milestones"].keys()))
+        miles_cat = adata.obs.milestones.cat.categories
+        mil_col = np.array(adata.uns["milestones_colors"])
 
-    if perc_seg is not None:
-        min_v, max_v = np.percentile(seg_val, perc_seg)
-        seg_val[seg_val < min_v] = min_v
-        seg_val[seg_val > max_v] = max_v
+        def get_milestones_gradients(i):
+            start = graph["pp_seg"].iloc[i, 1]
+            end = graph["pp_seg"].iloc[i, 2]
+            mil_path = graph["pp_info"].time[g.get_all_shortest_paths(start, end)[0]]
+            mil_path = (mil_path - mil_path.min()) / (mil_path.max() - mil_path.min())
+            start_col = mil_col[miles_cat == rev_dict[start]][0]
+            end_col = mil_col[miles_cat == rev_dict[end]][0]
 
-    sm = ScalarMappable(
-        norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
-    )
+            edges_mil = pd.Series(
+                [
+                    mil_path[[first, second]].mean()
+                    for first, second in zip(mil_path.index, mil_path.index[1:])
+                ],
+                index=[
+                    (first, second)
+                    for first, second in zip(mil_path.index, mil_path.index[1:])
+                ],
+            )
 
-    lines = [lines[i] for i in np.argsort(seg_val)]
-    seg_val = seg_val[np.argsort(seg_val)]
+            cmap = LinearSegmentedColormap.from_list("mil", [start_col, end_col])
+            return pd.Series(
+                [rgb2hex(c) for c in cmap(edges_mil)], index=edges_mil.index
+            )
+
+        edge_colors = pd.concat(
+            [get_milestones_gradients(i) for i in range(graph["pp_seg"].shape[0])]
+        )
+
+        edges_tuples = [tuple(e) for e in edges]
+        edge_colors.index = [
+            e if any((np.array(edges_tuples) == e).sum(axis=1) == 2) else e[::-1]
+            for e in edge_colors.index
+        ]
+        edge_colors = edge_colors[edges_tuples]
+
+        color_segs = [hex2color(c) for c in edge_colors]
+        color_mils = [
+            mil_col[miles_cat == mm][0] for mm in [rev_dict[m] for m in miles_ids]
+        ]
+
+    else:
+        vals = pd.Series(
+            _get_color_values(adata, color_seg, layer=layer_seg)[0],
+            index=adata.obs_names,
+        )
+        R = pd.DataFrame(
+            adata.uns["graph"]["R"], index=adata.uns["graph"]["cells_fitted"]
+        )
+        R = R.loc[adata.obs_names]
+        vals = vals[~np.isnan(vals)]
+        R = R.loc[vals.index]
+
+        def get_nval(i):
+            return np.average(vals, weights=R.loc[:, i])
+
+        node_vals = np.array(list(map(get_nval, range(R.shape[1]))))
+        seg_val = node_vals[np.array(edges)].mean(axis=1)
+
+        if perc_seg is not None:
+            min_v, max_v = np.percentile(seg_val, perc_seg)
+            seg_val[seg_val < min_v] = min_v
+            seg_val[seg_val > max_v] = max_v
+
+        sm = ScalarMappable(
+            norm=Normalize(vmin=seg_val.min(), vmax=seg_val.max()), cmap=cmap_seg
+        )
+
+        lines = [lines[i] for i in np.argsort(seg_val)]
+        seg_val = seg_val[np.argsort(seg_val)]
+
+        color_segs = [sm.to_rgba(sv) for sv in seg_val]
+        color_mils = sm.to_rgba(node_vals[miles_ids])
 
     lc = matplotlib.collections.LineCollection(
         lines, colors="k", linewidths=7.5 * scale_path, zorder=100
@@ -398,12 +455,10 @@ def trajectory(
 
     lc = matplotlib.collections.LineCollection(
         lines,
-        colors=[sm.to_rgba(sv) for sv in seg_val],
+        colors=color_segs,
         linewidths=5 * scale_path,
         zorder=104,
     )
-
-    miles_ids = miles_ids[np.isin(miles_ids, proj.index)]
 
     ax.scatter(
         proj.loc[miles_ids, 0],
@@ -414,13 +469,11 @@ def trajectory(
     )
     ax.add_collection(lc)
 
-    tip_val = node_vals[miles_ids]
-
     ax.scatter(
         proj.loc[miles_ids, 0],
         proj.loc[miles_ids, 1],
         zorder=105,
-        c=sm.to_rgba(tip_val),
+        c=color_mils,
         s=140 * scale_path,
     )
 
@@ -530,8 +583,6 @@ def trajectory_3d(
             adata.obs[color] = adata.obs[color].astype("category")
 
         if color + "_colors" not in adata.uns:
-            from . import palette_tools
-
             palette_tools._set_default_colors_for_categorical_obs(adata, color)
 
         if adata.obs[color].dtype.name == "category":
@@ -647,14 +698,14 @@ def _get_color_values(
     else:  # is_categorical_dtype(values)
         color_key = f"{value_to_plot}_colors"
         if palette:
-            _utils._set_colors_for_categorical_obs(adata, value_to_plot, palette)
+            palette_tools._set_colors_for_categorical_obs(adata, value_to_plot, palette)
         elif color_key not in adata.uns or len(adata.uns[color_key]) < len(
             values.categories
         ):
             #  set a default palette in case that no colors or few colors are found
-            _utils._set_default_colors_for_categorical_obs(adata, value_to_plot)
+            palette_tools._set_default_colors_for_categorical_obs(adata, value_to_plot)
         else:
-            _utils._validate_palette(adata, value_to_plot)
+            palette_tools._validate_palette(adata, value_to_plot)
 
         color_vector = np.asarray(adata.uns[color_key])[values.codes]
 
