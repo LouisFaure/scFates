@@ -58,6 +58,69 @@ def modules(
     """
 
     plt.rcParams["axes.grid"] = False
+
+    X_early, X_late = get_modules(adata, root_milestone, milestones, layer)
+
+    cells = X_early.index
+    adata_c = adata.copy()
+    adata_c.obsm["X_early"] = X_early.values
+    adata_c.obsm["X_late"] = X_late.values
+
+    if smooth:
+        adata_c.obsm["X_early"] = adata_c.obsp["connectivities"].dot(
+            adata_c.obsm["X_early"]
+        )
+        adata_c.obsm["X_late"] = adata_c.obsp["connectivities"].dot(
+            adata_c.obsm["X_late"]
+        )
+
+    axs, _, _, _ = setup_axes(panels=[0, 1])
+
+    if show_traj:
+        plot_trajectory(
+            adata_c,
+            basis="early",
+            root_milestone=root_milestone,
+            milestones=milestones,
+            color_cells=color,
+            show=False,
+            title="",
+            legend_loc="none",
+            ax=axs[0],
+            **kwargs,
+        )
+    else:
+        sc.pl.embedding(
+            adata_c[cells],
+            basis="early",
+            color=color,
+            legend_loc="none",
+            title="",
+            show=False,
+            ax=axs[0],
+            **kwargs,
+        )
+
+    sc.pl.embedding(
+        adata_c[cells],
+        basis="late",
+        color=color,
+        legend_loc="none",
+        show=False,
+        title="",
+        ax=axs[1],
+        **kwargs,
+    )
+
+    axs[0].set_xlabel("early " + milestones[0])
+    axs[0].set_ylabel("early " + milestones[1])
+    axs[1].set_xlabel("late " + milestones[0])
+    axs[1].set_ylabel("late " + milestones[1])
+
+    savefig_or_show("modules", show=show, save=save)
+
+
+def get_modules(adata, root_milestone, milestones, layer):
     graph = adata.uns["graph"]
 
     dct = graph["milestones"]
@@ -135,69 +198,16 @@ def modules(
         {
             "early_" + milestones[0]: X.loc[:, early_1].mean(axis=1),
             "early_" + milestones[1]: X.loc[:, early_2].mean(axis=1),
-        }
+        },
+        index=X.index,
     )
 
     X_late = pd.DataFrame(
         {
             "late_" + milestones[0]: X.loc[:, late_1].mean(axis=1),
             "late_" + milestones[1]: X.loc[:, late_2].mean(axis=1),
-        }
+        },
+        index=X.index,
     )
 
-    adata_c = adata.copy()
-    adata_c.obsm["X_early"] = X_early.values
-    adata_c.obsm["X_late"] = X_late.values
-
-    if smooth:
-        adata_c.obsm["X_early"] = adata_c.obsp["connectivities"].dot(
-            adata_c.obsm["X_early"]
-        )
-        adata_c.obsm["X_late"] = adata_c.obsp["connectivities"].dot(
-            adata_c.obsm["X_late"]
-        )
-
-    axs, _, _, _ = setup_axes(panels=[0, 1])
-
-    if show_traj:
-        plot_trajectory(
-            adata_c,
-            basis="early",
-            root_milestone=root_milestone,
-            milestones=milestones,
-            color_cells=color,
-            show=False,
-            title="",
-            legend_loc="none",
-            ax=axs[0],
-            **kwargs,
-        )
-    else:
-        sc.pl.embedding(
-            adata_c[cells],
-            basis="early",
-            color=color,
-            legend_loc="none",
-            title="",
-            show=False,
-            ax=axs[0],
-            **kwargs,
-        )
-
-    sc.pl.embedding(
-        adata_c[cells],
-        basis="late",
-        color=color,
-        legend_loc="none",
-        show=False,
-        title="",
-        ax=axs[1],
-        **kwargs,
-    )
-
-    axs[0].set_xlabel("early " + milestones[0])
-    axs[0].set_ylabel("early " + milestones[1])
-    axs[1].set_xlabel("late " + milestones[0])
-    axs[1].set_ylabel("late " + milestones[1])
-
-    savefig_or_show("modules", show=show, save=save)
+    return X_early, X_late
