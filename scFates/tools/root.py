@@ -14,7 +14,12 @@ from .. import settings
 
 
 def root(
-    adata: AnnData, root: Union[int, str], layer: Optional = None, copy: bool = False
+    adata: AnnData,
+    root: Union[int, str],
+    tips_only: bool = False,
+    min_val: bool = False,
+    layer: Optional = None,
+    copy: bool = False,
 ):
     """\
     Define the root of the trajectory.
@@ -25,6 +30,10 @@ def root(
         Annotated data matrix.
     root
         Either an Id (int) of the tip of the fork to be considered as a root. Or a key (str) from obs/X (such as CytoTRACE) for automatic selection.
+    tips_only
+        Perform automatic assignment on tips only.
+    min_val
+        Perform automatic assignment using minimum value instead.
     layer
         If key is in X, choose which layer to use for the averaging.
     copy
@@ -64,7 +73,17 @@ def root(
                 range(graph["R"].shape[1]),
             )
         )
-        root = np.argmax(np.array(avgs))
+        avgs = np.array(avgs)
+        if tips_only:
+            mask = np.ones(avgs.shape, bool)
+            mask[adata.uns["graph"]["tips"]] = False
+            avgs[mask] = 0
+        if min_val:
+            if tips_only:
+                avgs[mask] = avgs.max()
+            root = np.argmin(avgs)
+        else:
+            root = np.argmax(avgs)
 
     d = 1e-6 + pairwise_distances(graph["F"].T, graph["F"].T, metric=graph["metrics"])
 
