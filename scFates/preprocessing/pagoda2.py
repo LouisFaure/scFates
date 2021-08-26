@@ -10,7 +10,7 @@ from anndata import AnnData
 import pandas as pd
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, issparse
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from scipy.stats import t
@@ -304,11 +304,12 @@ def find_overdispersed(
     Rpy2, R, rstats, rmgcv, Formula = importeR("finding overdispersed features")
 
     if any(np.array(adata.X.sum(axis=0)).ravel() == 0):
-        logg.info(
-            "Cannot find overdispersed features if some are not expressed in any cell!",
-            reset=True,
+        raise Exception(
+            "Cannot find overdispersed features if some are not expressed in any cell!"
         )
-        return adata if copy else None
+
+    if not issparse(adata.X):
+        raise Exception("Overdispersion requires sparse matrix!")
 
     logg.info("Finding overdispersed features", reset=True)
 
