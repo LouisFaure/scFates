@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from .graph_fitting import *
 from .pseudotime import *
+from .root import root
 from .. import logging as logg
 from .. import settings
 
@@ -15,6 +16,7 @@ def cellrank_to_tree(
     method: Literal["ppt", "epg"] = "ppt",
     ppt_lambda=20,
     auto_root=True,
+    rev_root=False,
     reassign_pseudotime=True,
     plot_circular=False,
     copy=False,
@@ -43,6 +45,8 @@ def cellrank_to_tree(
         Parameter for simpleppt, penalty for the tree length [Mao15]_. Usually works well at default for the conversion.
     auto_root
         Automatically select the root tip using the time key.
+    rev_root
+        Reverse the time measurement values: auto root uses the maximum values (should be False for CytoTRACE and True for latent_time)
     reassign_pseudotime
         whether use the time key to replace the distances comptued from the tree.
     plot_circular
@@ -126,10 +130,11 @@ def cellrank_to_tree(
 
     if auto_root:
         logg.info("\nauto selecting a root using " + time + ".\n")
-        tips = adata.uns["graph"]["tips"]
-        R = adata.uns["graph"]["R"]
-        root_sel = tips[adata.obs[time].iloc[R[:, tips].argmax(axis=0)].values.argmin()]
-        root(adata, int(root_sel))
+        if rev_root:
+            adata.obs[time] = 1 - adata.obs[time]
+        root(adata, time)
+        if rev_root:
+            adata.obs[time] = 1 - adata.obs[time]
         pseudotime(adata)
 
     newt = ""
