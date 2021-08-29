@@ -96,6 +96,7 @@ intersphinx_mapping = dict(
     sklearn=("https://scikit-learn.org/stable/", None),
     cugraph=("https://docs.rapids.ai/api/cugraph/stable/", None),
     scipy=("https://docs.scipy.org/doc/scipy/reference/", None),
+    cellrank=("https://cellrank.readthedocs.io/en/stable/", None),
 )
 
 templates_path = ["_templates"]

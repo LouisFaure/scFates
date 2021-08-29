@@ -4,8 +4,23 @@
 Release Notes
 =============
 
+Version 0.2.6 :small:`August 29, 2021`
+------------------------------------
+
+.. rubric:: Additions
+
+- added :func:`scFates.tl.subset_tree` and :func:`scFates.tl.attach_tree`, functions that allow to perform linkage or cutting operations on tree or set of two trees.
+
+.. rubric:: Improvements
+
+- Added possibility to show any metadata on top of :func:`scFates.pl.trends`
+- :func:`scFates.pl.trajectory` can now color segments with nice gradients of milestone colors following pseudotime.
+- Added check for sparsity in :func:`scFates.pp.find_opverdispersed`, as it is a crucial parameter for finding overdispersed features.
+- :func:`scFates.tl.root` can now automatically select a tip, and with a minimum value instead of a max.
+- :func:`scFates.pl.single_trend` can now plot raw and fitted mean module along pseudotime, plots with embedding can now be saved as image.
+
 Version 0.2.5 :small:`July 09, 2021`
------------------------------------
+------------------------------------
 
 .. rubric:: Addition/Changes
 

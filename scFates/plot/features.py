@@ -79,7 +79,7 @@ def trends(
     branch
         if bifurcation analysis as been performed, subset features to a specific milestone.
     annot
-        adds an annotation row o ntop of the heatmap.
+        adds an annotation row on top of the heatmap.
     title
         add a title.
     feature_cmap
