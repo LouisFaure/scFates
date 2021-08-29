@@ -16,8 +16,13 @@ from typing_extensions import Literal
 from scanpy.plotting._utils import savefig_or_show
 
 from .. import logging as logg
-from ..tools.utils import getpath
+from ..tools.utils import getpath, importeR
 from .trajectory import trajectory
+
+Rpy2, R, rstats, rmgcv, Formula = importeR("fitting associated features")
+check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
+
+from .modules import get_modules
 
 
 def trends(
@@ -513,7 +518,11 @@ def trends(
 
 def single_trend(
     adata: AnnData,
-    feature: str,
+    feature: Union[str, None] = None,
+    root_milestone: Union[None, str] = None,
+    milestones: Union[None, str] = None,
+    module: Union[None, Literal["early", "late"]] = None,
+    branch: Union[None, str] = None,
     basis: str = "umap",
     ylab: str = "expression",
     color_exp=None,
@@ -523,6 +532,7 @@ def single_trend(
     layer: Union[str, None] = None,
     cmap_seg: str = "RdBu_r",
     cmap_cells: str = "RdBu_r",
+    plot_emb: bool = True,
     figsize: tuple = (8, 4),
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -537,7 +547,15 @@ def single_trend(
     adata
         Annotated data matrix.
     feature
-        Name of the fitted feature
+        Name of the fitted feature.
+    root_milestone
+        if plotting module instead of feature, tip defining progenitor branch.
+    milestones
+        if plotting module instead of feature, tips defining the progenies branches.
+    module
+        if plotting module instead of feature, whether to plot early or late modules.
+    branch
+        if plotting module instead of feature, plot fitted milestone-specific module.
     basis
         Name of the `obsm` basis to use.
     ylab
@@ -569,37 +587,74 @@ def single_trend(
 
     """
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+    if root_milestone is None:
+        color_key = "seg_colors"
+        if color_key not in adata.uns:
+            from . import palette_tools
 
-    color_key = "seg_colors"
-    if color_key not in adata.uns:
-        from . import palette_tools
+            palette_tools._set_default_colors_for_categorical_obs(adata, "seg")
 
-        palette_tools._set_default_colors_for_categorical_obs(adata, "seg")
-
-    if layer is None:
-        if sparse.issparse(adata.X):
-            Xfeature = adata[:, feature].X.A.T.flatten()
+        if layer is None:
+            if sparse.issparse(adata.X):
+                Xfeature = adata[:, feature].X.A.T.flatten()
+            else:
+                Xfeature = adata[:, feature].X.T.flatten()
         else:
-            Xfeature = adata[:, feature].X.T.flatten()
+            if sparse.issparse(adata.layers[layer]):
+                Xfeature = adata[:, feature].layers[layer].A.T.flatten()
+            else:
+                Xfeature = adata[:, feature].layers[layer].T.flatten()
+
+        df = pd.DataFrame(
+            {
+                "t": adata.obs.t,
+                "fitted": adata[:, feature].layers["fitted"].flatten(),
+                "expression": Xfeature,
+                "seg": adata.obs.seg,
+            }
+        ).sort_values("t")
     else:
-        if sparse.issparse(adata.layers[layer]):
-            Xfeature = adata[:, feature].layers[layer].A.T.flatten()
-        else:
-            Xfeature = adata[:, feature].layers[layer].T.flatten()
+        if plot_emb:
+            logg.warn("trajectory plotting is not yet implemented for module plot!")
+            plot_emb = False
+        graph = adata.uns["graph"]
+        miles_cat = adata.obs.milestones.cat.categories
+        mil_col = np.array(adata.uns["milestones_colors"])
 
-    df = pd.DataFrame(
-        {
-            "t": adata.obs.t,
-            "fitted": adata[:, feature].layers["fitted"].flatten(),
-            "expression": Xfeature,
-            "seg": adata.obs.seg,
-        }
-    ).sort_values("t")
+        X_early, X_late = get_modules(adata, root_milestone, milestones, layer)
+        X = pd.concat([X_early, X_late], axis=1)
+        X["t"] = adata.obs.loc[X.index, "t"].values
+
+        def gamfit(f):
+            m = rmgcv.gam(
+                Formula(f),
+                data=X,
+                gamma=1.5,
+            )
+            return pd.Series(rmgcv.predict_gam(m), index=X.index)
+
+        predictions = gamfit("{}_{}~s(t,bs='ts')".format(module, branch))
+
+        df = pd.DataFrame(
+            {
+                "t": adata[X.index].obs.t,
+                "fitted": predictions.values,
+                "expression": X["_".join([module, branch])].values,
+                "seg": adata[X.index].obs.seg,
+            }
+        ).sort_values("t")
+
+        color_exp = mil_col[miles_cat == branch][0]
+
+    if plot_emb:
+        fig, axs = plt.subplots(1, 2, figsize=figsize)
+    else:
+        fig, axs = plt.subplots(1, 1, figsize=figsize)
+        axs = ["empty", axs]
 
     for s in df.seg.unique():
         if color_exp is None:
-            ax2.scatter(
+            axs[1].scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
                 alpha=alpha_expr,
@@ -608,7 +663,7 @@ def single_trend(
                     np.argwhere(adata.obs.seg.cat.categories == s)[0][0]
                 ],
             )
-            ax2.plot(
+            axs[1].plot(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "fitted"],
                 c=adata.uns["seg_colors"][
@@ -622,7 +677,7 @@ def single_trend(
                     adata.uns["graph"]["pp_seg"].loc[:, "from"].isin([tolink]).values
                 ).flatten()
             ]:
-                ax2.plot(
+                axs[1].plot(
                     [
                         df.loc[df.seg == s, "t"].iloc[-1],
                         df.loc[df.seg == next_s, "t"].iloc[0],
@@ -637,14 +692,14 @@ def single_trend(
                     linewidth=fitted_linewidth,
                 )
         else:
-            ax2.scatter(
+            axs[1].scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
                 c=color_exp,
                 alpha=alpha_expr,
                 s=size_expr,
             )
-            ax2.plot(
+            axs[1].plot(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "fitted"],
                 c=color_exp,
@@ -656,7 +711,7 @@ def single_trend(
                     adata.uns["graph"]["pp_seg"].loc[:, "from"].isin([tolink]).values
                 ).flatten()
             ]:
-                ax2.plot(
+                axs[1].plot(
                     [
                         df.loc[df.seg == s, "t"].iloc[-1],
                         df.loc[df.seg == next_s, "t"].iloc[0],
@@ -669,29 +724,31 @@ def single_trend(
                     linewidth=fitted_linewidth,
                 )
 
-    ax2.set_ylabel(ylab)
-    ax2.set_xlabel("pseudotime")
-    x0, x1 = ax2.get_xlim()
-    y0, y1 = ax2.get_ylim()
-    ax2.set_aspect(abs(x1 - x0) / abs(y1 - y0))
+    axs[1].set_ylabel(ylab)
+    axs[1].set_xlabel("pseudotime")
+    x0, x1 = axs[1].get_xlim()
+    y0, y1 = axs[1].get_ylim()
+    if plot_emb:
+        axs[1].set_aspect(abs(x1 - x0) / abs(y1 - y0))
 
-    trajectory(
-        adata,
-        basis=basis,
-        color_seg=feature,
-        cmap_seg=cmap_seg,
-        color_cells=feature,
-        cmap=cmap_cells,
-        show_info=False,
-        ax=ax1,
-        title=feature,
-        layer="fitted",
-        show=False,
-        save=False,
-        **kwargs,
-    )
+    if plot_emb:
+        trajectory(
+            adata,
+            basis=basis,
+            color_seg=feature,
+            cmap_seg=cmap_seg,
+            color_cells=feature,
+            cmap=cmap_cells,
+            show_info=False,
+            ax=axs[0],
+            title=feature,
+            layer="fitted",
+            show=False,
+            save=False,
+            **kwargs,
+        )
 
     savefig_or_show("single_trend", show=show, save=save)
 
     if show is False:
-        return (ax1, ax2)
+        return axs if plot_emb else axs[1]
