@@ -13,6 +13,8 @@ import warnings
 from .. import logging as logg
 from .. import settings
 from .utils import process_R_cpu, norm_R_cpu, cor_mat_cpu
+from .root import root
+from .pseudotime import pseudotime, rename_milestones
 from sklearn.metrics import pairwise_distances
 
 
@@ -174,18 +176,40 @@ def subset_tree(
 
     adata = adata.copy() if copy else adata
 
-    graph = adata.uns["graph"]
+    graph = adata.uns["graph"].copy()
     B = graph["B"].copy()
     R = graph["R"].copy()
     F = graph["F"].copy()
 
     dct = adata.uns["graph"]["milestones"]
 
+    edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
+    img = igraph.Graph()
+    img.add_vertices(
+        np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
+    )
+    img.add_edges(edges)
+
+    dct = graph["milestones"]
+    dct_rev = dict(zip(dct.values(), dct.keys()))
+    oldmil = adata.obs.milestones.cat.categories.copy()
+    oldmilcol = np.array(adata.uns["milestones_colors"])
+
+    milpath = img.get_all_shortest_paths(
+        str(dct[root_milestone]), [str(dct[m]) for m in milestones]
+    )
+    milpath = np.unique(np.array(milpath).ravel())
+    milsel = np.array(img.vs["name"])[milpath].astype(int)
+    milsel = np.array([dct_rev[m] for m in milsel])
+    if mode == "substract":
+        milsel = np.array(list(dct.keys()))[~np.isin(list(dct.keys()), milsel)]
+
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     leaves = list(map(lambda leave: dct[leave], milestones))
-    root = dct[root_milestone]
-    sub_nodes = np.unique(np.concatenate(g.get_all_shortest_paths(root, leaves)))
-    sub_nodes = sub_nodes[sub_nodes != root]
+    r = dct[root_milestone]
+    sub_nodes = np.unique(np.concatenate(g.get_all_shortest_paths(r, leaves)))
+    if mode == "substract":
+        sub_nodes = sub_nodes[sub_nodes != r]
     cells = getpath(adata, root_milestone, milestones).index
 
     if mode == "extract":
@@ -209,11 +233,43 @@ def subset_tree(
     adata.uns["graph"]["R"] = R
     adata.uns["graph"]["B"] = B
     adata.uns["graph"]["F"] = F
+    adata.uns["milestones"] = dict(
+        zip(milsel, [graph["milestones"][m] for m in milsel])
+    )
 
     adata._inplace_subset_obs(adata.uns["graph"]["cells_fitted"])
 
+    rmil = dct_rev[graph["root"]]
+    rmil = root_milestone if ~np.isin(rmil, milsel) else rmil
+    nodes = pd.Series(sub_nodes, index=np.arange(len(sub_nodes)) + 1)
+    nodes.loc[nodes] = np.arange(nodes.sum()) + 1
+    if mode == "substract":
+        del adata.uns["graph"]["milestones"]
+        del adata.obs["milestones"]
+
+    root(adata, nodes[dct[rmil]])
+    pseudotime(adata)
+
+    if mode == "substract":
+        newmil = [
+            dct_rev[nodes.index[nodes == int(m)][0]]
+            for m in adata.obs.milestones.cat.categories
+        ]
+        rename_milestones(adata, newmil)
+        milsel = newmil
+
+    if "milestones_colors" in adata.uns:
+        newcols = [oldmilcol[oldmil == m][0] for m in milsel]
+    else:
+        newcols = None
+
+    adata.uns["milestones_colors"] = newcols
+
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint("dataset subsetted")
+    if mode == "substract":
+        logg.hint("tree subsetted")
+    else:
+        logg.hint("tree extracted")
 
     return adata if copy else None
 
