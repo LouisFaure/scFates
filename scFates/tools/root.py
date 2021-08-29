@@ -9,6 +9,8 @@ from sklearn.metrics import pairwise_distances
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import shortest_path
 
+from .utils import get_X
+
 from .. import logging as logg
 from .. import settings
 

@@ -193,7 +193,9 @@ def subset_tree(
     dct = graph["milestones"]
     dct_rev = dict(zip(dct.values(), dct.keys()))
     oldmil = adata.obs.milestones.cat.categories.copy()
-    oldmilcol = np.array(adata.uns["milestones_colors"])
+
+    if "milestones_colors" in adata.uns:
+        oldmilcol = np.array(adata.uns["milestones_colors"])
 
     milpath = img.get_all_shortest_paths(
         str(dct[root_milestone]), [str(dct[m]) for m in milestones]
@@ -241,8 +243,8 @@ def subset_tree(
 
     rmil = dct_rev[graph["root"]]
     rmil = root_milestone if ~np.isin(rmil, milsel) else rmil
-    nodes = pd.Series(sub_nodes, index=np.arange(len(sub_nodes)) + 1)
-    nodes.loc[nodes] = np.arange(nodes.sum()) + 1
+    nodes = pd.Series(sub_nodes, index=np.arange(len(sub_nodes)))
+    nodes.loc[nodes] = np.arange(nodes.sum())
     if mode == "substract":
         del adata.uns["graph"]["milestones"]
         del adata.obs["milestones"]
@@ -277,7 +279,6 @@ def subset_tree(
 def attach_tree(
     adata: AnnData,
     adata_branch: AnnData,
-    use_rep: str,
     linkage: Union[None, tuple] = None,
 ):
     """\
@@ -291,10 +292,9 @@ def attach_tree(
         Annotated data matrix.
     adata_branch
         Annotated data matrix containing cells and tree to attach to the adata.
-    use_rep
-        representation used to refit the tree, it is recommended to reuse the same as initially used.
     linkage
-        Force the attachment of the two tree at a specific node (main tree, branch), the adjacency matrix will not be updated
+        Force the attachment of the two tree between two respective milestones (main tree, branch),
+        the adjacency matrix will not be updated.
 
     Returns
     -------
@@ -332,7 +332,8 @@ def attach_tree(
             np.concatenate((np.zeros((B.shape[0], B2.shape[1])), B2)),
         )
         B = np.concatenate((B, B2), axis=1)
-        i, ib = linkage
+        i = adata.uns["graph"]["milestones"][linkage[0]]
+        ib = adata_branch.uns["graph"]["milestones"][linkage[1]]
         B[i, n_init + ib] = 1
         B[n_init + ib, i] = 1
     else:
@@ -347,6 +348,11 @@ def attach_tree(
     )
 
     logg.info("    tree refitting")
+    use_rep = graph["use_rep"]
+    ndims_rep = graph["ndims_rep"]
+    ndims_rep = (
+        adata[newcells].obsm[use_rep].shape[1] if ndims_rep is None else ndims_rep
+    )
     F = np.dot(adata[newcells].obsm[use_rep].T, R) / R.sum(axis=0)
 
     def run_ppt(F, adata, R, B):

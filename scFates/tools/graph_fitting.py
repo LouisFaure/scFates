@@ -250,7 +250,7 @@ def tree(
 
     adata = adata.copy() if copy else adata
 
-    X = get_data(adata, use_rep, ndims_rep)
+    X, use_rep = get_data(adata, use_rep, ndims_rep)
 
     if Nodes is None:
         if adata.shape[0] * 2 > 2000:
@@ -283,6 +283,8 @@ def tree(
             "forks": ppt["forks"],
             "cells_fitted": X.index.tolist(),
             "metrics": ppt["metric"],
+            "use_rep": use_rep,
+            "ndims_rep": ndims_rep,
         }
 
         adata.uns["graph"] = graph
@@ -301,6 +303,8 @@ def tree(
             seed,
             epg_verbose,
         )
+        graph["use_rep"] = use_rep
+        graph["ndims_rep"] = ndims_rep
         adata.uns["graph"] = graph
         adata.uns["epg"] = epg
 
@@ -454,7 +458,7 @@ def curve_epg(
             \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
         )
 
-    X = get_data(adata, use_rep, ndims_rep)
+    X, use_rep = get_data(adata, use_rep, ndims_rep)
 
     if seed is not None:
         np.random.seed(seed)
@@ -530,6 +534,8 @@ def curve_epg(
         "forks": forks,
         "cells_fitted": X.index.tolist(),
         "metrics": "euclidean",
+        "use_rep": use_rep,
+        "ndims_rep": ndims_rep,
     }
 
     Curve[0]["Edges"] = list(Curve[0]["Edges"])
@@ -579,4 +585,4 @@ def get_data(adata, use_rep, ndims_rep):
     if ndims_rep is not None:
         X = X.iloc[:, :ndims_rep]
 
-    return X
+    return X, use_rep
