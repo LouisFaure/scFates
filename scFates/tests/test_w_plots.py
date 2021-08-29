@@ -52,6 +52,8 @@ def test_pipeline():
     adata_2 = scf.tl.roots(
         adata, roots=[80, 25], meeting=adata.uns["graph"]["forks"][0], copy=True
     )
+    scf.tl.root(adata, "n_counts")
+    scf.tl.root(adata, "Phox2a", tips_only=True, min_val=True)
     scf.tl.root(adata, 80)
     pp_info_time = adata.uns["graph"]["pp_info"]["time"][:5].values
 
@@ -72,6 +74,15 @@ def test_pipeline():
     )
     scf.pl.trajectory_3d(adata)
     scf.pl.trajectory_3d(adata, color="seg")
+
+    adata_s1 = scf.tl.subset_tree(
+        adata, root_milestone="29", milestones=["19"], mode="substract", copy=True
+    )
+    adata_s2 = scf.tl.subset_tree(
+        adata, root_milestone="29", milestones=["19"], mode="extract", copy=True
+    )
+    adata_at = scf.tl.attach_tree(adata_s1, adata_s2)
+    adata_at = scf.tl.attach_tree(adata_s1, adata_s2, linkage=("25", "19"))
 
     scf.tl.test_association(adata, n_jobs=2)
     scf.tl.test_association(adata, A_cut=0.3, reapply_filters=True)
@@ -159,6 +170,10 @@ def test_pipeline():
 
     scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"])
     scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"], show_traj=True)
+
+    scf.pl.single_trend(
+        adata, root_milestone="80", milestones=["25", "19"], module="early", branch="25"
+    )
 
     scf.tl.slide_cells(adata, root_milestone="80", milestones=["25", "19"], win=200)
     cell_freq_sum = adata.uns["80->25<>19"]["cell_freq"][0].sum()
