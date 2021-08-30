@@ -235,9 +235,6 @@ def subset_tree(
     adata.uns["graph"]["R"] = R
     adata.uns["graph"]["B"] = B
     adata.uns["graph"]["F"] = F
-    adata.uns["milestones"] = dict(
-        zip(milsel, [graph["milestones"][m] for m in milsel])
-    )
 
     adata._inplace_subset_obs(adata.uns["graph"]["cells_fitted"])
 
@@ -245,20 +242,18 @@ def subset_tree(
     rmil = root_milestone if ~np.isin(rmil, milsel) else rmil
     nodes = pd.Series(sub_nodes, index=np.arange(len(sub_nodes)))
     nodes.loc[nodes] = np.arange(nodes.sum())
-    if mode == "substract":
-        del adata.uns["graph"]["milestones"]
-        del adata.obs["milestones"]
 
+    del adata.uns["graph"]["milestones"]
+    del adata.obs["milestones"]
     root(adata, nodes[dct[rmil]])
     pseudotime(adata)
 
-    if mode == "substract":
-        newmil = [
-            dct_rev[nodes.index[nodes == int(m)][0]]
-            for m in adata.obs.milestones.cat.categories
-        ]
-        rename_milestones(adata, newmil)
-        milsel = newmil
+    newmil = [
+        dct_rev[nodes.index[nodes == int(m)][0]]
+        for m in adata.obs.milestones.cat.categories
+    ]
+    rename_milestones(adata, newmil)
+    milsel = newmil
 
     if "milestones_colors" in adata.uns:
         newcols = [oldmilcol[oldmil == m][0] for m in milsel]
@@ -402,6 +397,10 @@ def attach_tree(
     adata.uns["graph"]["R"] = R
     adata.uns["graph"]["B"] = B
     adata.uns["graph"]["F"] = F
+
+    if "milestones" in adata.uns["graph"]:
+        del adata.uns["graph"]["milestones"]
+        del adata.obs["milestones"]
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint("datasets combined")

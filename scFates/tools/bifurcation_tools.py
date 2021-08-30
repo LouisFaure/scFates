@@ -190,7 +190,8 @@ def test_fork(
         topleave = fork_stat[m].iloc[:, :-1].idxmax(axis=1).apply(lambda mil: dct[mil])
 
         ## test for upregulation
-        logg.info("    test for upregulation for each leave vs root")
+        if n_map == 1:
+            logg.info("    test for upregulation for each leave vs root")
         leaves_stat = list()
         for leave in leaves:
             subtree = getpath(img, root, graph["tips"], leave, graph, df).sort_values(

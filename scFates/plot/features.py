@@ -488,7 +488,7 @@ def trends(
 
     if plot_emb:
         axemb = fig.add_subplot(gs[:, 0])
-        adata_temp.obs["mean_trajectory"] = np.nan
+        adata_temp.obs["mean_trajectory"] = 0
         adata_temp.obs.loc[
             fitted_sorted.columns, "mean_trajectory"
         ] = fitted_sorted.mean(axis=0).values

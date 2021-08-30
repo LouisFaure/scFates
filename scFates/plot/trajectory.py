@@ -12,13 +12,15 @@ from pandas.api.types import is_categorical_dtype
 from scanpy.plotting._utils import savefig_or_show
 import types
 
-from matplotlib.backend_bases import GraphicsContextBase, RendererBase
+import matplotlib.patheffects as path_effects
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, hex2color, rgb2hex
 from numba import njit
 import math
 
 from . import palette_tools
+from ..tools.graph_operations import subset_tree
+from .. import settings
 
 
 def graph(
@@ -217,18 +219,24 @@ def trajectory(
 
     """
 
-    class GC(GraphicsContextBase):
-        def __init__(self):
-            super().__init__()
-            self._capstyle = "round"
-
-    def custom_new_gc(self):
-        return GC()
-
-    RendererBase.new_gc = types.MethodType(custom_new_gc, RendererBase)
-
     if "graph" not in adata.uns:
         raise ValueError("You need to run `tl.pseudotime` first before plotting.")
+
+    if (root_milestone is not None) & (color_seg == "milestones"):
+        if ax is None:
+            ax = sc.pl.embedding(adata, show=False, basis=basis, **kwargs)
+        else:
+            sc.pl.embedding(adata, show=False, ax=ax, basis=basis, **kwargs)
+        verb_temp = settings.verbosity
+        settings.verbosity = 1
+        adata = subset_tree(
+            adata,
+            root_milestone="immature",
+            milestones=["Ic", "II<>rest"],
+            mode="extract",
+            copy=True,
+        )
+        settings.verbosity = verb_temp
 
     graph = adata.uns["graph"]
 
@@ -253,7 +261,7 @@ def trajectory(
 
     miles_ids = np.concatenate([graph["tips"], graph["forks"]])
 
-    if root_milestone is not None:
+    if (root_milestone is not None) & (color_seg != "milestones"):
         dct = graph["milestones"]
         nodes = g.get_all_shortest_paths(
             dct[root_milestone], [dct[m] for m in milestones]
@@ -404,7 +412,11 @@ def trajectory(
         color_mils = sm.to_rgba(node_vals[miles_ids])
 
     lc = matplotlib.collections.LineCollection(
-        lines, colors="k", linewidths=7.5 * scale_path, zorder=100
+        lines,
+        colors="k",
+        linewidths=7.5 * scale_path,
+        zorder=100,
+        path_effects=[path_effects.Stroke(capstyle="round")],
     )
     ax.add_collection(lc)
 
@@ -458,6 +470,7 @@ def trajectory(
         colors=color_segs,
         linewidths=5 * scale_path,
         zorder=104,
+        path_effects=[path_effects.Stroke(capstyle="round")],
     )
 
     ax.scatter(

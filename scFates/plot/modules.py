@@ -11,6 +11,8 @@ from scanpy.plotting._utils import savefig_or_show
 from ..tools.utils import getpath
 from .trajectory import trajectory as plot_trajectory
 from .utils import setup_axes
+from ..tools.graph_operations import subset_tree
+from .. import settings
 
 import scanpy as sc
 
@@ -62,9 +64,12 @@ def modules(
     X_early, X_late = get_modules(adata, root_milestone, milestones, layer)
 
     cells = X_early.index
-    adata_c = adata.copy()
-    adata_c.obsm["X_early"] = X_early.values
-    adata_c.obsm["X_late"] = X_late.values
+    verb = settings.verbosity
+    settings.verbosity = 1
+    adata_c = subset_tree(adata, root_milestone, milestones, mode="extract", copy=True)
+    settings.verbosity = verb
+    adata_c.obsm["X_early"] = X_early.loc[adata_c.obs_names].values
+    adata_c.obsm["X_late"] = X_late.loc[adata_c.obs_names].values
 
     if smooth:
         adata_c.obsm["X_early"] = adata_c.obsp["connectivities"].dot(
@@ -164,27 +169,27 @@ def get_modules(adata, root_milestone, milestones, layer):
     if layer is None:
         if sparse.issparse(adata.X):
             X = pd.DataFrame(
-                np.array(adata[:, stats.index].X.A),
-                index=adata.obs_names,
+                np.array(adata[cells, stats.index].X.A),
+                index=cells,
                 columns=stats.index,
             )
         else:
             X = pd.DataFrame(
-                np.array(adata[:, stats.index].X),
-                index=adata.obs_names,
+                np.array(adata[cells, stats.index].X),
+                index=cells,
                 columns=stats.index,
             )
     else:
         if sparse.issparse(adata.layers[layer]):
             X = pd.DataFrame(
-                np.array(adata[:, stats.index].layers[layer].A),
-                index=adata.obs_names,
+                np.array(adata[cells, stats.index].layers[layer].A),
+                index=cells,
                 columns=stats.index,
             )
         else:
             X = pd.DataFrame(
                 np.array(adata[:, stats.index].layers[layer]),
-                index=adata.obs_names,
+                index=cells,
                 columns=stats.index,
             )
 
