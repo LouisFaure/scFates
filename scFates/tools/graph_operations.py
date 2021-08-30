@@ -332,8 +332,11 @@ def attach_tree(
             np.concatenate((np.zeros((B.shape[0], B2.shape[1])), B2)),
         )
         B = np.concatenate((B, B2), axis=1)
-        i = adata.uns["graph"]["milestones"][linkage[0]]
-        ib = adata_branch.uns["graph"]["milestones"][linkage[1]]
+        if "milestones" in adata.uns["graph"]:
+            i = adata.uns["graph"]["milestones"][linkage[0]]
+            ib = adata_branch.uns["graph"]["milestones"][linkage[1]]
+        else:
+            i, ib = int(linkage[0]), int(linkage[1])
         B[i, n_init + ib] = 1
         B[n_init + ib, i] = 1
     else:
