@@ -18,6 +18,7 @@ from matplotlib.colors import Normalize, hex2color, rgb2hex
 from numba import njit
 import math
 
+from .utils import is_categorical
 from . import palette_tools
 from ..tools.graph_operations import subset_tree
 from .. import settings
@@ -731,52 +732,3 @@ def _get_color_values(
             # that are not in the groups
             color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
         return color_vector, True
-
-
-def is_categorical(data, c=None):
-    from pandas.api.types import is_categorical_dtype as cat
-
-    if c is None:
-        return cat(data)  # if data is categorical/array
-    if not is_view(data):  # if data is anndata view
-        strings_to_categoricals(data)
-    return isinstance(c, str) and c in data.obs.keys() and cat(data.obs[c])
-
-
-def is_view(adata):
-    return (
-        adata.is_view
-        if hasattr(adata, "is_view")
-        else adata.isview
-        if hasattr(adata, "isview")
-        else adata._isview
-        if hasattr(adata, "_isview")
-        else True
-    )
-
-
-def strings_to_categoricals(adata):
-    """Transform string annotations to categoricals."""
-    from pandas.api.types import is_string_dtype, is_integer_dtype, is_bool_dtype
-    from pandas import Categorical
-
-    def is_valid_dtype(values):
-        return (
-            is_string_dtype(values) or is_integer_dtype(values) or is_bool_dtype(values)
-        )
-
-    df = adata.obs
-    df_keys = [key for key in df.columns if is_valid_dtype(df[key])]
-    for key in df_keys:
-        c = df[key]
-        c = Categorical(c)
-        if 1 < len(c.categories) < min(len(c), 100):
-            df[key] = c
-
-    df = adata.var
-    df_keys = [key for key in df.columns if is_string_dtype(df[key])]
-    for key in df_keys:
-        c = df[key].astype("U")
-        c = Categorical(c)
-        if 1 < len(c.categories) < min(len(c), 100):
-            df[key] = c

@@ -17,3 +17,4 @@ from .bifurcation_tools import test_fork, branch_specific, activation, activatio
 # from .activation_tools import activation, activation_lm
 from .conversion import cellrank_to_tree
 from .linearity_deviation import linearity_deviation
+from .dendrogram import dendrogram

@@ -8,6 +8,10 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib.axes import Axes
 from matplotlib.figure import SubplotParams as sppars
+from matplotlib.colors import to_hex
+
+from matplotlib.colors import LinearSegmentedColormap
+import pandas as pd
 
 
 def setup_axes(
@@ -120,3 +124,85 @@ def make_projection_available(projection):
             "Please install matplotlib==3.0.2 or wait for "
             "https://github.com/matplotlib/matplotlib/issues/14298"
         )
+
+
+def is_categorical(data, c=None):
+    from pandas.api.types import is_categorical_dtype as cat
+
+    if c is None:
+        return cat(data)  # if data is categorical/array
+    if not is_view(data):  # if data is anndata view
+        strings_to_categoricals(data)
+    return isinstance(c, str) and c in data.obs.keys() and cat(data.obs[c])
+
+
+def is_view(adata):
+    return (
+        adata.is_view
+        if hasattr(adata, "is_view")
+        else adata.isview
+        if hasattr(adata, "isview")
+        else adata._isview
+        if hasattr(adata, "_isview")
+        else True
+    )
+
+
+def strings_to_categoricals(adata):
+    """Transform string annotations to categoricals."""
+    from pandas.api.types import is_string_dtype, is_integer_dtype, is_bool_dtype
+    from pandas import Categorical
+
+    def is_valid_dtype(values):
+        return (
+            is_string_dtype(values) or is_integer_dtype(values) or is_bool_dtype(values)
+        )
+
+    df = adata.obs
+    df_keys = [key for key in df.columns if is_valid_dtype(df[key])]
+    for key in df_keys:
+        c = df[key]
+        c = Categorical(c)
+        if 1 < len(c.categories) < min(len(c), 100):
+            df[key] = c
+
+    df = adata.var
+    df_keys = [key for key in df.columns if is_string_dtype(df[key])]
+    for key in df_keys:
+        c = df[key].astype("U")
+        c = Categorical(c)
+        if 1 < len(c.categories) < min(len(c), 100):
+            df[key] = c
+
+
+def gen_milestones_gradients(adata, seg_order=None):
+
+    seg_order = adata.obs.seg.unique() if seg_order is None else seg_order
+
+    if "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"]) == 1:
+        from . import palette_tools
+
+        palette_tools._set_default_colors_for_categorical_obs(adata, "milestones")
+
+    def milestones_prog(s):
+        cfrom = adata.obs.t[adata.obs.seg == s].idxmin()
+        cto = adata.obs.t[adata.obs.seg == s].idxmax()
+        mfrom = adata.obs.milestones[cfrom]
+        mto = adata.obs.milestones[cto]
+        mfrom_c = adata.uns["milestones_colors"][
+            np.argwhere(adata.obs.milestones.cat.categories == mfrom)[0][0]
+        ]
+        mto_c = adata.uns["milestones_colors"][
+            np.argwhere(adata.obs.milestones.cat.categories == mto)[0][0]
+        ]
+
+        cm = LinearSegmentedColormap.from_list("test", [mfrom_c, mto_c], N=1000)
+        pst = (
+            adata.obs.t[adata.obs.seg == s] - adata.obs.t[adata.obs.seg == s].min()
+        ) / (
+            adata.obs.t[adata.obs.seg == s].max()
+            - adata.obs.t[adata.obs.seg == s].min()
+        )
+        return pd.Series(list(map(to_hex, cm(pst))), index=pst.index)
+
+    return pd.concat(list(map(milestones_prog, seg_order)))

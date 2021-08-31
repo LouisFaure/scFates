@@ -5,7 +5,6 @@ from anndata import AnnData
 import igraph
 import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.colors import to_hex
 from scipy import stats
 from adjustText import adjust_text
 from matplotlib import patches
@@ -19,11 +18,13 @@ from scanpy.plotting._utils import savefig_or_show
 from .. import logging as logg
 from ..tools.utils import getpath, importeR
 from .trajectory import trajectory
+from .dendrogram import dendrogram
 
 Rpy2, R, rstats, rmgcv, Formula = importeR("fitting associated features")
 check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 from .modules import get_modules
+from .utils import gen_milestones_gradients
 
 
 def trends(
@@ -40,6 +41,7 @@ def trends(
     feature_cmap: str = "RdBu_r",
     pseudo_cmap: str = "viridis",
     plot_emb: bool = True,
+    dendro: bool = False,
     basis: str = "umap",
     heatmap_space: float = 0.5,
     offset_names: float = 0.15,
@@ -274,38 +276,7 @@ def trends(
     fitted_sorted = fitted.loc[feature_order, :]
 
     if annot == "milestones":
-        color_key = "milestones_colors"
-        if color_key not in adata.uns or len(adata.uns[color_key]) == 1:
-            from . import palette_tools
-
-            palette_tools._set_default_colors_for_categorical_obs(adata, "milestones")
-
-        def milestones_prog(s):
-            cfrom = adata.obs.t[adata.obs.seg == s].idxmin()
-            cto = adata.obs.t[adata.obs.seg == s].idxmax()
-            mfrom = adata.obs.milestones[cfrom]
-            mto = adata.obs.milestones[cto]
-            import numpy as np
-
-            mfrom_c = adata.uns["milestones_colors"][
-                np.argwhere(adata.obs.milestones.cat.categories == mfrom)[0][0]
-            ]
-            mto_c = adata.uns["milestones_colors"][
-                np.argwhere(adata.obs.milestones.cat.categories == mto)[0][0]
-            ]
-
-            from matplotlib.colors import LinearSegmentedColormap
-
-            cm = LinearSegmentedColormap.from_list("test", [mfrom_c, mto_c], N=1000)
-            pst = (
-                adata.obs.t[adata.obs.seg == s] - adata.obs.t[adata.obs.seg == s].min()
-            ) / (
-                adata.obs.t[adata.obs.seg == s].max()
-                - adata.obs.t[adata.obs.seg == s].min()
-            )
-            return pd.Series(list(map(to_hex, cm(pst))), index=pst.index)
-
-        annot_cmap = pd.concat(list(map(milestones_prog, seg_order)))
+        annot_cmap = gen_milestones_gradients(adata, seg_order)
 
     elif type(annot) == str:
         if len(adata.obs[annot].unique()) > 1:
@@ -488,18 +459,32 @@ def trends(
         adata_temp.obs.loc[
             fitted_sorted.columns, "mean_trajectory"
         ] = fitted_sorted.mean(axis=0).values
-        trajectory(
-            adata=adata_temp,
-            basis=basis,
-            color_seg="mean_trajectory",
-            cmap_seg=feature_cmap,
-            show_info=False,
-            ax=axemb,
-            title=title,
-            root_milestone=root_milestone,
-            milestones=milestones,
-            **kwargs,
-        )
+
+        if dendro:
+            dendrogram(
+                adata_temp,
+                color="mean_trajectory",
+                cmap=feature_cmap,
+                ax=axemb,
+                title=title,
+                root_milestone=root_milestone,
+                milestones=milestones,
+                show_info=False,
+                **kwargs,
+            )
+        else:
+            trajectory(
+                adata=adata_temp,
+                basis=basis,
+                color_seg="mean_trajectory",
+                cmap_seg=feature_cmap,
+                show_info=False,
+                ax=axemb,
+                title=title,
+                root_milestone=root_milestone,
+                milestones=milestones,
+                **kwargs,
+            )
 
     if save_genes is not None:
         with open(save_genes, "w") as f:
