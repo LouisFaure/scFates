@@ -10,6 +10,7 @@ from scipy import stats
 from adjustText import adjust_text
 from matplotlib import patches
 from scipy import sparse
+import matplotlib.gridspec as gridspec
 
 from typing import Union, Optional, List
 from typing_extensions import Literal
@@ -327,27 +328,21 @@ def trends(
     else:
         annot = None
 
-    fig, f_axs = plt.subplots(
-        ncols=2,
-        nrows=20,
-        figsize=(fig_heigth * (1 + 1 * plot_emb), fig_heigth),
-        gridspec_kw={"width_ratios": [1 * plot_emb, 1]},
+    fig = plt.figure(figsize=(fig_heigth + (fig_heigth * plot_emb), fig_heigth))
+    outer = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1 * plot_emb, 1])
+
+    gs_ht = gridspec.GridSpecFromSubplotSpec(
+        2 + (annot is not None),
+        1,
+        height_ratios=(1, 1, 18) if (annot is not None) else (1, 19),
+        subplot_spec=outer[1],
+        hspace=0,
     )
-    gs = f_axs[2, 1].get_gridspec()
-
-    # remove the underlying axes
-    start = 2 if annot is not None else 1
-    for ax in f_axs[start:, -1]:
-        ax.remove()
-    axheatmap = fig.add_subplot(gs[start:, -1])
-
-    gs = f_axs[0, 0].get_gridspec()
-    # remove the underlying axes
-    for ax in f_axs[:, 0]:
-        ax.remove()
-
+    axs = []
+    i = 0
     if annot is not None:
-        axannot = f_axs[0, 1]
+        axannot = plt.subplot(gs_ht[i])
+        axs = axs + [axannot]
         sns.heatmap(
             pd.DataFrame(range(fitted_sorted.shape[1])).T,
             robust=False,
@@ -358,11 +353,10 @@ def trends(
             cbar=False,
             ax=axannot,
         )
-        axpsdt = f_axs[1, 1]
+        i = i + 1
 
-    else:
-        axpsdt = f_axs[0, 1]
-
+    axpsdt = plt.subplot(gs_ht[i])
+    axs = axs + [axpsdt]
     sns.heatmap(
         pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,
         robust=True,
@@ -375,6 +369,8 @@ def trends(
         vmax=adata.obs.t.max(),
     )
 
+    axheatmap = plt.subplot(gs_ht[i + 1])
+    axs = axs + [axheatmap]
     sns.heatmap(
         fitted_sorted,
         robust=True,
@@ -484,10 +480,10 @@ def trends(
         yy = [ys[i], texts[i].get_position()[1]]
         axheatmap.plot(xx, yy, color="k", linewidth=0.75)
 
-    plt.tight_layout(h_pad=0, w_pad=0)
-
     if plot_emb:
-        axemb = fig.add_subplot(gs[:, 0])
+        gs_emb = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[0])
+        axemb = fig.add_subplot(gs_emb[0])
+        axs = axs + [axemb]
         adata_temp.obs["mean_trajectory"] = 0
         adata_temp.obs.loc[
             fitted_sorted.columns, "mean_trajectory"
@@ -511,9 +507,9 @@ def trends(
                 f.write("%s\n" % item)
 
     if show == False:
-        return f_axs
-
-    savefig_or_show("trends", show=show, save=save)
+        return axs
+    if save is not None:
+        fig.savefig("figures/" + save, bbox_inches="tight")
 
 
 def single_trend(
