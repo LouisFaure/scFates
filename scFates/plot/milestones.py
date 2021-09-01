@@ -1,3 +1,4 @@
+from typing_extensions import Literal
 import igraph
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ def milestones(
     color=None,
     cmap=None,
     roots=None,
-    layout: Union["dendro", "reingold_tilford"] = "dendro",
+    layout: Literal["dendro", "reingold_tilford"] = "dendro",
     figsize=(500, 500),
 ):
     """\

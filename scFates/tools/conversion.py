@@ -18,7 +18,6 @@ def cellrank_to_tree(
     auto_root=True,
     min_val=False,
     reassign_pseudotime=True,
-    plot_circular=False,
     copy=False,
     **kwargs
 ):
@@ -49,8 +48,6 @@ def cellrank_to_tree(
         min_val parameter from :func:`scFates.tl.root`
     reassign_pseudotime
         whether use the time key to replace the distances comptued from the tree.
-    plot_circular
-        Call and display :func:`cr.pl.circular_projection`.
     copy
         Return a copy instead of writing to adata.
     kwargs

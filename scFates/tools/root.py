@@ -40,6 +40,7 @@ def root(
         If key is in X, choose which layer to use for the averaging.
     copy
         Return a copy instead of writing to adata.
+
     Returns
     -------
     adata : anndata.AnnData

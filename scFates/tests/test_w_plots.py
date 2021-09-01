@@ -60,6 +60,8 @@ def test_pipeline():
     scf.tl.pseudotime(adata_2, n_map=2)
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
+    print(adata.uns["graph"]["pp_seg"])
+    scf.tl.dendrogram(adata)
 
     obs_t = adata.obs.t[:5].values
 
@@ -136,6 +138,10 @@ def test_pipeline():
         layer="scaled",
         feature=adata.var_names[0],
         show=False,
+    )
+
+    scf.pl.dendrogram(
+        adata, show_info=False, color="t", root_milestone="80", milestones=["25", "19"]
     )
 
     scf.tl.test_fork(

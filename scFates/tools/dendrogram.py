@@ -10,8 +10,34 @@ import matplotlib.pyplot as plt
 from .. import logging as logg
 from .. import settings
 
+import anndata
 
-def dendrogram(adata, crowdedness=1):
+
+def dendrogram(adata: anndata.AnnData, crowdedness: float = 1):
+
+    """\
+    Generate a  single-cell dendrogram embedding.
+
+    This representation aims in simplifying and abstracting the view of the tree, it follows URD style represenation of the cells.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    crowdedness
+        size parameter passed on :func:`seaborn.swarmplot`, will influence wthe repartition of the cells along the segments.
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+
+        `.obs['X_dendro']`
+           new embedding generated.
+        `.uns['dendro_segments']`
+            tree segments used for plotting.
+
+    """
 
     logg.info("Generating dendrogram of tree", reset=True)
 
@@ -39,7 +65,6 @@ def dendrogram(adata, crowdedness=1):
     layout = layout[0]
     newseg = layout.loc[graph["pp_seg"].to]
     newseg.index = graph["pp_seg"].n
-
     df = adata.obs.copy()
 
     df["seg_pos"] = df.seg.astype(str)
@@ -54,6 +79,7 @@ def dendrogram(adata, crowdedness=1):
 
     plt.close()
     segments = list()
+    ax.collections = ax.collections[-len(newseg) :]
     for i in range(len(ax.collections)):
         newseg = newseg.sort_values()
         t_min, t_max = (

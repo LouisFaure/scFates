@@ -10,7 +10,6 @@ from cycler import Cycler
 
 from pandas.api.types import is_categorical_dtype
 from scanpy.plotting._utils import savefig_or_show
-import types
 
 import matplotlib.patheffects as path_effects
 from matplotlib.cm import ScalarMappable
