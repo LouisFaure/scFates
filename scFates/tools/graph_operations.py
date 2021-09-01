@@ -140,7 +140,7 @@ def subset_tree(
     adata: AnnData,
     root_milestone,
     milestones,
-    mode: Literal["extract", "substract"] = "substract",
+    mode: Literal["extract", "substract"] = "extract",
     copy: bool = False,
 ):
 

@@ -66,7 +66,7 @@ def modules(
     cells = X_early.index
     verb = settings.verbosity
     settings.verbosity = 1
-    adata_c = subset_tree(adata, root_milestone, milestones, mode="extract", copy=True)
+    adata_c = subset_tree(adata, root_milestone, milestones, copy=True)
     settings.verbosity = verb
     adata_c.obsm["X_early"] = X_early.loc[adata_c.obs_names].values
     adata_c.obsm["X_late"] = X_late.loc[adata_c.obs_names].values

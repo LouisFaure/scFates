@@ -1,12 +1,22 @@
 import igraph
 import numpy as np
-
+import pandas as pd
+from typing import Union
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
+from ..tools.dendrogram import hierarchy_pos
 
-def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
+
+def milestones(
+    adata,
+    color=None,
+    cmap=None,
+    roots=None,
+    layout: Union["dendro", "reingold_tilford"] = "dendro",
+    figsize=(500, 500),
+):
     """\
     Display the milestone graph in PAGA style.
 
@@ -19,7 +29,9 @@ def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
     cmap
         colormap to use for the node coloring.
     roots
-        select milestones to position on top fo the plot
+        select milestones to position on top fo the plot.
+    dendro
+        generate layout following dendrogram representation.
     figsize
         figure size in pixels
 
@@ -52,14 +64,6 @@ def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
                 dct[str(adata.uns["graph"]["root2"])],
             ]
 
-    layout = img.layout_reingold_tilford(
-        root=list(
-            map(
-                lambda root: np.argwhere(np.array(img.vs["label"]) == root)[0][0], roots
-            )
-        )
-    )
-
     if color is None:
         if "milestones_colors" not in adata.uns:
             from . import palette_tools
@@ -84,5 +88,20 @@ def milestones(adata, color=None, cmap=None, roots=None, figsize=(500, 500)):
             map(lambda m: mcolors.to_hex(mapper.to_rgba(m)), val_milestones.values)
         )
         img.vs["color"] = c_mil
+
+    if layout == "dendro":
+        pos = hierarchy_pos(img.to_networkx(), vert_gap=0.1)
+        pos = pd.DataFrame([pos[s] for s in np.sort(np.array(list(pos.keys())))])
+        pos.iloc[:, 1] = -pos.iloc[:, 1]
+        layout = list(pos.to_records(index=False))
+    else:
+        layout = img.layout_reingold_tilford(
+            root=list(
+                map(
+                    lambda root: np.argwhere(np.array(img.vs["label"]) == root)[0][0],
+                    roots,
+                )
+            )
+        )
 
     return igraph.plot(img, bbox=figsize, layout=layout, margin=50)
