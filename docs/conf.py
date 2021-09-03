@@ -121,7 +121,7 @@ from urllib.request import urlretrieve
 
 notebooks_url = "https://github.com/LouisFaure/scFates_notebooks/raw/main/"
 notebooks = [
-    "Basic_pseudotime_analysis.ipynb",
+    "Basic_Curved_trajectory_analysis.ipynb" "Basic_Tree_analysis.ipynb",
     "Advanced_bifurcation_analysis.ipynb",
     "Conversion_from_CellRank_pipeline.ipynb",
     "Critical_Transition.ipynb",

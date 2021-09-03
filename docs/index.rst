@@ -53,7 +53,8 @@ Analysis key steps
    :maxdepth: 2
    :hidden:
 
-   Basic_pseudotime_analysis
+   Basic_Curved_trajectory_analysis
+   Basic_Tree_analysis
    Advanced_bifurcation_analysis
    Conversion_from_CellRank_pipeline
    Critical_Transition
