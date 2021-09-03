@@ -210,16 +210,24 @@ def subset_tree(
     leaves = list(map(lambda leave: dct[leave], milestones))
     r = dct[root_milestone]
     sub_nodes = np.unique(np.concatenate(g.get_all_shortest_paths(r, leaves)))
-    if mode == "substract":
-        sub_nodes = sub_nodes[sub_nodes != r]
+
     cells = getpath(adata, root_milestone, milestones).index
 
-    if mode == "extract":
-        sub_nodes = np.isin(range(B.shape[0]), sub_nodes)
-        sub_cells = np.isin(graph["cells_fitted"], cells)
-    else:
+    if mode == "substract":
+        sub_nodes = sub_nodes[sub_nodes != r]
         sub_nodes = ~np.isin(range(B.shape[0]), sub_nodes)
         sub_cells = ~np.isin(graph["cells_fitted"], cells)
+
+    if mode == "extract":
+        sub_nodes = sub_nodes[sub_nodes != r] if r != graph["root"] else sub_nodes
+        sub_nodes = np.isin(range(B.shape[0]), sub_nodes)
+        sub_cells = np.isin(graph["cells_fitted"], cells)
+        if r != graph["root"]:
+            newroot = np.array(g.neighborhood(r)[1:])[sub_nodes[g.neighborhood(r)[1:]]][
+                0
+            ]
+            dct[root_milestone] = newroot
+            dct_rev = dict(zip(dct.values(), dct.keys()))
 
     R = R[sub_cells, :][:, sub_nodes]
     B = B[sub_nodes, :][:, sub_nodes]
@@ -248,6 +256,7 @@ def subset_tree(
     root(adata, nodes[dct[rmil]])
     pseudotime(adata)
 
+    nodes[[n is False for n in nodes]] = np.nan  # handle zero
     newmil = [
         dct_rev[nodes.index[nodes == int(m)][0]]
         for m in adata.obs.milestones.cat.categories
@@ -305,6 +314,9 @@ def attach_tree(
     """
 
     logg.info("attaching tree", reset=True)
+
+    if "ppt" not in adata.uns:
+        raise Exception("tree attachment can only run on graph computed with ppt!")
 
     graph = adata.uns["graph"]
     B = graph["B"].copy()
@@ -408,7 +420,7 @@ def attach_tree(
     return adata
 
 
-def getpath(adata, root_milestone, milestones):
+def getpath(adata, root_milestone, milestones, include_root=False):
     """\
     Ontain dataframe of cell of a given path.
 
@@ -420,6 +432,8 @@ def getpath(adata, root_milestone, milestones):
         Starting point of the path.
     milestones
         Endpoint(s) of the path.
+    include_root
+        When the root milestone is not the root, cells for the start tip are missing.
 
     Returns
     -------
@@ -477,4 +491,13 @@ def getpath(adata, root_milestone, milestones):
         except IndexError:
             pass
 
-    return pd.concat(list(map(gatherpath, leaves)), axis=0)
+    res = pd.concat(list(map(gatherpath, leaves)), axis=0)
+
+    if include_root:
+        sel = df.edge.str.startswith(str(root) + "|") | df.edge.str.contains(
+            "\|" + str(root)
+        )
+        df = df.loc[sel]
+        res = pd.concat([res, df], axis=0)
+
+    return res

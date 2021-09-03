@@ -430,7 +430,7 @@ def tree_epg(
         "metrics": "euclidean",
     }
 
-    Tree[0]["Edges"] = list(Tree[0]["Edges"])
+    Tree[0]["Edges"] = list(Tree[0]["Edges"])[0]
 
     return graph, Tree[0]
 
@@ -538,7 +538,7 @@ def curve_epg(
         "ndims_rep": ndims_rep,
     }
 
-    Curve[0]["Edges"] = list(Curve[0]["Edges"])
+    Curve[0]["Edges"] = list(Curve[0]["Edges"])[0]
 
     adata.uns["graph"] = graph
     adata.uns["epg"] = Curve[0]
