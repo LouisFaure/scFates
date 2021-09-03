@@ -10,6 +10,7 @@ def linearity_deviation(
     start_milestone,
     end_milestone,
     ntop_genes: int = 30,
+    fontsize: int = 8,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -27,6 +28,8 @@ def linearity_deviation(
         tip defining the end point of analysed segment.
     ntop_genes
         number of top genes to show.
+    fontsize
+        Fontsize for gene names.
     show
         show the plot.
     save
@@ -56,6 +59,7 @@ def linearity_deviation(
             rotation="vertical",
             verticalalignment="bottom",
             horizontalalignment="center",
+            fontsize=fontsize,
         )
 
     ax.set_xlabel("ranking")
