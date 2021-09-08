@@ -10,3 +10,4 @@ from .module_inclusion import module_inclusion
 from .critical_transition import critical_transition
 from .linearity_deviation import linearity_deviation
 from .dendrogram import dendrogram
+from .binned_pseudotime_meta import binned_pseudotime_meta
