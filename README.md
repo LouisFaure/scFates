@@ -77,10 +77,6 @@ scFates installed via pip gives a base package that can perform tree fitting on 
 
     pip install git+https://github.com/j-bac/elpigraph-python.git
 
--`tl.refine_pseudotime`, `pp.diffusion` in CPU mode: Require Palantir to be installed in order to function:
-
-    pip install Palantir
-
 -`tl.cellrank_to_tree`: Requires cellrank to be installed in order to function::
 
     pip install cellrank

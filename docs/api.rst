@@ -43,7 +43,7 @@ Tree operations
     tl.cleanup
     tl.subset_tree
     tl.attach_tree
-    tl.dendrogram
+    tl.extend_tips
 
 Pseudotime analysis
 -------------------
@@ -54,7 +54,7 @@ Pseudotime analysis
     tl.root
     tl.roots
     tl.pseudotime
-    tl.refine_pseudotime
+    tl.dendrogram
     tl.test_association
     tl.fit
     tl.cluster
@@ -110,6 +110,7 @@ Plot
     pl.single_trend
     pl.trends
     pl.linearity_deviation
+    pl.binned_pseudotime_meta
 
 **Bifurcation & correlation analysis**
 

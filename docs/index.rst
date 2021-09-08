@@ -56,6 +56,7 @@ Analysis key steps
    Basic_Curved_trajectory_analysis
    Basic_Tree_analysis
    Advanced_bifurcation_analysis
+   Tree_operations
    Conversion_from_CellRank_pipeline
    Critical_Transition
 
