@@ -60,8 +60,9 @@ def test_pipeline():
     scf.tl.pseudotime(adata_2, n_map=2)
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
-    print(adata.uns["graph"]["pp_seg"])
     scf.tl.dendrogram(adata)
+
+    adata_ext = scf.tl.extend_tips(adata, copy=True)
 
     obs_t = adata.obs.t[:5].values
 

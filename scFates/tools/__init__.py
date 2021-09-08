@@ -1,7 +1,7 @@
-from .graph_operations import cleanup, getpath, subset_tree, attach_tree
+from .graph_operations import cleanup, getpath, subset_tree, attach_tree, extend_tips
 from .graph_fitting import tree, curve
 from .root import root, roots
-from .pseudotime import pseudotime, refine_pseudotime, rename_milestones
+from .pseudotime import pseudotime, rename_milestones
 from .test_association import test_association
 from .fit import fit
 from .cluster import cluster
