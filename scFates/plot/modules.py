@@ -66,10 +66,20 @@ def modules(
     cells = X_early.index
     verb = settings.verbosity
     settings.verbosity = 1
-    adata_c = subset_tree(adata, root_milestone, milestones, copy=True)
+    nmil = len(adata.uns["graph"]["milestones"])
+    if nmil > 4:
+        adata_c = subset_tree(adata, root_milestone, milestones, copy=True)
+        adata_c.obsm["X_early"] = X_early.loc[adata_c.obs_names].values
+        adata_c.obsm["X_late"] = X_late.loc[adata_c.obs_names].values
+    else:
+        adata_c = AnnData(
+            X_early.values,
+            obs=adata.obs,
+            uns=adata.uns,
+            obsm={"X_early": X_early.values, "X_late": X_late.values},
+            obsp=adata.obsp,
+        )
     settings.verbosity = verb
-    adata_c.obsm["X_early"] = X_early.loc[adata_c.obs_names].values
-    adata_c.obsm["X_late"] = X_late.loc[adata_c.obs_names].values
 
     if smooth:
         adata_c.obsm["X_early"] = adata_c.obsp["connectivities"].dot(
@@ -80,6 +90,8 @@ def modules(
         )
 
     axs, _, _, _ = setup_axes(panels=[0, 1])
+
+    color = "old_milestones" if ((color == "milestones") & (nmil > 4)) else color
 
     if show_traj:
         plot_trajectory(
