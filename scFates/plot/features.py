@@ -25,6 +25,7 @@ check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 from .modules import get_modules
 from .utils import gen_milestones_gradients
+from .. import logging as logg
 
 
 def trends(
@@ -44,7 +45,8 @@ def trends(
     basis: str = "umap",
     heatmap_space: float = 0.5,
     offset_names: float = 0.15,
-    fontsize: float = 9,
+    fontsize: int = 9,
+    style: Literal["normal", "italic", "oblique"] = "normal",
     ordering: Union[
         None, Literal["pearson", "spearman", "quantile", "max"]
     ] = "pearson",
@@ -54,6 +56,7 @@ def trends(
     complex_z: float = 3,
     fig_heigth: float = 4,
     show: Optional[bool] = None,
+    output_mean: bool = False,
     save: Union[str, bool, None] = None,
     save_genes: Optional[bool] = None,
     **kwargs,
@@ -98,6 +101,8 @@ def trends(
         how far on the right the annotated features should be displayed, in proportion of the heatmap space.
     fontsize
         font size of the feature annotations.
+    style
+        font style.
     ordering
         strategy to order the features on heatmap, quantile takes the mean pseudotime of the choosen value.
     ord_thre
@@ -112,6 +117,8 @@ def trends(
         standard deviation threshold on the quantile subsetted feature.
     fig_heigth
         figure height.
+    output_mean
+        output mean fitted values to adata.
     show
         show the plot.
     save
@@ -298,8 +305,9 @@ def trends(
     else:
         annot = None
 
-    fig = plt.figure(figsize=(fig_heigth + (fig_heigth * plot_emb), fig_heigth))
-    outer = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1 * plot_emb, 1])
+    ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
+    fig = plt.figure(figsize=(fig_heigth + (fig_heigth * plot_emb * ratio), fig_heigth))
+    outer = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1 * plot_emb * ratio, 1])
 
     gs_ht = gridspec.GridSpecFromSubplotSpec(
         2 + (annot is not None),
@@ -408,7 +416,7 @@ def trends(
 
     texts = []
     for x, y, s in zip(xs, ys, highlight_features):
-        texts.append(axheatmap.text(x, y, s, fontsize=fontsize))
+        texts.append(axheatmap.text(x, y, s, fontsize=fontsize, style=style))
 
     patch = patches.Rectangle(
         (0, 0),
@@ -458,11 +466,22 @@ def trends(
         adata_temp.obs.loc[
             fitted_sorted.columns, "mean_trajectory"
         ] = fitted_sorted.mean(axis=0).values
+        if output_mean:
+            adata.obs["mean_trajectory"] = adata_temp.obs["mean_trajectory"]
+        if "color" in kwargs:
+            color = kwargs["color"]
+            del kwargs["color"]
+        else:
+            color = "mean_trajectory"
+
+        if "cmap" in kwargs:
+            feature_cmap = kwargs["cmap"]
+            del kwargs["cmap"]
 
         if basis == "dendro":
             dendrogram(
                 adata_temp,
-                color="mean_trajectory",
+                color=color,
                 cmap=feature_cmap,
                 ax=axemb,
                 title=title,
@@ -475,7 +494,7 @@ def trends(
             trajectory(
                 adata=adata_temp,
                 basis=basis,
-                color_seg="mean_trajectory",
+                color_seg=color,
                 cmap_seg=feature_cmap,
                 show_info=False,
                 ax=axemb,
@@ -493,7 +512,9 @@ def trends(
     if show == False:
         return axs
     if save is not None:
-        fig.savefig("figures/" + save, bbox_inches="tight")
+        savefile = "figures/trends" + save
+        logg.warn("saving figure to file " + savefile)
+        fig.savefig(savefile, bbox_inches="tight")
 
 
 def single_trend(

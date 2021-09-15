@@ -93,7 +93,7 @@ def dendrogram(
             if ax.get_legend() is not None:
                 ax.get_legend().remove()
         else:
-            ax.set_box_aspect(aspect=1)
+            # ax.set_box_aspect(aspect=1)
             fig = ax.get_gridspec().figure
             cbar = np.argwhere(
                 ["colorbar" in a.get_label() for a in fig.get_axes()]
