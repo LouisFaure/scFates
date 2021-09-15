@@ -8,6 +8,7 @@ from matplotlib.colors import rgb2hex
 
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
+from .dendrogram import dendrogram
 
 
 def slide_cors(
@@ -113,6 +114,20 @@ def slide_cors(
 
     for i in range(nwin):
         freq = freqs[i]
+        if basis == "dendro":
+            dendrogram(
+                adata,
+                s=10,
+                cmap=gr,
+                show=False,
+                ax=axs[0, i],
+                show_info=False,
+                title="",
+                alpha=0,
+            )
+            axs[0, i].set_xlabel("")
+            axs[0, i].set_ylabel("")
+
         axs[0, i].scatter(
             emb[np.argsort(freq), 0],
             emb[np.argsort(freq), 1],

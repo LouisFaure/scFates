@@ -41,7 +41,6 @@ def trends(
     feature_cmap: str = "RdBu_r",
     pseudo_cmap: str = "viridis",
     plot_emb: bool = True,
-    dendro: bool = False,
     basis: str = "umap",
     heatmap_space: float = 0.5,
     offset_names: float = 0.15,
@@ -120,7 +119,7 @@ def trends(
     save_genes
         save list of genes following the order displayed on the heatmap.
     **kwargs
-        arguments passed to :func:`scFates.pl.trajectory` if `plot_emb=True`
+        if `plot_emb=True`, arguments passed to :func:`scFates.pl.trajectory` or :func:`scFates.pl.dendrogram` if `basis="dendro"`
 
     Returns
     -------
@@ -460,7 +459,7 @@ def trends(
             fitted_sorted.columns, "mean_trajectory"
         ] = fitted_sorted.mean(axis=0).values
 
-        if dendro:
+        if basis == "dendro":
             dendrogram(
                 adata_temp,
                 color="mean_trajectory",
