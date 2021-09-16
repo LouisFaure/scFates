@@ -18,6 +18,7 @@ def slide_cors(
     col: Union[None, list] = None,
     basis: str = "umap",
     win_keep: Union[None, list] = None,
+    frame_emb=True,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -139,6 +140,10 @@ def slide_cors(
         axs[0, i].grid(b=None)
         axs[0, i].set_xticks([])
         axs[0, i].set_yticks([])
+        ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
+        axs[0, i].set_aspect(ratio)
+        if frame_emb == False:
+            axs[0, i].axis("off")
 
     c_mil = (
         [
