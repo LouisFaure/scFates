@@ -170,11 +170,26 @@ def subset_tree(
             subsetted updated soft assignment of cells to principal point in representation space.
         `.uns['graph']['F']`
             subsetted coordinates of principal points in representation space.
+        `.obs['old_milestones']`
+            previous milestones from initial tree.
     """
 
     logg.info("subsetting tree", reset=True)
 
     adata = adata.copy() if copy else adata
+
+    adata.obs["old_milestones"] = adata.obs.milestones.copy()
+
+    if "milestones_colors" in adata.uns:
+        adata.uns["old_milestones_colors"] = adata.uns["milestones_colors"].copy()
+        old_dct = dict(
+            zip(
+                adata.obs["old_milestones"].cat.categories,
+                adata.uns["old_milestones_colors"],
+            )
+        )
+    else:
+        old_dct = None
 
     graph = adata.uns["graph"].copy()
     B = graph["B"].copy()
@@ -270,12 +285,20 @@ def subset_tree(
         newcols = None
 
     adata.uns["milestones_colors"] = newcols
+    if old_dct is not None:
+        adata.uns["old_milestons_colors"] = [
+            old_dct[m] for m in adata.obs.old_milestones.cat.categories
+        ]
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     if mode == "substract":
         logg.hint("tree subsetted")
     else:
         logg.hint("tree extracted")
+
+    logg.hint(
+        "added \n" "    .obs['old_milestones'], previous milestones from intial tree"
+    )
 
     return adata if copy else None
 
