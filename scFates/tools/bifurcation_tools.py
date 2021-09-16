@@ -794,7 +794,7 @@ def activation_lm(
         },
         index=df.index,
     )
-    df[["slope", "pval", "fdr", "prefork_signi"]] = df_res[
+    df[["slope", "pre_pval", "pre_fdr", "prefork_signi"]] = df_res[
         ["slope", "pval", "fdr", "prefork_signi"]
     ]
     df["module"] = "late"
