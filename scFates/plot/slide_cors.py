@@ -18,9 +18,13 @@ def slide_cors(
     col: Union[None, list] = None,
     basis: str = "umap",
     win_keep: Union[None, list] = None,
-    frame_emb=True,
+    frame_emb: bool = True,
+    fig_height: float = 6,
+    fontsize: int = 16,
+    point_size: int = 20,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    **kwargs,
 ):
 
     """\
@@ -44,10 +48,20 @@ def slide_cors(
         Name of the `obsm` basis to use.
     win_keep
         plot only a subset of windows.
+    frame_emb
+        add frame around emb plot.
+    fig_height
+        figure height.
+    fontsize
+        repulsion score font size.
+    point_size
+        correlation plot point size.
     show
         show the plot.
     save
         save the plot.
+    **kwargs
+        if `basis=dendro`, arguments passed to :func:`scFates.pl.dendrogram`
 
     Returns
     -------
@@ -108,7 +122,7 @@ def slide_cors(
     )
 
     nwin = len(freqs)
-    fig, axs = plt.subplots(2, nwin, figsize=(nwin * 3, 6))
+    fig, axs = plt.subplots(2, nwin, figsize=(nwin * fig_height / 2, fig_height))
 
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
     emb = adata[adata.uns["graph"]["cells_fitted"], :].obsm["X_" + basis]
@@ -116,15 +130,21 @@ def slide_cors(
     for i in range(nwin):
         freq = freqs[i]
         if basis == "dendro":
+            if "s" in kwargs:
+                s = kwargs["s"]
+                del kwargs["s"]
+            else:
+                s = 10
             dendrogram(
                 adata,
-                s=10,
+                s=s,
                 cmap=gr,
                 show=False,
                 ax=axs[0, i],
                 show_info=False,
                 title="",
                 alpha=0,
+                **kwargs,
             )
             axs[0, i].set_xlabel("")
             axs[0, i].set_ylabel("")
@@ -163,13 +183,17 @@ def slide_cors(
                 color=c_mil[j],
                 alpha=0.5,
                 rasterized=True,
+                s=point_size,
             )
         rep = (
             np.corrcoef(groupsA, corA.iloc[:, i])[0][1]
             + np.corrcoef(groupsB, corB.iloc[:, i])[0][1]
         ) / 2
         axs[1, i].annotate(
-            str(round(rep, 2)), xy=(0.7, 0.88), xycoords="axes fraction", fontsize=16
+            str(round(rep, 2)),
+            xy=(0.7, 0.88),
+            xycoords="axes fraction",
+            fontsize=fontsize,
         )
         axs[1, i].grid(b=None)
         axs[1, i].axvline(0, linestyle="dashed", color="grey", zorder=0)
