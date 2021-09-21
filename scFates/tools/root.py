@@ -62,7 +62,7 @@ def root(
         )
 
     graph = adata.uns["graph"]
-
+    circle = False
     if type(root) == str:
         if root in adata.obs:
             root_val = adata.obs[root]
@@ -87,6 +87,28 @@ def root(
             root = np.argmin(avgs)
         else:
             root = np.argmax(avgs)
+
+        if len(graph["tips"]) == 0:
+            B = adata.uns["graph"]["B"]
+            g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+            circle = True
+            if min_val:
+                todel = g.neighbors(root)[
+                    np.argmax([avgs[i] for i in g.neighbors(root)])
+                ]
+            else:
+                todel = g.neighbors(root)[
+                    np.argmin([avgs[i] for i in g.neighbors(root)])
+                ]
+            B[root, todel] = 0
+            B[todel, root] = 0
+            g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+            # Add edge weights and node labels.
+            g.es["weight"] = B[B.nonzero()]
+            tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+            forks = np.argwhere(np.array(g.degree()) > 2).flatten()
+            adata.uns["graph"]["B"] = B
+            adata.uns["graph"]["tips"] = tips
 
     d = 1e-6 + pairwise_distances(graph["F"].T, graph["F"].T, metric=graph["metrics"])
 
@@ -156,6 +178,13 @@ def root(
         "    .uns['graph']['pp_info'] for each PP, its distance vs root and segment assignment.\n"
         "    .uns['graph']['pp_seg'] segments network information."
     )
+
+    if circle:
+        logg.hint(
+            "updated\n"
+            "    .uns['graph']['B'] with circle now converted to curved trajectory.\n"
+            "    .uns['graph']['tips'] new tips delimitating the trajectory."
+        )
 
     return adata if copy else None
 

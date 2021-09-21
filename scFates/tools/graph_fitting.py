@@ -323,6 +323,123 @@ def tree(
     return adata if copy else None
 
 
+def circle(
+    adata: AnnData,
+    Nodes: int = None,
+    use_rep: str = None,
+    ndims_rep: Optional[int] = None,
+    init: Optional[DataFrame] = None,
+    epg_lambda: Optional[Union[float, int]] = 0.01,
+    epg_mu: Optional[Union[float, int]] = 0.1,
+    epg_trimmingradius: Optional = np.inf,
+    epg_initnodes: Optional[int] = 3,
+    epg_verbose: bool = False,
+    device: str = "cpu",
+    plot: bool = False,
+    basis: Optional[str] = "umap",
+    seed: Optional[int] = None,
+    copy: bool = False,
+):
+    """\
+    Generate a principal circle.
+
+    Learn a circled representation on any space, composed of nodes, approximating the
+    position of the cells on a given space such as gene expression, pca, diffusion maps, ...
+    Uses ElpiGraph algorithm.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    Nodes
+        Number of nodes composing the principial tree, use a range of 10 to 100 for
+        ElPiGraph approach and 100 to 2000 for PPT approach.
+    use_rep
+        Choose the space to be learned by the principal tree.
+    ndims_rep
+        Number of dimensions to use for the inference.
+    init
+        Initialise the point positions.
+    epg_lambda
+        Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20]_.
+    epg_mu
+        Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20]_.
+    epg_trimmingradius
+        Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
+    epg_initnodes
+        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
+        in the initial step
+    epg_verbose
+        show verbose output of epg algorithm
+    device
+        Run method on either `cpu` or on `gpu`
+    plot
+        Plot the resulting tree.
+    basis
+        Basis onto which the resulting tree should be projected.
+    seed
+        A numpy random seed.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+
+        `.uns['epg']`
+            dictionnary containing information from elastic principal curve
+        `.uns['graph']['B']`
+            adjacency matrix of the principal points
+        `.uns['graph']['R']`
+            soft assignment of cells to principal point in representation space
+        `.uns['graph']['F']`
+            coordinates of principal points in representation space
+    """
+
+    logg.info(
+        "inferring a principal circle",
+        reset=True,
+        end=" " if settings.verbosity > 2 else "\n",
+    )
+
+    adata = adata.copy() if copy else adata
+
+    if Nodes is None:
+        if adata.shape[0] * 2 > 100:
+            Nodes = 100
+        else:
+            Nodes = int(adata.shape[0] / 2)
+
+    logg.hint(
+        "parameters used \n"
+        "    "
+        + str(Nodes)
+        + " principal points, mu = "
+        + str(epg_mu)
+        + ", lambda = "
+        + str(epg_lambda)
+    )
+    circle_epg(
+        adata,
+        Nodes,
+        use_rep,
+        ndims_rep,
+        init,
+        epg_lambda,
+        epg_mu,
+        epg_trimmingradius,
+        epg_initnodes,
+        device,
+        seed,
+        epg_verbose,
+    )
+
+    if plot:
+        plot_graph(adata, basis)
+
+    return adata if copy else None
+
+
 def tree_epg(
     X,
     Nodes: int = None,
@@ -417,7 +534,35 @@ def tree_epg(
 
     B = np.asarray(g.get_adjacency().data)
 
+    emptynodes = np.argwhere(R.max(axis=0) == 0).ravel()
+    sel = ~np.isin(np.arange(R.shape[1]), emptynodes)
+    B = B[sel, :][:, sel]
+    R = R[:, sel]
+    F = Curve[0]["NodePositions"].T[:, sel]
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+
+    def reconnect():
+        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+        distmat = np.triu(pairwise_distances(F[:, tips].T))
+        distmat = pd.DataFrame(distmat, columns=tips, index=tips)
+        distmat[distmat == 0] = np.inf
+        row, col = np.unravel_index(np.argmin(distmat.values), distmat.shape)
+        i, j = distmat.index[row], distmat.columns[col]
+        B[i, j] = 1
+        B[j, i] = 1
+        return B
+
+    if len(emptynodes) > 0:
+        logg.info("    removed %d non assigned nodes" % (len(emptynodes)))
+
+    recon = len(np.unique(np.array(g.clusters().membership))) > 1
+    while recon:
+        B = reconnect()
+        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+        recon = len(np.unique(np.array(g.clusters().membership))) > 1
+
     forks = np.argwhere(np.array(g.degree()) > 2).flatten()
 
     graph = {
@@ -523,7 +668,35 @@ def curve_epg(
 
     B = np.asarray(g.get_adjacency().data)
 
+    emptynodes = np.argwhere(R.max(axis=0) == 0).ravel()
+    sel = ~np.isin(np.arange(R.shape[1]), emptynodes)
+    B = B[sel, :][:, sel]
+    R = R[:, sel]
+    F = Curve[0]["NodePositions"].T[:, sel]
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+
+    def reconnect():
+        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+        distmat = np.triu(pairwise_distances(F[:, tips].T))
+        distmat = pd.DataFrame(distmat, columns=tips, index=tips)
+        distmat[distmat == 0] = np.inf
+        row, col = np.unravel_index(np.argmin(distmat.values), distmat.shape)
+        i, j = distmat.index[row], distmat.columns[col]
+        B[i, j] = 1
+        B[j, i] = 1
+        return B
+
+    if len(emptynodes) > 0:
+        logg.info("    removed %d non assigned nodes" % (len(emptynodes)))
+
+    recon = len(np.unique(np.array(g.clusters().membership))) > 1
+    while recon:
+        B = reconnect()
+        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+        recon = len(np.unique(np.array(g.clusters().membership))) > 1
+
     forks = np.argwhere(np.array(g.degree()) > 2).flatten()
 
     graph = {
@@ -547,6 +720,154 @@ def curve_epg(
     logg.hint(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic curve generated from elpigraph.\n"
+        "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
+        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
+        "    .uns['graph']['F'], coordinates of principal points in representation space."
+    )
+
+    return adata
+
+
+def circle_epg(
+    adata: AnnData,
+    Nodes: int = None,
+    use_rep: str = None,
+    ndims_rep: Optional[int] = None,
+    init: Optional[DataFrame] = None,
+    lam: Optional[Union[float, int]] = 0.01,
+    mu: Optional[Union[float, int]] = 0.1,
+    trimmingradius: Optional = np.inf,
+    initnodes: int = None,
+    device: str = "cpu",
+    seed: Optional[int] = None,
+    verbose: bool = True,
+):
+    try:
+        import elpigraph
+
+    except Exception as e:
+        warnings.warn(
+            'ElPiGraph package is not installed \
+            \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
+        )
+
+    X, use_rep = get_data(adata, use_rep, ndims_rep)
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    if device == "gpu":
+        import cupy as cp
+        from .utils import cor_mat_gpu
+        from cuml.metrics import pairwise_distances
+
+        Curve = elpigraph.computeElasticPrincipalCircle(
+            X.values.astype(np.float64),
+            NumNodes=Nodes,
+            Do_PCA=False,
+            InitNodes=initnodes,
+            Lambda=lam,
+            Mu=mu,
+            TrimmingRadius=trimmingradius,
+            GPU=True,
+            verbose=verbose,
+        )
+
+        R = pairwise_distances(
+            cp.asarray(X.values), cp.asarray(Curve[0]["NodePositions"])
+        )
+
+        R = cp.asnumpy(R)
+        # Hard assigment
+        R = sparse.csr_matrix(
+            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
+        ).A
+
+    else:
+        from .utils import cor_mat_cpu
+        from sklearn.metrics import pairwise_distances
+
+        Curve = elpigraph.computeElasticPrincipalCircle(
+            X.values.astype(np.float64),
+            NumNodes=Nodes,
+            Do_PCA=False,
+            InitNodes=initnodes,
+            Lambda=lam,
+            Mu=mu,
+            TrimmingRadius=trimmingradius,
+            verbose=verbose,
+        )
+
+        R = pairwise_distances(X.values, Curve[0]["NodePositions"])
+        # Hard assigment
+        R = sparse.csr_matrix(
+            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
+        ).A
+
+    g = igraph.Graph(directed=False)
+    g.add_vertices(np.unique(Curve[0]["Edges"][0].flatten().astype(int)))
+    g.add_edges(
+        pd.DataFrame(Curve[0]["Edges"][0]).astype(int).apply(tuple, axis=1).values
+    )
+
+    # mat = np.asarray(g.get_adjacency().data)
+    # mat = mat + mat.T - np.diag(np.diag(mat))
+    # B=((mat>0).astype(int))
+
+    B = np.asarray(g.get_adjacency().data)
+
+    emptynodes = np.argwhere(R.max(axis=0) == 0).ravel()
+    sel = ~np.isin(np.arange(R.shape[1]), emptynodes)
+    B = B[sel, :][:, sel]
+    R = R[:, sel]
+    F = Curve[0]["NodePositions"].T[:, sel]
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+
+    def reconnect():
+        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+        distmat = np.triu(pairwise_distances(F[:, tips].T))
+        distmat = pd.DataFrame(distmat, columns=tips, index=tips)
+        distmat[distmat == 0] = np.inf
+        row, col = np.unravel_index(np.argmin(distmat.values), distmat.shape)
+        i, j = distmat.index[row], distmat.columns[col]
+        B[i, j] = 1
+        B[j, i] = 1
+        return B
+
+    if len(emptynodes) > 0:
+        logg.info("    removed %d non assigned nodes" % (len(emptynodes)))
+
+    recon = len(tips) > 0
+    while recon:
+        B = reconnect()
+        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+        recon = len(tips) > 0
+
+    forks = np.argwhere(np.array(g.degree()) > 2).flatten()
+
+    graph = {
+        "B": B,
+        "R": R,
+        "F": F,
+        "tips": tips,
+        "forks": forks,
+        "cells_fitted": X.index.tolist(),
+        "metrics": "euclidean",
+        "use_rep": use_rep,
+        "ndims_rep": ndims_rep,
+    }
+
+    Curve[0]["Edges"] = list(Curve[0]["Edges"])[0]
+
+    adata.uns["graph"] = graph
+    adata.uns["epg"] = Curve[0]
+
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "added \n"
+        "    .uns['epg'] dictionnary containing inferred elastic circle generated from elpigraph.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
         "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
