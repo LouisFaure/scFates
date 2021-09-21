@@ -59,6 +59,7 @@ Analysis key steps
    Tree_operations
    Conversion_from_CellRank_pipeline
    Critical_Transition
+   Beyond_scRNAseq
 
 .. _scanpy: https://scanpy.readthedocs.io/
 .. _crestree: https://github.com/hms-dbmi/crestree
