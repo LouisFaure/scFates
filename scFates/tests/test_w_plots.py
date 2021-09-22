@@ -16,6 +16,8 @@ def test_pipeline():
     scf.tl.tree(adata, Nodes=10, use_rep="pca", method="epg", device="cpu", seed=1)
     F_PC1_epgt_cpu = adata.uns["graph"]["F"][0, :5]
 
+    scf.tl.circle(adata, Nodes=10, use_rep="pca", device="cpu", seed=1)
+
     # scf.tl.tree(adata,Nodes=10,use_rep="pca",method="epg",device="gpu",seed=1)
     # F_PC1_epgt_gpu = adata.uns['graph']['F'][0,:5]
 

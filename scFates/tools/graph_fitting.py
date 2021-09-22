@@ -538,7 +538,7 @@ def tree_epg(
     sel = ~np.isin(np.arange(R.shape[1]), emptynodes)
     B = B[sel, :][:, sel]
     R = R[:, sel]
-    F = Curve[0]["NodePositions"].T[:, sel]
+    F = Tree[0]["NodePositions"].T[:, sel]
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     tips = np.argwhere(np.array(g.degree()) == 1).flatten()
 
