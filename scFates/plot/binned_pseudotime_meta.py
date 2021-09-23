@@ -85,6 +85,11 @@ def binned_pseudotime_meta(
         )
         cbar.set_ticks([])
 
+    if key + "_colors" not in adata.uns:
+        from . import palette_tools
+
+        palette_tools._set_default_colors_for_categorical_obs(adata, key)
+
     for i, d in enumerate(adata.obs[key].cat.categories):
         ax.scatter(
             X[:, i], Y[:, i], s=prop.values[i, :] * 200, c=adata.uns[key + "_colors"][i]
