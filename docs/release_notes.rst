@@ -28,6 +28,7 @@ Version 0.2.7 :small:`September 23, 2021`
 
 .. rubric:: Changes
 
+- any graph fitting functions relying in elpigraph now removes automatically non-assigned nodes, and reattach the separated tree at the level of removals in case the tree is broken into pieces.
 - :func:`scFates.pl.milestones` default layout to dendrogram view (similar to `tl.dendrogram` layout).
 - :func:`scFates.tl.subset_tree` default mode is "extract".
 - :func:`scFates.pl.linearity_deviation` has a font parameter, with a default value.
