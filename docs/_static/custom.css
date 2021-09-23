@@ -110,3 +110,7 @@ img.no-scaled-link {
     max-width: 100% !important;
     height: auto !important;
 }
+
+.wy-side-scroll { width: 300px; overflow-y: auto; }
+.wy-side-nav-search { width: auto }
+.wy-menu-vertical { width: auto }

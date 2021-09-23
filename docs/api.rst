@@ -32,6 +32,7 @@ Tree inference
 
     tl.tree
     tl.curve
+    tl.circle
     tl.cellrank_to_tree
 
 Tree operations

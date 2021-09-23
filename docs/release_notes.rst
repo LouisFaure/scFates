@@ -4,6 +4,34 @@
 Release Notes
 =============
 
+Version 0.2.7 :small:`September 23, 2021`
+-------------------------------------
+
+.. rubric:: Additions
+
+- :func:`scFates.tl.circle`, to fit a principal circle on high dimensions!
+- :func:`scFates.tl.dendrogram` and `pl.dendrogram`, for generating and plotting a dendrogram URD style single-cell embedding for better interpretability
+- :func:`scFates.tl.extend_tips` (replaces `tl.refine_pseudotime` ) to avoid the compression of cells at the tips.
+- :func:`scFates.pl.binned_pseudotime_meta`, a dotplot showing the proportion of cells for a given category, along binned pseudotime intervals.
+
+.. rubric:: New walkthroughs
+
+- `Tree operation walkthrough <https://scfates.readthedocs.io/en/latest/Tree_operations.html>`_, for tree subsetting, attachment and extension.
+- `Basic trajectory walkthrough <https://scfates.readthedocs.io/en/latest/Basic_pseudotime_analysis.html>`_, for simple developmental transition.
+- `Going beyond scRNAseq <https://scfates.readthedocs.io/en/latest/Beyond_scRNAseq.html>`_, one can also apply scFates to other dynamical systems, such as neuronal recordings.
+
+.. rubric:: Improvements
+
+- :func:`scFates.tl.attach_tree`: Allow to attach trees without milestones (using vertiex id instead).
+- :func:`scFates.tl.subset_tree`: Better handling of tree subsetting when different root is used. Previosu milestones are saved.
+- :func:`scFates.pl.trends` now respects embedding aspect ratio, can now save figure.
+
+.. rubric:: Changes
+
+- :func:`scFates.pl.milestones` default layout to dendrogram view (similar to `tl.dendrogram` layout).
+- :func:`scFates.tl.subset_tree` default mode is "extract".
+- :func:`scFates.pl.linearity_deviation` has a font parameter, with a default value.
+
 Version 0.2.6 :small:`August 29, 2021`
 -------------------------------------
 
