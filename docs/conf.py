@@ -33,6 +33,7 @@ MOCK_MODULES = [
     "tqdm",
     "simpleppt",
     "sklearn.metrics",
+    "networkx",
 ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
