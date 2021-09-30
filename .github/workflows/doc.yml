@@ -1,0 +1,32 @@
+name: Doc build
+
+on:
+  push:
+    paths:
+      - 'scFates/**'
+
+jobs:
+  doc_build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 50
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Prepare dependencies
+      run: |
+        sudo apt update && sudo apt install -y pandoc
+        pip install -r docs/requirements.txt
+        pip install mock pandoc
+        pip install --no-deps .
+    - name: Build documentation
+      run: |
+        sphinx-build docs/ docs/out/
