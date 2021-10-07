@@ -13,7 +13,9 @@ def binned_pseudotime_meta(
     nbins: int = 20,
     rotation: int = 0,
     show_colorbar: bool = False,
+    rev=False,
     cmap="viridis",
+    ax=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -59,6 +61,8 @@ def binned_pseudotime_meta(
 
     xs = np.arange(prop.shape[0])
     ys = np.arange(prop.shape[1])
+    ys = [c.mid for c in intervals.cat.categories]
+    ys = -np.array(ys) if rev else ys
     X, Y = np.meshgrid(xs, ys)
 
     specs = (
@@ -66,24 +70,29 @@ def binned_pseudotime_meta(
         if show_colorbar
         else None
     )
-    fig, ax = plt.subplots(
-        1,
-        1 + 1 * show_colorbar,
-        figsize=(2.5 * ncats / 6 + 0.25 * show_colorbar, (nbins / 4) + 1),
-        gridspec_kw=specs,
-    )
-    ax2 = ax[1] if show_colorbar else None
-    ax = ax[0] if show_colorbar else ax
-
-    if show_colorbar:
-        cmap = eval("mpl.cm." + cmap)
-        timebins = np.array([i.mid for i in intervals.cat.categories])
-        norm = mpl.colors.Normalize(vmin=timebins.min(), vmax=timebins.max())
-        norm = mpl.colors.BoundaryNorm(timebins, cmap.N)
-        cbar = mpl.colorbar.ColorbarBase(
-            ax2, cmap=cmap, norm=norm, spacing="proportional", orientation="vertical"
+    if ax is None:
+        fig, ax = plt.subplots(
+            1,
+            1 + 1 * show_colorbar,
+            figsize=(2.5 * ncats / 6 + 0.25 * show_colorbar, (nbins / 4) + 1),
+            gridspec_kw=specs,
         )
-        cbar.set_ticks([])
+        ax2 = ax[1] if show_colorbar else None
+        ax = ax[0] if show_colorbar else ax
+
+        if show_colorbar:
+            cmap = eval("mpl.cm." + cmap)
+            timebins = np.array([i.mid for i in intervals.cat.categories])
+            norm = mpl.colors.Normalize(vmin=timebins.min(), vmax=timebins.max())
+            norm = mpl.colors.BoundaryNorm(timebins, cmap.N)
+            cbar = mpl.colorbar.ColorbarBase(
+                ax2,
+                cmap=cmap,
+                norm=norm,
+                spacing="proportional",
+                orientation="vertical",
+            )
+            cbar.set_ticks([])
 
     if key + "_colors" not in adata.uns:
         from . import palette_tools
