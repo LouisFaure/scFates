@@ -221,9 +221,9 @@ def importeR(task):
 
         pandas2ri.activate()
         Rpy2 = True
-    except Exception as e:
+    except ModuleNotFoundError as e:
         Rpy2 = (
-            "rpy2 installatio nis necessary for "
+            "rpy2 installation is necessary for "
             + task
             + '. \
             \nPlease use "pip3 install rpy2" to install rpy2'
