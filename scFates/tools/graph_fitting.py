@@ -87,10 +87,10 @@ def curve(
 
         `.uns['epg']`
             dictionnary containing information from elastic principal curve
+        `.obsm['X_R']`
+            hard assignment of cells to principal points
         `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['graph']['R']`
-            soft assignment of cells to principal point in representation space
         `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
@@ -234,10 +234,10 @@ def tree(
             dictionnary containing information from simpelppt tree if method='ppt'
         `.uns['epg']`
             dictionnary containing information from elastic principal tree if method='epg'
+        `.obsm['R']`
+            soft assignment of cells to principal points
         `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['graph']['R']`
-            soft assignment of cells to principal point in representation space
         `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
@@ -277,11 +277,9 @@ def tree(
 
         graph = {
             "B": ppt["B"],
-            "R": ppt["R"],
             "F": ppt["F"],
             "tips": ppt["tips"],
             "forks": ppt["forks"],
-            "cells_fitted": X.index.tolist(),
             "metrics": ppt["metric"],
             "use_rep": use_rep,
             "ndims_rep": ndims_rep,
@@ -289,6 +287,7 @@ def tree(
 
         adata.uns["graph"] = graph
         adata.uns["ppt"] = ppt
+        adata.obsm["X_R"] = ppt["R"]
 
     elif method == "epg":
         graph, epg = tree_epg(
@@ -305,6 +304,8 @@ def tree(
         )
         graph["use_rep"] = use_rep
         graph["ndims_rep"] = ndims_rep
+        adata.obsm["X_R"] = graph["R"]
+        del graph["R"]
         adata.uns["graph"] = graph
         adata.uns["epg"] = epg
 
@@ -315,8 +316,8 @@ def tree(
     logg.hint(
         "added \n"
         "    .uns['" + method + "'], dictionnary containing inferred tree.\n"
+        "    .obsm['X_R'] soft assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] soft assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'] coordinates of principal points in representation space."
     )
 
@@ -388,10 +389,10 @@ def circle(
 
         `.uns['epg']`
             dictionnary containing information from elastic principal curve
+        `.obsm['X_R']`
+            soft assignment of cells to principal points
         `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['graph']['R']`
-            soft assignment of cells to principal point in representation space
         `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
@@ -701,11 +702,9 @@ def curve_epg(
 
     graph = {
         "B": B,
-        "R": R,
         "F": Curve[0]["NodePositions"].T,
         "tips": tips,
         "forks": forks,
-        "cells_fitted": X.index.tolist(),
         "metrics": "euclidean",
         "use_rep": use_rep,
         "ndims_rep": ndims_rep,
@@ -715,13 +714,14 @@ def curve_epg(
 
     adata.uns["graph"] = graph
     adata.uns["epg"] = Curve[0]
+    adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic curve generated from elpigraph.\n"
+        "    .obsm['X_R'] hard assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
 
@@ -849,11 +849,9 @@ def circle_epg(
 
     graph = {
         "B": B,
-        "R": R,
         "F": F,
         "tips": tips,
         "forks": forks,
-        "cells_fitted": X.index.tolist(),
         "metrics": "euclidean",
         "use_rep": use_rep,
         "ndims_rep": ndims_rep,
@@ -863,13 +861,14 @@ def circle_epg(
 
     adata.uns["graph"] = graph
     adata.uns["epg"] = Curve[0]
+    adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic circle generated from elpigraph.\n"
+        "    .obsm['X_R'] hard assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
 

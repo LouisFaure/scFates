@@ -79,18 +79,17 @@ def graph(
     graph = adata.uns["graph"]
 
     emb = adata.obsm[f"X_{basis}"]
-    emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
     if "components" in kwargs:
         cmp = np.array(kwargs["components"]) - 1
-        emb_f = emb_f[:, cmp]
+        emb = emb[:, cmp]
 
     else:
-        emb_f = emb_f[:, :2]
+        emb = emb[:, :2]
 
-    R = graph["R"]
+    R = adata.obsm["X_R"]
 
-    proj = (np.dot(emb_f.T, R) / R.sum(axis=0)).T
+    proj = (np.dot(emb.T, R) / R.sum(axis=0)).T
 
     B = graph["B"]
 
@@ -241,19 +240,18 @@ def trajectory(
     graph = adata.uns["graph"]
 
     emb = adata.obsm[f"X_{basis}"]
-    emb_f = adata[graph["cells_fitted"], :].obsm[f"X_{basis}"]
 
     if "components" in kwargs:
         cmp = np.array(kwargs["components"]) - 1
-        emb_f = emb_f[:, cmp]
+        emb = emb[:, cmp]
 
     else:
-        emb_f = emb_f[:, :2]
+        emb = emb[:, :2]
 
-    R = graph["R"]
+    R = adata.obsm["X_R"]
 
     nodes = graph["pp_info"].index
-    proj = pd.DataFrame((np.dot(emb_f.T, R) / R.sum(axis=0)).T, index=nodes)
+    proj = pd.DataFrame((np.dot(emb.T, R) / R.sum(axis=0)).T, index=nodes)
 
     B = graph["B"]
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
@@ -383,9 +381,7 @@ def trajectory(
             _get_color_values(adata, color_seg, layer=layer_seg)[0],
             index=adata.obs_names,
         )
-        R = pd.DataFrame(
-            adata.uns["graph"]["R"], index=adata.uns["graph"]["cells_fitted"]
-        )
+        R = pd.DataFrame(adata.obsm["X_R"], index=adata.obs_names)
         R = R.loc[adata.obs_names]
         vals = vals[~np.isnan(vals)]
         R = R.loc[vals.index]
@@ -558,10 +554,8 @@ def trajectory_3d(
     if emb.shape[1] > 3:
         raise ValueError("Embedding is not three dimensional.")
 
-    emb_f = adata[r["cells_fitted"], :].obsm[f"X_{basis}"]
-
-    R = r["R"]
-    proj = (np.dot(emb_f.T, R) / R.sum(axis=0)).T
+    R = adata.obsm["X_R"]
+    proj = (np.dot(emb.T, R) / R.sum(axis=0)).T
 
     B = r["B"]
 
@@ -605,7 +599,7 @@ def trajectory_3d(
             trace1 = list(
                 map(
                     lambda x: scatter3d(
-                        emb_f[adata.obs[color] == x, :], pal_dict[x], cell_size, x
+                        emb[adata.obs[color] == x, :], pal_dict[x], cell_size, x
                     ),
                     list(pal_dict.keys()),
                 )
@@ -616,9 +610,9 @@ def trajectory_3d(
                 cmap = "Viridis"
             trace1 = [
                 go.Scatter3d(
-                    x=emb_f[:, 0],
-                    y=emb_f[:, 1],
-                    z=emb_f[:, 2],
+                    x=emb[:, 0],
+                    y=emb[:, 1],
+                    z=emb[:, 2],
                     mode="markers",
                     marker=dict(
                         size=cell_size,
@@ -632,9 +626,9 @@ def trajectory_3d(
     else:
         trace1 = [
             go.Scatter3d(
-                x=emb_f[:, 0],
-                y=emb_f[:, 1],
-                z=emb_f[:, 2],
+                x=emb[:, 0],
+                y=emb[:, 1],
+                z=emb[:, 2],
                 mode="markers",
                 marker=dict(size=cell_size, color="grey", opacity=0.9),
             )

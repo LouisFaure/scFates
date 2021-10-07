@@ -67,14 +67,18 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     logg.info("projecting cells onto the principal graph", reset=True)
 
     if n_map == 1:
-        df_l = [map_cells(graph, multi=False)]
+        df_l = [map_cells(graph, R=adata.obsm["X_R"], multi=False)]
     else:
         df_l = ProgressParallel(
             n_jobs=n_jobs, total=n_map, file=sys.stdout, desc="    mappings"
-        )(delayed(map_cells)(graph=graph, multi=True) for m in range(n_map))
+        )(
+            delayed(map_cells)(graph=graph, R=adata.obsm["X_R"], multi=True)
+            for m in range(n_map)
+        )
 
     # formatting cell projection data
-
+    for i in range(len(df_l)):
+        df_l[i].index = adata.obs_names
     df_summary = df_l[0]
 
     df_summary["seg"] = df_summary["seg"].astype("category")
@@ -162,7 +166,7 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     return adata if copy else None
 
 
-def map_cells(graph, multi=False):
+def map_cells(graph, R, multi=False):
     import igraph
 
     g = igraph.Graph.Adjacency((graph["B"] > 0).tolist(), mode="undirected")
@@ -173,11 +177,11 @@ def map_cells(graph, multi=False):
             np.apply_along_axis(
                 lambda x: np.random.choice(np.arange(len(x)), size=1, p=x),
                 axis=1,
-                arr=graph["R"],
+                arr=R,
             )
         ).T.flatten()
     else:
-        rrm = np.apply_along_axis(np.argmax, axis=1, arr=graph["R"])
+        rrm = np.apply_along_axis(np.argmax, axis=1, arr=R)
 
     def map_on_edges(v):
         vcells = np.argwhere(rrm == v)
@@ -186,7 +190,7 @@ def map_cells(graph, multi=False):
             nv = np.array(g.neighborhood(v, order=1))
             nvd = np.array(g.shortest_paths(v, nv)[0])
 
-            spi = np.apply_along_axis(np.argmax, axis=1, arr=graph["R"][vcells, nv[1:]])
+            spi = np.apply_along_axis(np.argmax, axis=1, arr=R[vcells, nv[1:]])
             ndf = pd.DataFrame(
                 {
                     "cell": vcells.flatten(),
@@ -196,11 +200,9 @@ def map_cells(graph, multi=False):
                 }
             )
 
-            p0 = graph["R"][vcells, v].flatten()
+            p0 = R[vcells, v].flatten()
             p1 = np.array(
-                list(
-                    map(lambda x: graph["R"][vcells[x], ndf.v1[x]], range(len(vcells)))
-                )
+                list(map(lambda x: R[vcells[x], ndf.v1[x]], range(len(vcells))))
             ).flatten()
 
             alpha = np.random.uniform(size=len(vcells))
@@ -231,7 +233,7 @@ def map_cells(graph, multi=False):
     df = list(map(map_on_edges, range(graph["B"].shape[1])))
     df = pd.concat(df)
     df.sort_values("cell", inplace=True)
-    df.index = graph["cells_fitted"]
+    # df.index = graph["cells_fitted"]
 
     df["edge"] = df.apply(lambda x: str(int(x[1])) + "|" + str(int(x[2])), axis=1)
 

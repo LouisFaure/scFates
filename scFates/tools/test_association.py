@@ -154,7 +154,7 @@ def test_association(
 
     genes = adata.var_names
     if root is None:
-        cells = graph["cells_fitted"]
+        cells = adata.obs_names
     else:
         df = adata.obs.copy()
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values

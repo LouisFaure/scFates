@@ -59,7 +59,7 @@ def cleanup(
     graph = adata.uns["graph"]
 
     B = graph["B"]
-    R = graph["R"]
+    R = adata.obsm["X_R"]
     F = graph["F"]
     init_num = B.shape[0]
     init_pp = np.arange(B.shape[0])
@@ -119,7 +119,7 @@ def cleanup(
         R = np.delete(R, tip_torem, axis=1)
         F = np.delete(F, tip_torem, axis=1)
     R = (R.T / R.sum(axis=1)).T
-    graph["R"] = R
+    adata.obsm["X_R"] = R
     graph["B"] = B
     graph["F"] = F
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
@@ -193,7 +193,7 @@ def subset_tree(
 
     graph = adata.uns["graph"].copy()
     B = graph["B"].copy()
-    R = graph["R"].copy()
+    R = adata.obsm["X_R"].copy()
     F = graph["F"].copy()
 
     dct = adata.uns["graph"]["milestones"]
@@ -231,12 +231,12 @@ def subset_tree(
     if mode == "substract":
         sub_nodes = sub_nodes[sub_nodes != r]
         sub_nodes = ~np.isin(range(B.shape[0]), sub_nodes)
-        sub_cells = ~np.isin(graph["cells_fitted"], cells)
+        sub_cells = ~np.isin(adata.obs_names, cells)
 
     if mode == "extract":
         sub_nodes = sub_nodes[sub_nodes != r] if r != graph["root"] else sub_nodes
         sub_nodes = np.isin(range(B.shape[0]), sub_nodes)
-        sub_cells = np.isin(graph["cells_fitted"], cells)
+        sub_cells = np.isin(adata.obs_names, cells)
         if r != graph["root"]:
             newroot = np.array(g.neighborhood(r)[1:])[sub_nodes[g.neighborhood(r)[1:]]][
                 0
@@ -254,12 +254,11 @@ def subset_tree(
 
     adata.uns["graph"]["tips"] = tips
     adata.uns["graph"]["forks"] = forks
-    adata.uns["graph"]["cells_fitted"] = np.array(graph["cells_fitted"])[sub_cells]
-    adata.uns["graph"]["R"] = R
     adata.uns["graph"]["B"] = B
     adata.uns["graph"]["F"] = F
 
-    adata._inplace_subset_obs(adata.uns["graph"]["cells_fitted"])
+    adata._inplace_subset_obs(adata.obs_names[sub_cells])
+    adata.obsm["X_R"] = R
 
     rmil = dct_rev[graph["root"]]
     rmil = root_milestone if ~np.isin(rmil, milsel) else rmil
@@ -343,10 +342,10 @@ def attach_tree(
 
     graph = adata.uns["graph"]
     B = graph["B"].copy()
-    R = graph["R"].copy()
+    R = adata.obsm["X_R"].copy()
     F = graph["F"].copy()
 
-    R2 = adata_branch.uns["graph"]["R"].copy()
+    R2 = adata_branch.obsm["X_R"].copy()
 
     logg.info("    merging")
     R, R2 = np.concatenate((R, np.zeros((R2.shape[0], R.shape[1])))), np.concatenate(
@@ -372,9 +371,7 @@ def attach_tree(
     else:
         B = None
 
-    newcells = np.concatenate(
-        [np.array(graph["cells_fitted"]), adata_branch.uns["graph"]["cells_fitted"]]
-    )
+    newcells = np.concatenate([adata.obs_names, adata_branch.obs_names])
 
     adata = adata.concatenate(
         adata_branch, batch_key=None, index_unique=None, uns_merge="first", join="outer"
@@ -428,8 +425,7 @@ def attach_tree(
 
     adata.uns["graph"]["tips"] = tips
     adata.uns["graph"]["forks"] = forks
-    adata.uns["graph"]["cells_fitted"] = newcells
-    adata.uns["graph"]["R"] = R
+    adata.obsm["X_R"] = R
     adata.uns["graph"]["B"] = B
     adata.uns["graph"]["F"] = F
 
@@ -446,7 +442,7 @@ def attach_tree(
 def extend_tip(adata, tip, use_rep, restrict_seg):
 
     graph = adata.uns["graph"].copy()
-    selecta = graph["R"].argmax(axis=1) == tip
+    selecta = adata.obsm["X_R"].argmax(axis=1) == tip
     adata_sub = adata[selecta]
 
     early_cell = (
@@ -492,7 +488,7 @@ def extend_tip(adata, tip, use_rep, restrict_seg):
     F = np.concatenate([F, adata[tip_cell].obsm[use_rep].reshape(-1, 1)], axis=1)
 
     tip_nodes = np.array(g.neighborhood(tip, order=0, mindist=0) + [B.shape[0] - 1])
-    R = graph["R"]
+    R = adata.obsm["X_R"]
     cnei = np.isin(np.argmax(R, axis=1), tip_nodes)
 
     R[cnei, :] = 0
@@ -524,7 +520,7 @@ def extend_tip(adata, tip, use_rep, restrict_seg):
 
     adata.uns["graph"]["tips"] = tips
     adata.uns["graph"]["forks"] = forks
-    adata.uns["graph"]["R"] = R
+    adata.obsm["X_R"] = R
     adata.uns["graph"]["B"] = B
     adata.uns["graph"]["F"] = F
 
@@ -567,7 +563,7 @@ def extend_tips(adata: AnnData, restrict_seg: bool = False, copy: bool = False):
     for t in adata.uns["graph"]["tips"]:
         adata = extend_tip(adata, t, adata.uns["graph"]["use_rep"], restrict_seg)
 
-    if any(adata.uns["graph"]["R"].sum(axis=0) == 0) & (restrict_seg == False):
+    if any(adata.obsm["X_R"].sum(axis=0) == 0) & (restrict_seg == False):
         raise ValueError(
             "One tip has been assigned to no cell, rerun with restrict_seg=True."
         )
