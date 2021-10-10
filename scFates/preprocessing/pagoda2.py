@@ -176,7 +176,8 @@ def batch_correct(
             batch-corrected count matrix.
 
     """
-
+    if adata.is_view:
+        adata._init_as_actual(adata.copy())
     if layer == "X":
         X = adata.X.copy()
     else:
@@ -244,14 +245,15 @@ def batch_correct(
         X = X.multiply(1.0 / d[None, :].T)
         X = X.get()
 
+    X = csr_matrix(X)
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
 
     if inplace:
         if layer == "X":
-            adata.X = csr_matrix(X)
+            adata.X = X
             logg.hint("updated \n" "    .X, batch corrected matrix.")
         else:
-            adata.layers[layer] = csr_matrix(X)
+            adata.layers[layer] = X
             logg.hint(
                 "updated \n" "    .layer['" + layer + "'], batch corrected matrix."
             )
