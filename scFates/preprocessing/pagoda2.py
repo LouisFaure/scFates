@@ -158,13 +158,11 @@ def batch_correct(
     batch_key
         Column name to use for batch.
     layer
-        Which layer to correct
+        Which layer to correct, if layer doesn't exist, then correct X and save to layer
     depth_scale
         Depth scale.
     device
         Run method on either `cpu` or on `gpu`.
-    add_layer
-        if True, corrected count matrix is added to adata.layers["pagoda2"].
     copy
         Return a copy instead of writing to adata.
     Returns
@@ -178,10 +176,12 @@ def batch_correct(
     """
     if adata.is_view:
         adata._init_as_actual(adata.copy())
-    if layer == "X":
-        X = adata.X.copy()
-    else:
+
+    if layer in adata.layers:
         X = adata.layers[layer].copy()
+    else:
+        X = adata.X.copy()
+
     logg.info("Performing pagoda2 batch correction", reset=True)
     if adata.obs[batch_key].dtype.name != "category":
         adata.obs[batch_key] = adata.obs[batch_key].astype("category")
@@ -263,7 +263,12 @@ def batch_correct(
 
 
 def find_overdispersed(
-    adata, gam_k: int = 5, alpha: float = 5e-2, plot: bool = False, copy: bool = False
+    adata,
+    gam_k: int = 5,
+    alpha: float = 5e-2,
+    layer: str = "X",
+    plot: bool = False,
+    copy: bool = False,
 ):
 
     """\
@@ -275,12 +280,12 @@ def find_overdispersed(
     ----------
     adata
         Annotated data matrix.
-    gan_k
+    gam_k
         The k used for the generalized additive model.
     alpha
         The criterion used to measure statistical significance.
-    device
-        Run method on either `cpu` or on `gpu`.
+    layer
+        Which layer to use.
     plot
         Plot selected genes.
     copy
@@ -317,10 +322,10 @@ def find_overdispersed(
 
     adata = adata.copy() if copy else adata
 
-    if "pagoda2" in adata.layers:
-        X = adata.layers["pagoda2"].copy()
-    else:
+    if layer == "X":
         X = adata.X.copy()
+    else:
+        X = adata.layers[layer].copy()
 
     logg.info("    computing mean and variances")
 
