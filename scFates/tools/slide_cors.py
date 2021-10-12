@@ -94,7 +94,7 @@ def slide_cells(
     img.add_edges(edges)
 
     paths = list(map(lambda l: getsegs(img, root, l, graph), leaves))
-    pp_probs = graph["R"].sum(axis=0)
+    pp_probs = adata.obsm["X_R"].sum(axis=0)
 
     if len(milestones) == 2:
         seg_progenies = list(set.intersection(*[set(path) for path in paths]))
@@ -143,12 +143,12 @@ def slide_cells(
         if len(inds) == 0:
             if cmsm.max() > win / 2:
                 if mapping:
-                    cell_probs = graph["R"][:, pp_next].sum(axis=1)
+                    cell_probs = adata.obsm["X_R"][:, pp_next].sum(axis=1)
                 else:
                     cell_probs = (
                         np.isin(
                             np.apply_along_axis(
-                                lambda x: np.argmax(x), axis=1, arr=graph["R"]
+                                lambda x: np.argmax(x), axis=1, arr=adata.obsm["X_R"]
                             ),
                             pp_next,
                         )
@@ -161,12 +161,12 @@ def slide_cells(
                 np.argsort(graph["pp_info"].loc[pp_next, "time"].values)
             ][: inds[0]]
             if mapping:
-                cell_probs = graph["R"][:, pps_region].sum(axis=1)
+                cell_probs = adata.obsm["X_R"][:, pps_region].sum(axis=1)
             else:
                 cell_probs = (
                     np.isin(
                         np.apply_along_axis(
-                            lambda x: np.argmax(x), axis=1, arr=graph["R"]
+                            lambda x: np.argmax(x), axis=1, arr=adata.obsm["X_R"]
                         ),
                         pps_region,
                     )
@@ -244,9 +244,7 @@ def slide_cells(
 
     adata.uns = uns_temp
 
-    freqs = list(
-        map(lambda f: pd.Series(f, index=adata.uns["graph"]["cells_fitted"]), freq)
-    )
+    freqs = list(map(lambda f: pd.Series(f, index=adata.obs_names), freq))
 
     if ext is False:
         if name in adata.uns:

@@ -125,7 +125,7 @@ def slide_cors(
     fig, axs = plt.subplots(2, nwin, figsize=(nwin * fig_height / 2, fig_height))
 
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
-    emb = adata[adata.uns["graph"]["cells_fitted"], :].obsm["X_" + basis]
+    emb = adata.obsm["X_" + basis]
 
     for i in range(nwin):
         freq = freqs[i]

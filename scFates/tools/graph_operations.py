@@ -191,6 +191,12 @@ def subset_tree(
     else:
         old_dct = None
 
+    if "seg_colors" in adata.uns:
+        oldseg = adata.obs.seg.cat.categories.copy()
+        oldseg_col = np.array(adata.uns["seg_colors"].copy())
+    else:
+        oldseg = None
+
     graph = adata.uns["graph"].copy()
     B = graph["B"].copy()
     R = adata.obsm["X_R"].copy()
@@ -287,6 +293,11 @@ def subset_tree(
     if old_dct is not None:
         adata.uns["old_milestons_colors"] = [
             old_dct[m] for m in adata.obs.old_milestones.cat.categories
+        ]
+
+    if oldseg is not None:
+        adata.uns["seg_colors"] = [
+            oldseg_col[oldseg == s][0] for s in adata.obs.seg.cat.categories
         ]
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
