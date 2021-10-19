@@ -221,7 +221,7 @@ def subset_tree(
     milpath = img.get_all_shortest_paths(
         str(dct[root_milestone]), [str(dct[m]) for m in milestones]
     )
-    milpath = np.unique(np.array(milpath).ravel())
+    milpath = np.unique([item for sublist in milpath for item in sublist])
     milsel = np.array(img.vs["name"])[milpath].astype(int)
     milsel = np.array([dct_rev[m] for m in milsel])
     if mode == "substract":
