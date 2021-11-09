@@ -564,7 +564,7 @@ def extend_tips(adata: AnnData, restrict_seg: bool = False, copy: bool = False):
 
     """
 
-    logg.info("subsetting tree", reset=True)
+    logg.info("extending tree", reset=True)
 
     if "t" not in adata.obs.columns:
         raise ValueError("You need to compute pseudotime before extending tips.")

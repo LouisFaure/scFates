@@ -318,7 +318,6 @@ def tree(
     if plot:
         plot_graph(adata, basis)
 
-    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    .uns['" + method + "'], dictionnary containing inferred tree.\n"
