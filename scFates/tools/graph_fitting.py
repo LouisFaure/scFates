@@ -144,6 +144,7 @@ def tree(
     Nodes: int = None,
     use_rep: str = None,
     ndims_rep: Optional[int] = None,
+    weight_rep: str = None,
     method: str = None,
     init: Optional[DataFrame] = None,
     ppt_sigma: Optional[Union[float, int]] = 0.1,
@@ -182,6 +183,8 @@ def tree(
         Choose the space to be learned by the principal tree.
     ndims_rep
         Number of dimensions to use for the inference.
+    weight_rep
+        If `ppt`, use a weight matrix for learning the tree.
     method
         If `ppt`, uses simpleppt approach, `ppt_lambda` and `ppt_sigma` are the
         parameters controlling the algorithm. If `epg`, uses ComputeElasticPrincipalTree
@@ -252,6 +255,8 @@ def tree(
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
 
+    W = get_data(adata, weight_rep, ndims_rep)[0] if weight_rep is not None else None
+
     if Nodes is None:
         if adata.shape[0] * 2 > 2000:
             Nodes = 2000
@@ -261,6 +266,7 @@ def tree(
     if method == "ppt":
         ppt = simpleppt.ppt(
             X,
+            W,
             Nodes=Nodes,
             init=init,
             sigma=ppt_sigma,
