@@ -212,9 +212,9 @@ def test_pipeline():
         w=500,
         step=30,
     )
-    scf.pl.synchro_path(
-        adata, root_milestone="80", milestones=["25", "19"], loess_span=0.5
-    )
+    # scf.pl.synchro_path(
+    #    adata, root_milestone="80", milestones=["25", "19"]
+    # )
     syncAB = adata.uns["80->25<>19"]["synchro"]["real"]["25"]["corAB"].values[:5]
 
     assert np.allclose(
