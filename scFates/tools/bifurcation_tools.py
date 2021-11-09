@@ -514,10 +514,7 @@ def activation(
 
     allact = []
 
-    for m in tqdm(
-        range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
-    ):
-
+    def activation_map(m):
         df = adata.uns["pseudotime_list"][str(m)]
         acti = pd.Series(0, index=stats.index)
 
@@ -542,14 +539,22 @@ def activation(
             data = list(zip([subtree] * len(Xgenes), Xgenes))
 
             acti.loc[genes] = ProgressParallel(
-                n_jobs=n_jobs,
+                n_jobs=n_jobs if n_map == 1 else 1,
                 total=len(data),
                 use_tqdm=n_map == 1,
                 file=sys.stdout,
                 desc="    to " + str(keys[vals == leave][0]),
             )(delayed(get_activation)(data[d]) for d in range(len(data)))
 
-        allact = allact + [acti]
+        return acti
+
+    allact = ProgressParallel(
+        n_jobs=n_jobs if n_map > 1 else 1,
+        total=n_map,
+        use_tqdm=n_map > 1,
+        file=sys.stdout,
+        desc="    mapping: ",
+    )(delayed(activation_map)(m) for m in range(n_map))
 
     stats["activation"] = pd.concat(allact, axis=1).median(axis=1).values
 
