@@ -11,7 +11,6 @@ from .correlation_tools import (
     synchro_path_multi,
     module_inclusion,
 )
-from .correlation_tools import critical_transition, criticality_drivers
 from .bifurcation_tools import test_fork, branch_specific, activation, activation_lm
 
 # from .activation_tools import activation, activation_lm

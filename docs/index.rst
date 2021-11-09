@@ -58,7 +58,6 @@ Analysis key steps
    Advanced_bifurcation_analysis
    Tree_operations
    Conversion_from_CellRank_pipeline
-   Critical_Transition
    Beyond_scRNAseq
 
 .. _scanpy: https://scanpy.readthedocs.io/
