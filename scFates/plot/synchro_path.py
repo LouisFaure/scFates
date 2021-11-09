@@ -10,12 +10,16 @@ from typing import Union, Optional
 
 from scanpy.plotting._utils import savefig_or_show
 
+from scFates.tools.utils import importeR
+
+Rpy2, R, rstats, rmgcv, Formula = importeR("Plotting syncho path fit")
+
 
 def synchro_path(
     adata: AnnData,
     root_milestone,
     milestones,
-    loess_span=0.2,
+    knots=10,
     max_t: Union[float, None] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -31,8 +35,8 @@ def synchro_path(
         tip defining progenitor branch.
     milestones
         tips defining the progenies branches.
-    loess_span
-        loess fit span parameter.
+    knots
+        number of knots for gamfit.
     show
         show the plot.
     save
@@ -95,40 +99,54 @@ def synchro_path(
         for cc in ["corAA", "corBB", "corAB"]:
             for mil in milestones:
                 res = allcor[run][mil]
-                res.sort_values("t", inplace=True)
-                l = loess(res.t, res[cc], span=loess_span)
-                l.fit()
-                pred = l.predict(res.t, stderror=True)
-                conf = pred.confidence()
-
-                lowess = pred.values
-                ll = conf.lower
-                ul = conf.upper
-                col = mlsc[adata.obs.milestones.cat.categories == mil][0]
                 nmaps = res.n_map.unique()
+                col = mlsc[adata.obs.milestones.cat.categories == mil][0]
+
                 if len(nmaps) == 1:
+                    m = rmgcv.gam(
+                        Formula("%s ~ s(t, bs = 'cs',k=%s)" % (cc, knots)), data=res
+                    )
+                    pred, se = rmgcv.predict_gam(m, se_fit=True)
+
+                    fit = pred
+                    ll = pred - se
+                    ul = pred + se
+
                     axs[i].plot(
                         res.t.values, res[cc], "+", c=col, alpha=0.5, rasterized=True
                     )
+                    axs[i].plot(res.t.values, fit, c=col, rasterized=True)
+                    axs[i].fill_between(
+                        res.t.values.tolist(),
+                        ll.tolist(),
+                        ul.tolist(),
+                        alpha=0.33,
+                        edgecolor=col,
+                        facecolor=col,
+                        rasterized=True,
+                    )
                 else:
-                    for m in nmaps:
+                    for mp in nmaps:
+                        m = rmgcv.gam(
+                            Formula("%s ~ s(t, bs = 'cs',k=%s)" % (cc, knots)),
+                            data=res.loc[res.n_map == mp],
+                        )
+                        pred = rmgcv.predict_gam(m)
                         axs[i].plot(
-                            res.loc[res.n_map == m].t,
-                            res.loc[res.n_map == m][cc],
+                            res.loc[res.n_map == mp].t,
+                            res.loc[res.n_map == mp][cc],
+                            c=col,
+                            alpha=0.01,
+                            rasterized=True,
+                        )
+                        axs[i].plot(
+                            res.loc[res.n_map == mp].t,
+                            pred,
                             c=col,
                             alpha=0.1,
                             rasterized=True,
                         )
-                axs[i].plot(res.t.values, lowess, c=col, rasterized=True)
-                axs[i].fill_between(
-                    res.t.values.tolist(),
-                    ll.tolist(),
-                    ul.tolist(),
-                    alpha=0.33,
-                    edgecolor=col,
-                    facecolor=col,
-                    rasterized=True,
-                )
+
                 axs[i].axvline(fork_t, color="black")
                 axs[i].axhline(0, linestyle="dashed", color="grey", zorder=0)
 

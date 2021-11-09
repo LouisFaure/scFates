@@ -24,6 +24,10 @@ import sys
 
 sys.setrecursionlimit(10000)
 
+from scFates.tools.utils import importeR
+
+Rpy2, R, rstats, rmgcv, Formula = importeR("Fitting syncho path on cells")
+
 
 def synchro_path(
     adata: AnnData,
@@ -38,7 +42,7 @@ def synchro_path(
     w=200,
     step=30,
     winp=10,
-    loess_span=0.2,
+    knots=10,
     copy: bool = False,
 ):
     """\
@@ -66,8 +70,8 @@ def synchro_path(
         steps, in number of cells, between local windows.
     winp
         window of permutation in cells.
-    loess_span
-        fraction of points to take in account for loess fit
+    knots
+        number of knots for GAM fit of corAB on cells pre-fork
     copy
         Return a copy instead of writing to adata.
 
@@ -227,22 +231,6 @@ def synchro_path(
             + [milestones[0] + " vs " + milestones[1] + "\ninter-module"],
         )
     )
-    logg.info(" done, computing LOESS fit")
-    for cc in ["corAA", "corBB", "corAB"]:
-        allcor[cc + "_lowess"] = 0
-        allcor[cc + "_ll"] = 0
-        allcor[cc + "_ul"] = 0
-        for r in range(len(runs)):
-            for mil in milestones:
-                res = allcor.loc[runs[r]].loc[mil]
-                l = loess(res.t, res[cc], span=loess_span)
-                l.fit()
-                pred = l.predict(res.t, stderror=True)
-                conf = pred.confidence()
-
-                allcor.loc[(runs[r], mil), cc + "_lowess"] = pred.values
-                allcor.loc[(runs[r], mil), cc + "_ll"] = conf.lower
-                allcor.loc[(runs[r], mil), cc + "_ul"] = conf.upper
 
     fork = list(
         set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
@@ -253,16 +241,19 @@ def synchro_path(
     fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
     res = allcor.loc[allcor.t < fork_t, :]
     res = res[~res.t.duplicated()]
-    l = loess(res.t, res["corAB"], span=loess_span)
-    l.fit()
-    pred = l.predict(res.t, stderror=True)
+
+    m = rmgcv.gam(
+        Formula("corAB ~ s(t, bs = 'cs',k=%s)" % knots),
+        data=res,
+    )
+    pred = rmgcv.predict_gam(m)
 
     tval = adata.obs.t.copy()
     tval[tval > fork_t] = np.nan
 
     def inter_values(tv):
         if ~np.isnan(tv):
-            return pred.values[np.argmin(np.abs(res.t.values - tv))]
+            return pred[np.argmin(np.abs(res.t.values - tv))]
         else:
             return tv
 
@@ -311,7 +302,7 @@ def synchro_path(
         + "']['synchro'], mean local gene-gene correlations of all possible gene pairs inside one module, or between the two modules.\n"
         "    .obs['inter_cor "
         + name
-        + "'], loess fit of inter-module mean local gene-gene correlations prior to bifurcation."
+        + "'], GAM fit of inter-module mean local gene-gene correlations prior to bifurcation."
     )
 
     return adata if copy else None

@@ -211,7 +211,6 @@ def test_pipeline():
         milestones=["25", "19"],
         w=500,
         step=30,
-        loess_span=0.5,
     )
     scf.pl.synchro_path(
         adata, root_milestone="80", milestones=["25", "19"], loess_span=0.5
@@ -224,7 +223,6 @@ def test_pipeline():
         milestones=["25", "19"],
         w=50,
         step=30,
-        loess_span=0.5,
     )
 
     CI_lowess = adata.uns["80->25<>19"]["critical transition"]["LOESS"]["25"]["lowess"][
