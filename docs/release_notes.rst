@@ -10,14 +10,14 @@ Version 0.3 :small:`November 11, 2021`
 .. rubric:: Changes
 
 - **_!Breaking change!_** R soft assignment matrix now is moved to `.obsm` for better flexibility (notably when subsetting). If using an older dataset: refit the tree (with the same parameters) to update to the new data organisation.
-- Removal of LOESS for :func:`scFates.tl.syncho_path` (too slow). Using GAM instead, and only when calling :func:`scFates.pl.syncho_path`.
+- Removal of LOESS for :func:`scFates.tl.synchro_path` (too slow). Using GAM instead, and only when calling :func:`scFates.pl.synchro_path`.
 - Removal of critical transition related functions.
 
 .. rubric:: Improvements
 
 - :func:`scFates.pp.batch_correct` Faster matrix saving.
 - :func:`scFates.tl.circle`: Allow to use weights for graph fitting with simpleppt.
-- :func:`scFates.tl.subset`: Transfer segment colors to new tree when subsetting.
+- :func:`scFates.tl.subset_tree`: Transfer segment colors to new tree when subsetting.
 - :func:`scFates.tl.circle`: Better parallelism when doing on multiple mappings.
 - :func:`scFates.pl.binned_pseudotime_meta`: More responsive plot.
 - Better handling of R dependencies related errors.
