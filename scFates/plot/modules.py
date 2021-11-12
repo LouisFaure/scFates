@@ -76,7 +76,11 @@ def modules(
             X_early.values,
             obs=adata.obs,
             uns=adata.uns,
-            obsm={"X_early": X_early.values, "X_late": X_late.values},
+            obsm={
+                "X_early": X_early.values,
+                "X_late": X_late.values,
+                "X_R": adata.obsm["X_R"],
+            },
             obsp=adata.obsp,
         )
     settings.verbosity = verb

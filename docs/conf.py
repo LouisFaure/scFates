@@ -127,7 +127,6 @@ notebooks = [
     "Advanced_bifurcation_analysis.ipynb",
     "Tree_operations.ipynb",
     "Conversion_from_CellRank_pipeline.ipynb",
-    "Critical_Transition.ipynb",
     "Beyond_scRNAseq.ipynb",
 ]
 for nb in notebooks:

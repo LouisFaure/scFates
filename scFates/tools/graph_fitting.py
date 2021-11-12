@@ -87,10 +87,10 @@ def curve(
 
         `.uns['epg']`
             dictionnary containing information from elastic principal curve
+        `.obsm['X_R']`
+            hard assignment of cells to principal points
         `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['graph']['R']`
-            soft assignment of cells to principal point in representation space
         `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
@@ -144,6 +144,7 @@ def tree(
     Nodes: int = None,
     use_rep: str = None,
     ndims_rep: Optional[int] = None,
+    weight_rep: str = None,
     method: str = None,
     init: Optional[DataFrame] = None,
     ppt_sigma: Optional[Union[float, int]] = 0.1,
@@ -182,6 +183,8 @@ def tree(
         Choose the space to be learned by the principal tree.
     ndims_rep
         Number of dimensions to use for the inference.
+    weight_rep
+        If `ppt`, use a weight matrix for learning the tree.
     method
         If `ppt`, uses simpleppt approach, `ppt_lambda` and `ppt_sigma` are the
         parameters controlling the algorithm. If `epg`, uses ComputeElasticPrincipalTree
@@ -234,10 +237,10 @@ def tree(
             dictionnary containing information from simpelppt tree if method='ppt'
         `.uns['epg']`
             dictionnary containing information from elastic principal tree if method='epg'
+        `.obsm['R']`
+            soft assignment of cells to principal points
         `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['graph']['R']`
-            soft assignment of cells to principal point in representation space
         `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
@@ -252,6 +255,8 @@ def tree(
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
 
+    W = get_data(adata, weight_rep, ndims_rep)[0] if weight_rep is not None else None
+
     if Nodes is None:
         if adata.shape[0] * 2 > 2000:
             Nodes = 2000
@@ -261,6 +266,7 @@ def tree(
     if method == "ppt":
         ppt = simpleppt.ppt(
             X,
+            W,
             Nodes=Nodes,
             init=init,
             sigma=ppt_sigma,
@@ -277,11 +283,9 @@ def tree(
 
         graph = {
             "B": ppt["B"],
-            "R": ppt["R"],
             "F": ppt["F"],
             "tips": ppt["tips"],
             "forks": ppt["forks"],
-            "cells_fitted": X.index.tolist(),
             "metrics": ppt["metric"],
             "use_rep": use_rep,
             "ndims_rep": ndims_rep,
@@ -289,6 +293,7 @@ def tree(
 
         adata.uns["graph"] = graph
         adata.uns["ppt"] = ppt
+        adata.obsm["X_R"] = ppt["R"]
 
     elif method == "epg":
         graph, epg = tree_epg(
@@ -305,18 +310,19 @@ def tree(
         )
         graph["use_rep"] = use_rep
         graph["ndims_rep"] = ndims_rep
+        adata.obsm["X_R"] = graph["R"]
+        del graph["R"]
         adata.uns["graph"] = graph
         adata.uns["epg"] = epg
 
     if plot:
         plot_graph(adata, basis)
 
-    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    .uns['" + method + "'], dictionnary containing inferred tree.\n"
+        "    .obsm['X_R'] soft assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] soft assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'] coordinates of principal points in representation space."
     )
 
@@ -388,10 +394,10 @@ def circle(
 
         `.uns['epg']`
             dictionnary containing information from elastic principal curve
+        `.obsm['X_R']`
+            soft assignment of cells to principal points
         `.uns['graph']['B']`
             adjacency matrix of the principal points
-        `.uns['graph']['R']`
-            soft assignment of cells to principal point in representation space
         `.uns['graph']['F']`
             coordinates of principal points in representation space
     """
@@ -701,11 +707,9 @@ def curve_epg(
 
     graph = {
         "B": B,
-        "R": R,
         "F": Curve[0]["NodePositions"].T,
         "tips": tips,
         "forks": forks,
-        "cells_fitted": X.index.tolist(),
         "metrics": "euclidean",
         "use_rep": use_rep,
         "ndims_rep": ndims_rep,
@@ -715,13 +719,14 @@ def curve_epg(
 
     adata.uns["graph"] = graph
     adata.uns["epg"] = Curve[0]
+    adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic curve generated from elpigraph.\n"
+        "    .obsm['X_R'] hard assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
 
@@ -849,11 +854,9 @@ def circle_epg(
 
     graph = {
         "B": B,
-        "R": R,
         "F": F,
         "tips": tips,
         "forks": forks,
-        "cells_fitted": X.index.tolist(),
         "metrics": "euclidean",
         "use_rep": use_rep,
         "ndims_rep": ndims_rep,
@@ -863,13 +866,14 @@ def circle_epg(
 
     adata.uns["graph"] = graph
     adata.uns["epg"] = Curve[0]
+    adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic circle generated from elpigraph.\n"
+        "    .obsm['X_R'] hard assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
-        "    .uns['graph']['R'] hard assignment of cells to principal point in representation space.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
 

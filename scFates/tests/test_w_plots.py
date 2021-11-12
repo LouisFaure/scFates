@@ -211,31 +211,11 @@ def test_pipeline():
         milestones=["25", "19"],
         w=500,
         step=30,
-        loess_span=0.5,
     )
-    scf.pl.synchro_path(
-        adata, root_milestone="80", milestones=["25", "19"], loess_span=0.5
-    )
+    # scf.pl.synchro_path(
+    #    adata, root_milestone="80", milestones=["25", "19"]
+    # )
     syncAB = adata.uns["80->25<>19"]["synchro"]["real"]["25"]["corAB"].values[:5]
-
-    scf.tl.critical_transition(
-        adata,
-        root_milestone="80",
-        milestones=["25", "19"],
-        w=50,
-        step=30,
-        loess_span=0.5,
-    )
-
-    CI_lowess = adata.uns["80->25<>19"]["critical transition"]["LOESS"]["25"]["lowess"][
-        :5
-    ].values
-
-    scf.pl.critical_transition(adata, root_milestone="80", milestones=["25", "19"])
-
-    scf.tl.criticality_drivers(adata, root_milestone="80", milestones=["25", "19"])
-
-    CI_corr = adata.uns["80->25<>19"]["criticality drivers"]["corr"].values
 
     assert np.allclose(
         F_PC1_epgc_cpu,
@@ -290,17 +270,5 @@ def test_pipeline():
     assert np.allclose(
         syncAB,
         [-0.31113123, -0.28931709, -0.30131992, -0.31664843, -0.34292551],
-        rtol=1e-2,
-    )
-
-    assert np.allclose(
-        CI_lowess,
-        [0.67226054, 0.67321935, 0.67406923, 0.67481306, 0.67568304],
-        rtol=1e-2,
-    )
-
-    assert np.allclose(
-        CI_corr,
-        [-0.01154921, -0.03707902, -0.09560204, -0.20573824, -0.43346539],
         rtol=1e-2,
     )

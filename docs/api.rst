@@ -85,8 +85,6 @@ Bifurcation analysis
     tl.slide_cors
     tl.synchro_path
     tl.synchro_path_multi
-    tl.critical_transition
-    tl.criticality_drivers
 
 Plot
 ----
@@ -122,5 +120,4 @@ Plot
     pl.test_fork
     pl.slide_cors
     pl.synchro_path
-    pl.critical_transition
     pl.module_inclusion

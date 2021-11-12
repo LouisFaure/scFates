@@ -72,8 +72,8 @@ def root(
         logg.info("automatic root selection using " + root + " values", time=False)
         avgs = list(
             map(
-                lambda n: np.average(root_val, weights=graph["R"][:, n]),
-                range(graph["R"].shape[1]),
+                lambda n: np.average(root_val, weights=adata.obsm["X_R"][:, n]),
+                range(adata.obsm["X_R"].shape[1]),
             )
         )
         avgs = np.array(avgs)
