@@ -1,4 +1,4 @@
-from typing import Union, Iterable, Optional
+from typing import Union, Sequence, Optional
 import numpy as np
 import pandas as pd
 import igraph
@@ -10,13 +10,14 @@ from matplotlib.ticker import MaxNLocator
 import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scanpy.plotting._utils import savefig_or_show
+from anndata import AnnData
 
 
 def matrix(
-    adata: sc.AnnData,
-    features: Iterable,
+    adata: AnnData,
+    features: Sequence,
     nbins: int = 5,
-    layer: Union[None, str] = "fitted",
+    layer: str = "fitted",
     annot_var: bool = False,
     annot_top: bool = True,
     link_seg: bool = True,
@@ -53,7 +54,7 @@ def matrix(
     save_genes
         save list of genes following the order displayed on the heatmap.
     **kwargs
-        arguments passed to :func:`scanpy.pl.MatrixPlot`.
+        arguments passed to :class:`scanpy.pl.MatrixPlot`
 
     Returns
     -------
