@@ -76,6 +76,10 @@ def dendrogram(
         ax = sc.pl.embedding(adata, basis="dendro", show=False, **kwargs)
 
     for key, value in adata.uns["dendro_segments"].items():
+        if "seg_colors" not in adata.uns:
+            from . import palette_tools
+
+            palette_tools._set_default_colors_for_categorical_obs(adata, "seg")
         for s in value:
             ax.plot(
                 s[0],
