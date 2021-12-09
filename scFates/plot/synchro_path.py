@@ -19,7 +19,9 @@ def synchro_path(
     adata: AnnData,
     root_milestone,
     milestones,
-    knots=10,
+    knots: int = 10,
+    alpha_multi: float = 0.1,
+    knots_multi: Union[int, None] = None,
     max_t: Union[float, None] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -37,6 +39,12 @@ def synchro_path(
         tips defining the progenies branches.
     knots
         number of knots for gamfit.
+    alpha_multi
+        alpha multiple mapping.
+    knots_multi
+        knots for overall mappings (plot disabled if not set).
+    max_t
+        set max pseutotime to show
     show
         show the plot.
     save
@@ -143,7 +151,7 @@ def synchro_path(
                             res.loc[res.n_map == mp].t,
                             pred,
                             c=col,
-                            alpha=0.1,
+                            alpha=alpha_multi,
                             rasterized=True,
                         )
 
