@@ -456,6 +456,9 @@ def extend_tip(adata, tip, use_rep, restrict_seg):
     selecta = adata.obsm["X_R"].argmax(axis=1) == tip
     adata_sub = adata[selecta]
 
+    if sum(selecta) == 0:
+        return adata
+
     early_cell = (
         adata_sub.obs.t.idxmin() if tip == graph["root"] else adata_sub.obs.t.idxmax()
     )
