@@ -1,4 +1,4 @@
-from typing import Union, Iterable
+from typing import Union, Iterable, Optional
 import numpy as np
 import pandas as pd
 import igraph
@@ -6,22 +6,66 @@ import matplotlib.pyplot as plt
 from scFates.tools.utils import get_X
 import scanpy as sc
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import MaxNLocator
 import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scanpy.plotting._utils import savefig_or_show
 
 
 def matrix(
     adata: sc.AnnData,
     features: Iterable,
     nbins: int = 5,
-    layer: Union[None, str] = None,
-    do_annot: bool = False,
+    layer: Union[None, str] = "fitted",
+    annot_var: bool = False,
     annot_top: bool = True,
+    link_seg: bool = True,
+    figsize: Union[None, tuple] = None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
     **kwargs
 ):
+    """\
+    Plot a set of features as per-segment matrix plots of binned pseudotimes.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    features
+        Name of the features.
+    nbins
+        Number of pseudotime bins per segment.
+    layer
+        Layer to use for the expression to display.
+    annot_var
+        Annotate overall tree amplitude of expression of the marker (from .var['A']).
+    annot_top
+        Display milestones gradient for each segment on top of plots.
+    link_seg
+        Link the segment together to keep track of the the tree progression.
+    figsize
+        Custom figure size.
+    show
+        show the plot.
+    save
+        save the plot.
+    save_genes
+        save list of genes following the order displayed on the heatmap.
+    **kwargs
+        arguments passed to :func:`scanpy.pl.MatrixPlot`.
+
+    Returns
+    -------
+    If `show==False` an array of :class:`~matplotlib.axes.Axes`
+
+    """
 
     adata = adata[:, features].copy()
 
+    if (layer == "fitted") & ("fitted" not in adata.layers):
+        print("Features not fitted, using X expression matrix instead")
+        layer = None
     X = get_X(adata, adata.obs_names, adata.var_names, layer=layer)
 
     adata.X = X / X.max(axis=0).ravel()
@@ -67,16 +111,19 @@ def matrix(
 
     fig, axs = plt.subplots(
         1,
-        len(order) + 1 * do_annot,
+        len(order) + 1 * annot_var,
         constrained_layout=True,
         sharey=True,
         figsize=(
-            2 * len(order) / 4 + 2 + 2 * do_annot,
-            (len(features) + 1 * annot_top) / 5 + 1 / 3,
-        ),
+            len(order) * 0.85 + 0.85 + annot_var * 0.85,
+            (len(features) + 1 * annot_top + 1.5 * annot_var) / 5 + 1 / 3,
+        )
+        if figsize is None
+        else figsize,
     )
 
     pos = np.arange(len(order), 0, -1)
+    caxs = []
     for i, s in enumerate(order):
         adata_sub = adata[adata.obs.seg == adata.obs.seg.cat.categories[s]].copy()
         adata_sub.obs["split"] = pd.cut(adata_sub.obs.t, bins=nbins)
@@ -93,8 +140,6 @@ def matrix(
         )
         end = np.array(adata.uns["milestones_colors"])[sel][0]
 
-        from matplotlib.colors import LinearSegmentedColormap
-
         my_cm = LinearSegmentedColormap.from_list("aspect", [start, end])
 
         if "use_raw" not in kwargs:
@@ -104,11 +149,13 @@ def matrix(
         M.swap_axes()
         M._mainplot(axs[i])
         axs[i].set_xticklabels("")
+        axs[i].set_xticks([])
         plt.margins(y=10)
         plt.setp(axs[i].get_yticklabels(), style="italic")
         if annot_top:
             divider = make_axes_locatable(axs[i])
             cax = divider.new_vertical(size=0.2, pad=0.05, pack_start=False)
+            caxs.append(cax)
             mappable = cm.ScalarMappable(cmap=my_cm)
 
             fig.add_axes(cax)
@@ -116,7 +163,7 @@ def matrix(
             cbar.set_ticks([])
             cbar.outline.set_linewidth(1.5)
 
-    if do_annot:
+    if annot_var:
         Amps = adata.var.loc[features, "A"]
         axs[i + 1].barh(
             np.arange(len(features)) + 0.5,
@@ -128,21 +175,64 @@ def matrix(
             label="A",
         )
         axs[i + 1].invert_yaxis()
-        # axs[i+1].axis("off")
         axs[i + 1].spines["top"].set_visible(False)
         axs[i + 1].spines["left"].set_visible(False)
         axs[i + 1].spines["right"].set_visible(False)
 
         axs[i + 1].get_xaxis().tick_bottom()
         axs[i + 1].tick_params(left=False)
-        axs[i + 1].set_xlim([0, 4])
-        axs[i + 1].set_xticks([0, 2])
-        axs[i + 1].set_xticklabels([0, 2])
-
+        axs[i + 1].xaxis.set_major_locator(MaxNLocator(integer=True))
         axs[i + 1].grid(False)
+
         if annot_top:
             divider = make_axes_locatable(axs[i + 1])
             cax = divider.new_vertical(size=0.2, pad=0.05, pack_start=False)
             fig.add_axes(cax)
             cax.annotate("Amplitude", (0, 0), va="bottom", ha="left", size=12)
             cax.axis("off")
+
+    if link_seg:
+        caxs_dct = dict(zip([adata.obs.seg.cat.categories[o] for o in order], caxs))
+
+        kw = dict(
+            arrowprops=dict(
+                arrowstyle="<|-",
+                facecolor="k",
+                connectionstyle="bar,fraction=.2",
+                shrinkA=0.1,
+            ),
+            zorder=0,
+            va="center",
+            xycoords="axes fraction",
+            annotation_clip=False,
+        )
+
+        kwclose = dict(
+            arrowprops=dict(
+                arrowstyle="<|-",
+                facecolor="k",
+                connectionstyle="bar,fraction=1",
+                shrinkA=0.1,
+            ),
+            zorder=0,
+            va="center",
+            xycoords="axes fraction",
+            annotation_clip=False,
+        )
+
+        pp_seg = adata.uns["graph"]["pp_seg"]
+
+        dsts = pd.Series(range(len(caxs_dct)), index=caxs_dct.keys())
+        for s, cax in caxs_dct.items():
+            fro = pp_seg.loc[int(s), "from"]
+            to = pp_seg.loc[int(s), "to"]
+            for n in pp_seg.index[pp_seg["from"] == to]:
+                if dsts[str(n)] - dsts[s] > 1:
+                    cax.annotate("", xy=[1, 1], xytext=[2.4, 1], **kw)
+                else:
+                    cax.annotate("", xy=[1, 1], xytext=[1.2, 1], **kwclose)
+
+    savefig_or_show("matrix", show=show, save=save)
+
+    if show == False:
+        return axs

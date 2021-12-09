@@ -108,6 +108,7 @@ Plot
     pl.test_association
     pl.single_trend
     pl.trends
+    pl.matrix
     pl.linearity_deviation
     pl.binned_pseudotime_meta
 
