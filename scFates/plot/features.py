@@ -42,6 +42,7 @@ def trends(
     feature_cmap: str = "RdBu_r",
     pseudo_cmap: str = "viridis",
     plot_emb: bool = True,
+    wspace: Union[None, float] = None,
     basis: str = "umap",
     heatmap_space: float = 0.5,
     offset_names: float = 0.15,
@@ -93,6 +94,8 @@ def trends(
         colormap for pseudotime.
     plot_emb
         call pl.trajectory on the left side.
+    wspace
+        width space between emb and heatmap
     basis
         Name of the `obsm` basis to use if plot_emb is True.
     heatmap_space
@@ -307,7 +310,9 @@ def trends(
 
     ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
     fig = plt.figure(figsize=(fig_heigth + (fig_heigth * plot_emb * ratio), fig_heigth))
-    outer = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1 * plot_emb * ratio, 1])
+    outer = gridspec.GridSpec(
+        1, 2, figure=fig, width_ratios=[1 * plot_emb * ratio, 1], wspace=wspace
+    )
 
     gs_ht = gridspec.GridSpecFromSubplotSpec(
         2 + (annot is not None),
@@ -733,21 +738,35 @@ def single_trend(
         axs[1].set_aspect(abs(x1 - x0) / abs(y1 - y0))
 
     if plot_emb:
-        trajectory(
-            adata,
-            basis=basis,
-            color_seg=feature,
-            cmap_seg=cmap_seg,
-            color_cells=feature,
-            cmap=cmap_cells,
-            show_info=False,
-            ax=axs[0],
-            title=feature,
-            layer="fitted",
-            show=False,
-            save=False,
-            **kwargs,
-        )
+        if basis == "dendro":
+            dendrogram(
+                adata,
+                color=feature,
+                cmap=cmap_cells,
+                ax=axs[0],
+                title=feature,
+                show_info=False,
+                layer="fitted",
+                show=False,
+                save=False,
+                **kwargs,
+            )
+        else:
+            trajectory(
+                adata,
+                basis=basis,
+                color_seg=feature,
+                cmap_seg=cmap_seg,
+                color_cells=feature,
+                cmap=cmap_cells,
+                show_info=False,
+                ax=axs[0],
+                title=feature,
+                layer="fitted",
+                show=False,
+                save=False,
+                **kwargs,
+            )
 
     savefig_or_show("single_trend", show=show, save=save)
 
