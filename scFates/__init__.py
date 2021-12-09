@@ -12,3 +12,4 @@ from . import tl
 from . import pl
 from . import datasets
 from . import settings
+from .settings import set_figure_pubready

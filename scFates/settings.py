@@ -1,6 +1,7 @@
 """Settings
 """
 from . import logging
+import matplotlib.pyplot as plt
 
 verbosity = 3
 """Verbosity level (0=errors, 1=warnings, 2=info, 3=hints)
@@ -32,3 +33,10 @@ _previous_time = _start
 
 _previous_memory_usage = -1
 """Stores the previous memory usage."""
+
+
+def set_figure_pubready():
+    plt.rcParams["svg.fonttype"] = "none"
+    plt.rcParams["font.family"] = ["sans-serif"]
+    plt.rcParams["font.sans-serif"] = ["Arial"]
+    plt.rcParams["pdf.fonttype"] = 42
