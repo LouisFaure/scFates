@@ -117,7 +117,7 @@ def matrix(
         sharey=True,
         figsize=(
             len(order) * 0.85 + 0.85 + annot_var * 0.85,
-            (len(features) + 1 * annot_top + 1.5 * annot_var) / 5 + 1 / 3,
+            (len(features) + 1 * annot_top + 1.5 * annot_var) / 5,
         )
         if figsize is None
         else figsize,

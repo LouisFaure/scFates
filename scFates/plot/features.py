@@ -14,6 +14,7 @@ import matplotlib.gridspec as gridspec
 from typing import Union, Optional, List
 from typing_extensions import Literal
 from scanpy.plotting._utils import savefig_or_show
+import scanpy as sc
 
 from .. import logging as logg
 from ..tools.utils import getpath, importeR
@@ -24,6 +25,7 @@ Rpy2, R, rstats, rmgcv, Formula = importeR("fitting associated features")
 check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 from .modules import get_modules
+from .trajectory import remove_info
 from .utils import gen_milestones_gradients
 from .. import logging as logg
 
@@ -42,7 +44,9 @@ def trends(
     feature_cmap: str = "RdBu_r",
     pseudo_cmap: str = "viridis",
     plot_emb: bool = True,
+    plot_heatmap: bool = True,
     wspace: Union[None, float] = None,
+    show_segs: bool = True,
     basis: str = "umap",
     heatmap_space: float = 0.5,
     offset_names: float = 0.15,
@@ -55,7 +59,7 @@ def trends(
     filter_complex: bool = False,
     complex_thre: float = 0.7,
     complex_z: float = 3,
-    fig_heigth: float = 4,
+    figsize: Union[None, tuple] = None,
     show: Optional[bool] = None,
     output_mean: bool = False,
     save: Union[str, bool, None] = None,
@@ -94,8 +98,12 @@ def trends(
         colormap for pseudotime.
     plot_emb
         call pl.trajectory on the left side.
+    plot_heatmap
+        show heatmap on the right side.
     wspace
-        width space between emb and heatmap
+        width space between emb and heatmap.
+    show_segs
+        display segments on emb.
     basis
         Name of the `obsm` basis to use if plot_emb is True.
     heatmap_space
@@ -118,8 +126,8 @@ def trends(
         quantile to consider for complex filtering
     complex_z
         standard deviation threshold on the quantile subsetted feature.
-    fig_heigth
-        figure height.
+    figsize
+        figure size.
     output_mean
         output mean fitted values to adata.
     show
@@ -309,162 +317,172 @@ def trends(
         annot = None
 
     ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
-    fig = plt.figure(figsize=(fig_heigth + (fig_heigth * plot_emb * ratio), fig_heigth))
-    outer = gridspec.GridSpec(
-        1, 2, figure=fig, width_ratios=[1 * plot_emb * ratio, 1], wspace=wspace
+    figsize = (
+        ((4 * plot_emb * ratio) + 4 * plot_heatmap, 4) if figsize is None else figsize
     )
-
-    gs_ht = gridspec.GridSpecFromSubplotSpec(
-        2 + (annot is not None),
+    fig = plt.figure(figsize=figsize)
+    gsubs = gridspec.GridSpec(
         1,
-        height_ratios=(1, 1, 18) if (annot is not None) else (1, 19),
-        subplot_spec=outer[1],
-        hspace=0,
+        2,
+        figure=fig,
+        width_ratios=[1 * plot_emb * ratio, 1 * plot_heatmap],
+        wspace=wspace,
     )
     axs = []
-    i = 0
-    if annot is not None:
-        axannot = plt.subplot(gs_ht[i])
-        axs = axs + [axannot]
+    if plot_heatmap:
+        gs_ht = gridspec.GridSpecFromSubplotSpec(
+            2 + (annot is not None),
+            1,
+            height_ratios=(1, 1, 18) if (annot is not None) else (1, 19),
+            subplot_spec=gsubs[1],
+            hspace=0,
+        )
+        i = 0
+        if annot is not None:
+            axannot = plt.subplot(gs_ht[i])
+            axs = axs + [axannot]
+            sns.heatmap(
+                pd.DataFrame(range(fitted_sorted.shape[1])).T,
+                robust=False,
+                rasterized=True,
+                cmap=annot_cmap[fitted_sorted.columns].values.tolist(),
+                xticklabels=False,
+                yticklabels=False,
+                cbar=False,
+                ax=axannot,
+            )
+            i = i + 1
+
+        axpsdt = plt.subplot(gs_ht[i])
+        axs = axs + [axpsdt]
         sns.heatmap(
-            pd.DataFrame(range(fitted_sorted.shape[1])).T,
-            robust=False,
+            pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,
+            robust=True,
             rasterized=True,
-            cmap=annot_cmap[fitted_sorted.columns].values.tolist(),
+            cmap=pseudo_cmap,
             xticklabels=False,
             yticklabels=False,
             cbar=False,
-            ax=axannot,
+            ax=axpsdt,
+            vmax=adata.obs.t.max(),
         )
-        i = i + 1
 
-    axpsdt = plt.subplot(gs_ht[i])
-    axs = axs + [axpsdt]
-    sns.heatmap(
-        pd.DataFrame(adata.obs.t[fitted_sorted.columns].values).T,
-        robust=True,
-        rasterized=True,
-        cmap=pseudo_cmap,
-        xticklabels=False,
-        yticklabels=False,
-        cbar=False,
-        ax=axpsdt,
-        vmax=adata.obs.t.max(),
-    )
-
-    axheatmap = plt.subplot(gs_ht[i + 1])
-    axs = axs + [axheatmap]
-    sns.heatmap(
-        fitted_sorted,
-        robust=True,
-        cmap=feature_cmap,
-        rasterized=True,
-        xticklabels=False,
-        yticklabels=False,
-        ax=axheatmap,
-        cbar=False,
-    )
-
-    def add_frames(axis, vert):
-        rect = patches.Rectangle(
-            (0, 0),
-            len(fitted_sorted.columns),
-            vert,
-            linewidth=1,
-            edgecolor="k",
-            facecolor="none",
+        axheatmap = plt.subplot(gs_ht[i + 1])
+        axs = axs + [axheatmap]
+        sns.heatmap(
+            fitted_sorted,
+            robust=True,
+            cmap=feature_cmap,
+            rasterized=True,
+            xticklabels=False,
+            yticklabels=False,
+            ax=axheatmap,
+            cbar=False,
         )
-        # Add the patch to the Axes
-        axis.add_patch(rect)
-        offset = 0
-        for s in seg_order[:-1]:
-            prev_offset = offset
-            offset = offset + (adata.obs.seg == s).sum()
+
+        def add_frames(axis, vert):
             rect = patches.Rectangle(
-                (prev_offset, 0),
-                (adata.obs.seg == s).sum(),
+                (0, 0),
+                len(fitted_sorted.columns),
                 vert,
                 linewidth=1,
                 edgecolor="k",
                 facecolor="none",
             )
+            # Add the patch to the Axes
             axis.add_patch(rect)
-        return axis
+            offset = 0
+            for s in seg_order[:-1]:
+                prev_offset = offset
+                offset = offset + (adata.obs.seg == s).sum()
+                rect = patches.Rectangle(
+                    (prev_offset, 0),
+                    (adata.obs.seg == s).sum(),
+                    vert,
+                    linewidth=1,
+                    edgecolor="k",
+                    facecolor="none",
+                )
+                axis.add_patch(rect)
+            return axis
 
-    axpsdt = add_frames(axpsdt, 1)
+        axpsdt = add_frames(axpsdt, 1)
 
-    if annot is not None:
-        axannot = add_frames(axannot, 1)
+        if annot is not None:
+            axannot = add_frames(axannot, 1)
 
-    axheatmap = add_frames(axheatmap, fitted_sorted.shape[0])
+        axheatmap = add_frames(axheatmap, fitted_sorted.shape[0])
 
-    if highlight_features == "A":
-        highlight_features = (
-            adata.var.A[features].sort_values(ascending=False)[:n_features].index
-        )
-    elif highlight_features == "fdr":
-        highlight_features = (
-            adata.var.fdr[features].sort_values(ascending=True)[:n_features].index
-        )
-    xs = np.repeat(fitted_sorted.shape[1], len(highlight_features))
-    ys = (
-        np.array(
-            list(
-                map(
-                    lambda g: np.argwhere(fitted_sorted.index == g)[0][0],
-                    highlight_features,
+        if highlight_features == "A":
+            highlight_features = (
+                adata.var.A[features].sort_values(ascending=False)[:n_features].index
+            )
+        elif highlight_features == "fdr":
+            highlight_features = (
+                adata.var.fdr[features].sort_values(ascending=True)[:n_features].index
+            )
+        xs = np.repeat(fitted_sorted.shape[1], len(highlight_features))
+        ys = (
+            np.array(
+                list(
+                    map(
+                        lambda g: np.argwhere(fitted_sorted.index == g)[0][0],
+                        highlight_features,
+                    )
                 )
             )
+            + 0.5
         )
-        + 0.5
-    )
 
-    texts = []
-    for x, y, s in zip(xs, ys, highlight_features):
-        texts.append(axheatmap.text(x, y, s, fontsize=fontsize, style=style))
+        texts = []
+        for x, y, s in zip(xs, ys, highlight_features):
+            texts.append(axheatmap.text(x, y, s, fontsize=fontsize, style=style))
 
-    patch = patches.Rectangle(
-        (0, 0),
-        fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_names,
-        fitted_sorted.shape[0],
-        alpha=0,
-    )  # We add a rectangle to make sure the labels don't move to the right
-    axpsdt.set_xlim(
-        (0, fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_heatmap)
-    )
-    if annot is not None:
-        axannot.set_xlim(
+        patch = patches.Rectangle(
+            (0, 0),
+            fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_names,
+            fitted_sorted.shape[0],
+            alpha=0,
+        )  # We add a rectangle to make sure the labels don't move to the right
+        axpsdt.set_xlim(
             (0, fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_heatmap)
         )
-    axheatmap.set_xlim(
-        (0, fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_heatmap)
-    )
-    axheatmap.add_patch(patch)
-    axheatmap.hlines(
-        fitted_sorted.shape[0], 0, fitted_sorted.shape[1], color="k", clip_on=True
-    )
+        if annot is not None:
+            axannot.set_xlim(
+                (0, fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_heatmap)
+            )
+        axheatmap.set_xlim(
+            (0, fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_heatmap)
+        )
+        axheatmap.add_patch(patch)
+        axheatmap.hlines(
+            fitted_sorted.shape[0], 0, fitted_sorted.shape[1], color="k", clip_on=True
+        )
 
-    adjust_text(
-        texts,
-        ax=axheatmap,
-        add_objects=[patch],
-        va="center",
-        ha="left",
-        autoalign=False,
-        expand_text=(1.05, 1.2),
-        lim=5000,
-        only_move={"text": "y", "objects": "x"},
-        precision=0.1,
-        expand_points=(1.2, 1.05),
-    )
+        adjust_text(
+            texts,
+            ax=axheatmap,
+            add_objects=[patch],
+            va="center",
+            ha="left",
+            autoalign=False,
+            expand_text=(1.05, 1.2),
+            lim=5000,
+            only_move={"text": "y", "objects": "x"},
+            precision=0.1,
+            expand_points=(1.2, 1.05),
+        )
 
-    for i in range(len(xs)):
-        xx = [xs[i] + 1, fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_names]
-        yy = [ys[i], texts[i].get_position()[1]]
-        axheatmap.plot(xx, yy, color="k", linewidth=0.75)
+        for i in range(len(xs)):
+            xx = [
+                xs[i] + 1,
+                fitted_sorted.shape[1] + fitted_sorted.shape[1] * offset_names,
+            ]
+            yy = [ys[i], texts[i].get_position()[1]]
+            axheatmap.plot(xx, yy, color="k", linewidth=0.75)
 
     if plot_emb:
-        gs_emb = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[0])
+        gs_emb = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gsubs[0])
         axemb = fig.add_subplot(gs_emb[0])
         axs = axs + [axemb]
         adata_temp.obs["mean_trajectory"] = 0
@@ -495,6 +513,18 @@ def trends(
                 show_info=False,
                 **kwargs,
             )
+        elif show_segs == False:
+            sc.pl.embedding(
+                adata=adata_temp,
+                basis=basis,
+                color=color,
+                cmap=feature_cmap,
+                ax=axemb,
+                title=title,
+                show=False,
+                **kwargs,
+            )
+            remove_info(adata_temp, axemb, color)
         else:
             trajectory(
                 adata=adata_temp,
@@ -539,7 +569,9 @@ def single_trend(
     cmap_seg: str = "RdBu_r",
     cmap_cells: str = "RdBu_r",
     plot_emb: bool = True,
+    wspace: Union[None, float] = None,
     figsize: tuple = (8, 4),
+    ax_trend=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs,
@@ -580,8 +612,14 @@ def single_trend(
         colormap for trajectory segments on left plot.
     cmap_cells
         colormap for cells on left plot.
+    plot_emb
+        plot the emb on the left side.
+    wspace
+        width space between emb and heatmap.
     figsize
-        figure size in inches
+        figure size in inches.
+    ax_trend
+        existing ax for tredns, only works when emb plot is disabled.
     show
         show the plot.
     save
@@ -592,7 +630,6 @@ def single_trend(
     If `show==False` a tuple of two :class:`~matplotlib.axes.Axes`
 
     """
-
     if root_milestone is None:
         color_key = "seg_colors"
         if color_key not in adata.uns:
@@ -651,16 +688,22 @@ def single_trend(
         ).sort_values("t")
 
         color_exp = mil_col[miles_cat == branch][0]
-
+    ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
     if plot_emb:
-        fig, axs = plt.subplots(1, 2, figsize=figsize)
+        fig, (ax_emb, ax_trend) = plt.subplots(
+            1,
+            2,
+            figsize=figsize,
+            gridspec_kw=dict(width_ratios=[1 * ratio, 1], wspace=wspace),
+        )
     else:
-        fig, axs = plt.subplots(1, 1, figsize=figsize)
-        axs = ["empty", axs]
+        if ax_trend is None:
+            fig, ax_trend = plt.subplots(1, 1, figsize=figsize)
+        # axs = ["empty", axs]
 
     for s in df.seg.unique():
         if color_exp is None:
-            axs[1].scatter(
+            ax_trend.scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
                 alpha=alpha_expr,
@@ -669,7 +712,7 @@ def single_trend(
                     np.argwhere(adata.obs.seg.cat.categories == s)[0][0]
                 ],
             )
-            axs[1].plot(
+            ax_trend.plot(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "fitted"],
                 c=adata.uns["seg_colors"][
@@ -683,7 +726,7 @@ def single_trend(
                     adata.uns["graph"]["pp_seg"].loc[:, "from"].isin([tolink]).values
                 ).flatten()
             ]:
-                axs[1].plot(
+                ax_trend.plot(
                     [
                         df.loc[df.seg == s, "t"].iloc[-1],
                         df.loc[df.seg == next_s, "t"].iloc[0],
@@ -698,14 +741,14 @@ def single_trend(
                     linewidth=fitted_linewidth,
                 )
         else:
-            axs[1].scatter(
+            ax_trend.scatter(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "expression"],
                 c=color_exp,
                 alpha=alpha_expr,
                 s=size_expr,
             )
-            axs[1].plot(
+            ax_trend.plot(
                 df.loc[df.seg == s, "t"],
                 df.loc[df.seg == s, "fitted"],
                 c=color_exp,
@@ -717,7 +760,7 @@ def single_trend(
                     adata.uns["graph"]["pp_seg"].loc[:, "from"].isin([tolink]).values
                 ).flatten()
             ]:
-                axs[1].plot(
+                ax_trend.plot(
                     [
                         df.loc[df.seg == s, "t"].iloc[-1],
                         df.loc[df.seg == next_s, "t"].iloc[0],
@@ -730,12 +773,12 @@ def single_trend(
                     linewidth=fitted_linewidth,
                 )
 
-    axs[1].set_ylabel(ylab)
-    axs[1].set_xlabel("pseudotime")
-    x0, x1 = axs[1].get_xlim()
-    y0, y1 = axs[1].get_ylim()
+    ax_trend.set_ylabel(ylab)
+    ax_trend.set_xlabel("pseudotime")
+    x0, x1 = ax_trend.get_xlim()
+    y0, y1 = ax_trend.get_ylim()
     if plot_emb:
-        axs[1].set_aspect(abs(x1 - x0) / abs(y1 - y0))
+        ax_trend.set_aspect(abs(x1 - x0) / abs(y1 - y0))
 
     if plot_emb:
         if basis == "dendro":
@@ -743,7 +786,7 @@ def single_trend(
                 adata,
                 color=feature,
                 cmap=cmap_cells,
-                ax=axs[0],
+                ax=ax_emb,
                 title=feature,
                 show_info=False,
                 layer="fitted",
@@ -760,7 +803,7 @@ def single_trend(
                 color_cells=feature,
                 cmap=cmap_cells,
                 show_info=False,
-                ax=axs[0],
+                ax=ax_emb,
                 title=feature,
                 layer="fitted",
                 show=False,
@@ -771,4 +814,4 @@ def single_trend(
     savefig_or_show("single_trend", show=show, save=save)
 
     if show is False:
-        return axs if plot_emb else axs[1]
+        return (ax_emb, ax_trend) if plot_emb else ax_trend

@@ -309,17 +309,7 @@ def trajectory(
 
     anndata_logger.level = prelog
     if show_info == False and color_cells is not None:
-        if is_categorical(adata, color_cells):
-            if ax.get_legend() is not None:
-                ax.get_legend().remove()
-        else:
-            ax.set_box_aspect(aspect=1)
-            fig = ax.get_gridspec().figure
-            cbar = np.argwhere(
-                ["colorbar" in a.get_label() for a in fig.get_axes()]
-            ).ravel()
-            if len(cbar) > 0:
-                fig.get_axes()[cbar[0]].remove()
+        remove_info(adata, ax, color_cells)
 
     al = np.array(g.get_edgelist())
 
@@ -725,3 +715,17 @@ def _get_color_values(
             # that are not in the groups
             color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
         return color_vector, True
+
+
+def remove_info(adata, ax, color):
+    if is_categorical(adata, color):
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+    else:
+        ax.set_box_aspect(aspect=1)
+        fig = ax.get_gridspec().figure
+        cbar = np.argwhere(
+            ["colorbar" in a.get_label() for a in fig.get_axes()]
+        ).ravel()
+        if len(cbar) > 0:
+            fig.get_axes()[cbar[0]].remove()
