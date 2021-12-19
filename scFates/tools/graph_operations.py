@@ -258,6 +258,9 @@ def subset_tree(
     tips = np.argwhere(np.array(g.degree()) == 1).flatten()
     forks = np.argwhere(np.array(g.degree()) > 2).flatten()
 
+    Rsum = R.sum(axis=1)
+    norm_R_cpu(R, Rsum)
+
     adata.uns["graph"]["tips"] = tips
     adata.uns["graph"]["forks"] = forks
     adata.uns["graph"]["B"] = B
