@@ -183,9 +183,10 @@ def test_association(
 
     stat_assoc_l = list()
 
-    for m in tqdm(
-        range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
-    ):
+    #     for m in tqdm(
+    #         range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
+    #     ):
+    def test_assoc_map(m):
         data = list(
             zip(
                 [adata.uns["pseudotime_list"][str(m)].loc[cells, :]] * len(Xgenes),
@@ -194,7 +195,7 @@ def test_association(
         )
 
         stat = ProgressParallel(
-            n_jobs=n_jobs,
+            n_jobs=n_jobs if n_map == 1 else 1,
             total=len(data),
             file=sys.stdout,
             use_tqdm=n_map == 1,
@@ -202,7 +203,16 @@ def test_association(
         )(delayed(gt_fun_exp)(data[d]) for d in range(len(data)))
         stat = pd.DataFrame(stat, index=genes, columns=["p_val", "A"])
         stat["fdr"] = multipletests(stat.p_val, method="bonferroni")[1]
-        stat_assoc_l = stat_assoc_l + [stat]
+        return stat
+
+    stat_assoc_l = ProgressParallel(
+        n_jobs=1 if n_map == 1 else n_jobs,
+        total=n_map,
+        file=sys.stdout,
+        use_tqdm=n_map > 1,
+        desc="    multi mapping ",
+    )(delayed(test_assoc_map)(m) for m in range(m))
+    # stat_assoc_l = stat_assoc_l + [stat]
 
     adata = apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut)
 
