@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+import scipy.sparse as sp
 
 from .. import logging as logg
 from .. import settings
@@ -59,19 +60,33 @@ def cluster(
         from . import grapheno_modified
 
         logg.info("    clustering using grapheno")
-        clusters = grapheno_modified.cluster(
+        communities, G, Q = grapheno_modified.cluster(
             adata.layers["fitted"].T, metric=metric, n_neighbors=knn
-        )[0].get()
+        )
+        communities = communities.get()
+        G = sp.csr_matrix(G.to_numpy_array())
 
     elif device == "cpu":
         logg.info("    clustering using phenograph")
-        clusters = phenograph.cluster(
+        communities, G, Q = phenograph.cluster(
             adata.layers["fitted"].T, primary_metric=metric, k=knn, n_jobs=n_jobs
-        )[0]
+        )
+        G = sp.csr_matrix(G)
 
-    adata.var["fit_clusters"] = clusters
+    adata.varp["similarity"] = G
+    adata.var["fit_clusters"] = communities
+
+    adata.uns["fit_cluster"] = dict(
+        parameters=dict(knn=knn, metric=metric, device=device, n_jobs=n_jobs),
+        modularity=Q,
+    )
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint("added\n" "    .var['fit_clusters'], cluster assignments for features.")
+    logg.hint(
+        "added\n"
+        "    .obsp['similarity'], pairwise similarity graph.\n"
+        "    .var['fit_clusters'], cluster assignments for features.\n"
+        "    .uns['fit_clusters'], parameters and modularity of the clustering."
+    )
 
     return adata if copy else None
