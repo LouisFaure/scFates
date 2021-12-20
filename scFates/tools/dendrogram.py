@@ -230,22 +230,13 @@ class _CategoricalPlotter(object):
         hue = data.get(hue, hue)
         units = data.get(units, units)
 
-        # Validate the inputs
-        for var in [x, y, hue, units]:
-            if isinstance(var, str):
-                err = "Could not interpret input '{}'".format(var)
-                raise ValueError(err)
-
         # Figure out the plotting orientation
         vals, groups = y, x
         # Put them into the common representation
         plot_data = [np.asarray(vals)]
 
         # Get a label for the value axis
-        if hasattr(vals, "name"):
-            value_label = vals.name
-        else:
-            value_label = None
+        value_label = vals.name
 
         # Get the categorical axis label
         group_label = None
@@ -271,13 +262,6 @@ class _CategoricalPlotter(object):
 
     def _group_longform(self, vals, grouper, order):
         """Group a long-form variable by another with correct order."""
-        # Ensure that the groupby will work
-        if not isinstance(vals, pd.Series):
-            if isinstance(grouper, pd.Series):
-                index = grouper.index
-            else:
-                index = None
-            vals = pd.Series(vals, index=index)
 
         # Group the val data
         grouped_vals = vals.groupby(grouper)
@@ -299,36 +283,6 @@ class _CategoricalScatterPlotter(_CategoricalPlotter):
 
     default_palette = "dark"
     require_numeric = False
-
-    @property
-    def point_colors(self):
-        """Return an index into the palette for each scatter point."""
-        point_colors = []
-        for i, group_data in enumerate(self.plot_data):
-
-            # Initialize the array for this group level
-            group_colors = np.empty(group_data.size, int)
-            if isinstance(group_data, pd.Series):
-                group_colors = pd.Series(group_colors, group_data.index)
-
-            if self.plot_hues is None:
-
-                # Use the same color for all points at this level
-                # group_color = self.colors[i]
-                group_colors[:] = i
-
-            else:
-
-                # Color the points based on  the hue level
-
-                for j, level in enumerate(self.hue_names):
-                    # hue_color = self.colors[j]
-                    if group_data.size:
-                        group_colors[self.plot_hues[i] == level] = j
-
-            point_colors.append(group_colors)
-
-        return point_colors
 
 
 class _SwarmPlotter(_CategoricalScatterPlotter):
@@ -468,55 +422,17 @@ class _SwarmPlotter(_CategoricalScatterPlotter):
         orig_xy = ax.transData.transform(points.get_offsets())
 
         # Order the variables so that x is the categorical axis
-        if self.orient == "h":
-            orig_xy = orig_xy[:, [1, 0]]
 
         # Do the beeswarm in point coordinates
         new_xy = self.beeswarm(orig_xy, d)
 
         # Transform the point coordinates back to data coordinates
-        if self.orient == "h":
-            new_xy = new_xy[:, [1, 0]]
+
         new_x, new_y = ax.transData.inverted().transform(new_xy).T
 
         # Add gutters
-        if self.orient == "v":
-            self.add_gutters(new_x, center, width)
-        else:
-            self.add_gutters(new_y, center, width)
 
-        # Reposition the points so they do not overlap
-        points.set_offsets(np.c_[new_x, new_y])
-
-    def swarm_points2(self, ax, points, center, width, s, **kws):
-        """Find new positions on the categorical axis for each point."""
-        # Convert from point size (area) to diameter
-        default_lw = mpl.rcParams["patch.linewidth"]
-        lw = kws.get("linewidth", kws.get("lw", default_lw))
-        dpi = ax.figure.dpi
-        d = (np.sqrt(s) + lw) * (dpi / 72)
-        # Transform the data coordinates to point coordinates.
-        # We'll figure out the swarm positions in the latter
-        # and then convert back to data coordinates and replot
-        orig_xy = ax.transData.transform(points.get_offsets())
-
-        # Order the variables so that x is the categorical axis
-        if self.orient == "h":
-            orig_xy = orig_xy[:, [1, 0]]
-
-        # Do the beeswarm in point coordinates
-        new_xy = self.beeswarm(orig_xy, d)
-
-        # Transform the point coordinates back to data coordinates
-        if self.orient == "h":
-            new_xy = new_xy[:, [1, 0]]
-        new_x, new_y = ax.transData.inverted().transform(new_xy).T
-
-        # Add gutters
-        if self.orient == "v":
-            self.add_gutters(new_x, center, width)
-        else:
-            self.add_gutters(new_y, center, width)
+        self.add_gutters(new_x, center, width)
 
         # Reposition the points so they do not overlap
         return np.c_[new_x, new_y]
@@ -529,10 +445,8 @@ class _SwarmPlotter(_CategoricalScatterPlotter):
         swarms = []
 
         # Set the categorical axes limits here for the swarm math
-        if self.orient == "v":
-            ax.set_xlim(-0.5, len(self.plot_data) - 0.5)
-        else:
-            ax.set_ylim(-0.5, len(self.plot_data) - 0.5)
+
+        ax.set_xlim(-0.5, len(self.plot_data) - 0.5)
 
         # Plot each swarm
         cells = []
@@ -562,7 +476,7 @@ class _SwarmPlotter(_CategoricalScatterPlotter):
             file=sys.stdout,
             desc="    segment ",
         )(
-            delayed(self.swarm_points2)(ax, swarm, center, 0.8, s, **kws)
+            delayed(self.swarm_points)(ax, swarm, center, 0.8, s, **kws)
             for center, swarm in zip(centers, swarms)
         )
         plt.close()
@@ -595,11 +509,6 @@ def swarmplot(
     n_jobs=1,
     **kwargs
 ):
-
-    if "split" in kwargs:
-        dodge = kwargs.pop("split")
-        msg = "The `split` parameter has been renamed to `dodge`."
-        warnings.warn(msg, UserWarning)
 
     plotter = _SwarmPlotter(
         x, y, hue, data, order, hue_order, dodge, orient, color, palette, n_jobs
