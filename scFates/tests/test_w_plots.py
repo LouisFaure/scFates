@@ -108,6 +108,7 @@ def test_pipeline():
     scf.tl.fit(adata_2, layer="scaled")
     scf.tl.fit(adata)
     fitted = adata.layers["fitted"][0, :5]
+    scf.pl.matrix(adata, adata.var_names, annot_var=True)
 
     scf.tl.test_association(adata_2, root="80", leaves=["19"])
     scf.tl.fit(adata_2, root="80", leaves=["19"])
