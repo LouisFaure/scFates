@@ -183,9 +183,6 @@ def test_association(
 
     stat_assoc_l = list()
 
-    #     for m in tqdm(
-    #         range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
-    #     ):
     def test_assoc_map(m):
         data = list(
             zip(
@@ -211,7 +208,7 @@ def test_association(
         file=sys.stdout,
         use_tqdm=n_map > 1,
         desc="    multi mapping ",
-    )(delayed(test_assoc_map)(m) for m in range(m))
+    )(delayed(test_assoc_map)(m) for m in range(n_map))
     # stat_assoc_l = stat_assoc_l + [stat]
 
     adata = apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut)
