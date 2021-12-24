@@ -33,6 +33,7 @@ from .. import logging as logg
 def trends(
     adata: AnnData,
     features=None,
+    cluster=None,
     highlight_features: Union[List, Literal["A", "fdr"]] = "A",
     n_features: int = 10,
     root_milestone: Union[None, str] = None,
@@ -60,6 +61,7 @@ def trends(
     complex_thre: float = 0.7,
     complex_z: float = 3,
     figsize: Union[None, tuple] = None,
+    axemb=None,
     show: Optional[bool] = None,
     output_mean: bool = False,
     save: Union[str, bool, None] = None,
@@ -128,6 +130,8 @@ def trends(
         standard deviation threshold on the quantile subsetted feature.
     figsize
         figure size.
+    axemb
+        existing ax for plotting emb
     output_mean
         output mean fitted values to adata.
     show
@@ -195,8 +199,11 @@ def trends(
 
         adata = adata[cells]
 
-    if features is None:
+    if (features is None) & (cluster is None):
         features = adata.var_names
+    if cluster is not None:
+        features = adata.var_names[adata.var.fit_clusters == cluster]
+
     if branch is not None:
         name = root_milestone + "->" + "<>".join(milestones)
         df = adata.uns[name]["fork"]
@@ -316,19 +323,22 @@ def trends(
     else:
         annot = None
 
-    ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
-    figsize = (
-        ((4 * plot_emb * ratio) + 4 * plot_heatmap, 4) if figsize is None else figsize
-    )
-    fig = plt.figure(figsize=figsize)
-    gsubs = gridspec.GridSpec(
-        1,
-        2,
-        figure=fig,
-        width_ratios=[1 * plot_emb * ratio, 1 * plot_heatmap],
-        wspace=wspace,
-    )
-    axs = []
+    if axemb is None:
+        ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
+        figsize = (
+            ((4 * plot_emb * ratio) + 4 * plot_heatmap, 4)
+            if figsize is None
+            else figsize
+        )
+        fig = plt.figure(figsize=figsize)
+        gsubs = gridspec.GridSpec(
+            1,
+            2,
+            figure=fig,
+            width_ratios=[1 * plot_emb * ratio, 1 * plot_heatmap],
+            wspace=wspace,
+        )
+        axs = []
     if plot_heatmap:
         gs_ht = gridspec.GridSpecFromSubplotSpec(
             2 + (annot is not None),
@@ -482,9 +492,10 @@ def trends(
             axheatmap.plot(xx, yy, color="k", linewidth=0.75)
 
     if plot_emb:
-        gs_emb = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gsubs[0])
-        axemb = fig.add_subplot(gs_emb[0])
-        axs = axs + [axemb]
+        if axemb is None:
+            gs_emb = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gsubs[0])
+            axemb = fig.add_subplot(gs_emb[0])
+            axs = axs + [axemb]
         adata_temp.obs["mean_trajectory"] = 0
         adata_temp.obs.loc[
             fitted_sorted.columns, "mean_trajectory"
@@ -530,12 +541,15 @@ def trends(
                 adata=adata_temp,
                 basis=basis,
                 color_seg=color,
+                color_cells=color,
                 cmap_seg=feature_cmap,
+                cmap=feature_cmap,
                 show_info=False,
                 ax=axemb,
                 title=title,
                 root_milestone=root_milestone,
                 milestones=milestones,
+                show=False,
                 **kwargs,
             )
 
@@ -545,7 +559,7 @@ def trends(
                 f.write("%s\n" % item)
 
     if show == False:
-        return axs
+        return axs if plot_heatmap else axemb
     if save is not None:
         savefile = "figures/trends" + save
         logg.warn("saving figure to file " + savefile)
