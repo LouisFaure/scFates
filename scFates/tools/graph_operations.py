@@ -276,6 +276,9 @@ def subset_tree(
 
     del adata.uns["graph"]["milestones"]
     del adata.obs["milestones"]
+    del adata.uns["graph"]["root"]
+    if "root2" in adata.uns["graph"]:
+        del adata.uns["graph"]["root2"]
     root(adata, nodes[dct[rmil]])
     pseudotime(adata)
 
@@ -312,6 +315,60 @@ def subset_tree(
     logg.hint(
         "added \n" "    .obs['old_milestones'], previous milestones from intial tree"
     )
+
+    return adata if copy else None
+
+
+def limit_pseudotime(adata: AnnData, max_t: float, copy: Union[bool, None] = None):
+    """\
+    Cutoff tree by removing cells/nodes after !
+
+    Given that the datasets were initially processed together.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    max_t
+        Maximum pseudotime value to keep.
+    copy
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        subsetted dataset if `copy=True` it returns or else subsets these fields to `adata`:
+
+        `.uns['graph']['B']`
+            subsetted adjacency matrix of the principal points.
+        `.uns['graph']['R']`
+            subsetted updated soft assignment of cells to principal point in representation space.
+        `.uns['graph']['F']`
+            subsetted coordinates of principal points in representation space.
+    """
+
+    adata = adata.copy() if copy else adata
+
+    sub_cells = adata.obs.t < max_t
+    adata._inplace_subset_obs(adata.obs_names[sub_cells])
+    r = adata.uns["graph"]["root"]
+    pp_info = adata.uns["graph"]["pp_info"]
+    newroot = np.argwhere(pp_info.loc[pp_info.time < max_t].index == r)[0][0]
+    adata.obsm["X_R"] = adata.obsm["X_R"][:, pp_info.time < max_t]
+    adata.uns["graph"]["B"] = adata.uns["graph"]["B"][pp_info.time < max_t, :][
+        :, pp_info.time < max_t
+    ]
+    adata.uns["graph"]["F"] = adata.uns["graph"]["F"][:, pp_info.time < max_t]
+
+    g = igraph.Graph.Adjacency(
+        (adata.uns["graph"]["B"] > 0).tolist(), mode="undirected"
+    )
+
+    adata.uns["graph"]["tips"] = np.argwhere(np.array(g.degree()) == 1).flatten()
+    adata.uns["graph"]["forks"] = np.argwhere(np.array(g.degree()) > 2).flatten()
+
+    root(adata, newroot)
+    pseudotime(adata)
 
     return adata if copy else None
 

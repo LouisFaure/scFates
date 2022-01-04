@@ -1,4 +1,11 @@
-from .graph_operations import cleanup, getpath, subset_tree, attach_tree, extend_tips
+from .graph_operations import (
+    cleanup,
+    getpath,
+    subset_tree,
+    limit_pseudotime,
+    attach_tree,
+    extend_tips,
+)
 from .graph_fitting import tree, curve, circle
 from .root import root, roots
 from .pseudotime import pseudotime, rename_milestones

@@ -91,6 +91,10 @@ def test_pipeline():
     adata_at = scf.tl.attach_tree(adata_s1, adata_s2)
     adata_at = scf.tl.attach_tree(adata_s1, adata_s2, linkage=("25", "19"))
 
+    adata_lim = scf.tl.limit_pseudotime(
+        adata, max_t=adata.obs.t.max() / 4 * 3, copy=True
+    )
+
     scf.tl.test_association(adata, n_jobs=2)
     scf.tl.test_association(adata, A_cut=0.3, reapply_filters=True)
     scf.tl.test_association(adata_2, layer="scaled", A_cut=0.3)
