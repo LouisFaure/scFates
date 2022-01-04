@@ -9,18 +9,15 @@ jobs:
   build_and_test:
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.8
     - name: Install dependencies
       run: |
         sudo apt-get clean && sudo apt-get update
@@ -34,7 +31,6 @@ jobs:
         coverage report -m
         coverage xml
     - name: Upload coverage to Codecov
-      if: ${{ matrix.python-version == '3.8' }}
       uses: codecov/codecov-action@v1
       with:
         files: ./coverage.xml

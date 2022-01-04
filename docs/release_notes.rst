@@ -4,6 +4,23 @@
 Release Notes
 =============
 
+Version 0.3.1 :small:`January 4, 2022`
+---------------------------------------
+
+.. rubric:: Additions
+
+- :func:`scFates.pl.matrix` a new and compact way for plotting features over a subset or the whole tree.
+- :func:`scFates.tl.limit_pseudotime`, subset a tree by cutting of any nodes and cells having a higher pseudotime value than a threshold.
+- `scf.settings.set_figure_pubready()` to set publication ready figures (PDF/Arial output, needs Arial installed on the system)
+
+.. rubric:: Improvements/Fix
+
+- Solved :func:`scFates.tl.dendrogram` breaking down when version of seaborn is higher than v0.11.1
+- :func:`scFates.tl.cluster`: Output more information.
+- Better parallel handling of :func:`tl.test_association` for multiple mapping.
+- Flexibility improvements for :func:`scFates.pl.trends`, :func:`scFates.pl.single_trend`, :func:`scFates.pl.synchro_path`, :func:`scFates.pl.modules`.
+
+
 Version 0.3 :small:`November 11, 2021`
 ---------------------------------------
 
