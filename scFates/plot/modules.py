@@ -22,6 +22,7 @@ def modules(
     root_milestone,
     milestones,
     color: str = "milestones",
+    module: Union["early", "late", "all"] = "all",
     show_traj: bool = False,
     layer: Optional[str] = None,
     smooth: bool = False,
@@ -42,6 +43,8 @@ def modules(
         tips defining the progenies branches.
     color
         color the cells with variable from adata.obs.
+    module
+        whether to show early, late or both modules.
     show_traj
         show trajectory on the early module plot.
     layer
@@ -93,50 +96,59 @@ def modules(
             adata_c.obsm["X_late"]
         )
 
-    axs, _, _, _ = setup_axes(panels=[0, 1])
+    if module == "all":
+        axs, _, _, _ = setup_axes(panels=[0, 1])
+        ax_early, ax_late = axs
+    elif module == "early":
+        axs, _, _, _ = setup_axes(panels=[0])
+        ax_early = axs[0]
+    elif module == "late":
+        axs, _, _, _ = setup_axes(panels=[0])
+        ax_late = axs[0]
 
     color = "old_milestones" if ((color == "milestones") & (nmil > 4)) else color
 
-    if show_traj:
-        plot_trajectory(
-            adata_c,
-            basis="early",
-            root_milestone=root_milestone,
-            milestones=milestones,
-            color_cells=color,
-            show=False,
-            title="",
-            legend_loc="none",
-            ax=axs[0],
-            **kwargs,
-        )
-    else:
+    if (module == "early") | (module == "all"):
+        if show_traj:
+            plot_trajectory(
+                adata_c,
+                basis="early",
+                root_milestone=root_milestone,
+                milestones=milestones,
+                color_cells=color,
+                show=False,
+                title="",
+                legend_loc="none",
+                ax=ax_early,
+                **kwargs,
+            )
+        else:
+            sc.pl.embedding(
+                adata_c[cells],
+                basis="early",
+                color=color,
+                legend_loc="none",
+                title="",
+                show=False,
+                ax=ax_early,
+                **kwargs,
+            )
+        ax_early.set_xlabel("early " + milestones[0])
+        ax_early.set_ylabel("early " + milestones[1])
+
+    if (module == "late") | (module == "all"):
         sc.pl.embedding(
             adata_c[cells],
-            basis="early",
+            basis="late",
             color=color,
             legend_loc="none",
-            title="",
             show=False,
-            ax=axs[0],
+            title="",
+            ax=ax_late,
             **kwargs,
         )
-
-    sc.pl.embedding(
-        adata_c[cells],
-        basis="late",
-        color=color,
-        legend_loc="none",
-        show=False,
-        title="",
-        ax=axs[1],
-        **kwargs,
-    )
-
-    axs[0].set_xlabel("early " + milestones[0])
-    axs[0].set_ylabel("early " + milestones[1])
-    axs[1].set_xlabel("late " + milestones[0])
-    axs[1].set_ylabel("late " + milestones[1])
+        ax_late.set_xlabel("late " + milestones[0])
+        ax_late.set_ylabel("late " + milestones[1])
 
     savefig_or_show("modules", show=show, save=save)
 
