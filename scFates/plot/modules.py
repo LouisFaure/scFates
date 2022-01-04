@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from scipy import sparse
 
 from typing import Union, Optional
+from typing_extensions import Literal
 from scanpy.plotting._utils import savefig_or_show
 from ..tools.utils import getpath
 from .trajectory import trajectory as plot_trajectory
@@ -22,7 +23,7 @@ def modules(
     root_milestone,
     milestones,
     color: str = "milestones",
-    module: Union["early", "late", "all"] = "all",
+    module: Literal["early", "late", "all"] = "all",
     show_traj: bool = False,
     layer: Optional[str] = None,
     smooth: bool = False,

@@ -44,10 +44,10 @@ If you have a nvidia GPU, scFates can leverage CUDA computations for speedups fo
 
 The latest version of rapids framework is required (at least 0.17) it is recommanded to create a new conda environment::
 
-    conda create -n scFates-gpu -c rapidsai -c nvidia -c conda-forge -c defaults rapids=0.19 python=3.8 cudatoolkit=11.0 -y
+    conda create -n scFates-gpu -c rapidsai -c nvidia -c conda-forge -c defaults cuml=21.12 cugraph=21.12 python=3.8 cudatoolkit=11.0 -y
     conda activate scFates-gpu
     pip install git+https://github.com/j-bac/elpigraph-python.git
-    pip install scFates --ignore-installed
+    pip install scFates
 
 Docker container
 ----------------

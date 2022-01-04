@@ -45,6 +45,7 @@ Tree operations
     tl.subset_tree
     tl.attach_tree
     tl.extend_tips
+    tl.limit_pseudotime
 
 Pseudotime analysis
 -------------------
