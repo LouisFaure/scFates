@@ -202,7 +202,9 @@ def subset_tree(
     R = adata.obsm["X_R"].copy()
     F = graph["F"].copy()
 
-    dct = adata.uns["graph"]["milestones"]
+    dct = graph["milestones"]
+    dct_rev = dict(zip(dct.values(), dct.keys()))
+    oldmil = adata.obs.milestones.cat.categories.copy()
 
     edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
     img = igraph.Graph()
@@ -210,10 +212,6 @@ def subset_tree(
         np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
     )
     img.add_edges(edges)
-
-    dct = graph["milestones"]
-    dct_rev = dict(zip(dct.values(), dct.keys()))
-    oldmil = adata.obs.milestones.cat.categories.copy()
 
     if "milestones_colors" in adata.uns:
         oldmilcol = np.array(adata.uns["milestones_colors"])

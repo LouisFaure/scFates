@@ -227,8 +227,8 @@ def synchro_path(
     dct_cormil = dict(
         zip(
             ["corAA", "corBB", "corAB"],
-            [milestones[0] + "\nintra-module", milestones[1] + "\nintra-module"]
-            + [milestones[0] + " vs " + milestones[1] + "\ninter-module"],
+            [m + "\nintra-module" for m in milestones]
+            + [" vs ".join(milestones)[0] + "\ninter-module"],
         )
     )
 
