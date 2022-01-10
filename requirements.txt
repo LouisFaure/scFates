@@ -21,3 +21,4 @@ scikit-misc
 simpleppt>=1.1.2
 networkx>=2.5
 igraph>=0.9.6
+adjustText>=0.7.3

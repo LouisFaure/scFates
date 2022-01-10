@@ -5,10 +5,14 @@ from anndata import AnnData
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import rgb2hex
+from matplotlib.patches import ConnectionPatch
 
 from typing import Union, Optional
 from scanpy.plotting._utils import savefig_or_show
-from .dendrogram import dendrogram
+from scFates.plot.dendrogram import dendrogram
+from adjustText import adjust_text
+from matplotlib import gridspec
+from sklearn.metrics import pairwise_distances
 
 
 def slide_cors(
@@ -19,11 +23,17 @@ def slide_cors(
     basis: str = "umap",
     win_keep: Union[None, list] = None,
     frame_emb: bool = True,
+    focus=None,
+    top_focus=4,
+    labels: Union[None, tuple] = None,
     fig_height: float = 6,
     fontsize: int = 16,
     point_size: int = 20,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    kwargs_text: dict = {},
+    kwargs_con: dict = {},
+    kwargs_adjust: dict = {},
     **kwargs,
 ):
 
@@ -50,6 +60,12 @@ def slide_cors(
         plot only a subset of windows.
     frame_emb
         add frame around emb plot.
+    focus
+        add on the right side a scatter focusing one defined window.
+    top_focus
+        highlight n top markers for each module, having the greatest distance to 0,0 coordinates.
+    labels
+        labels defining the two modules, named after the milestones if None, or 'A' and 'B' if less than two milestones is used.
     fig_height
         figure height.
     fontsize
@@ -60,6 +76,12 @@ def slide_cors(
         show the plot.
     save
         save the plot.
+    kwargs_text
+        parameters for the text annotation of the labels.
+    kwargs_con
+        parameters passed on the ConnectionPatch linking the focused plot to the rest.
+    kwargs_adjust
+        parameters passed to adjust_text.
     **kwargs
         if `basis=dendro`, arguments passed to :func:`scFates.pl.dendrogram`
 
@@ -89,11 +111,14 @@ def slide_cors(
         genesetB = corAB[milestones[0]]["genesetB"].index
         corA = pd.concat(adata.uns[name]["corAB"][milestones[0]])
         corB = pd.concat(adata.uns[name]["corAB"][milestones[1]])
+        if labels is None:
+            labelA, labelB = milestones if labels is None else labels
     else:
         genesetA = corAB["A"]["genesetA"].index
         genesetB = corAB["A"]["genesetB"].index
         corA = pd.concat(adata.uns[name]["corAB"]["A"])
         corB = pd.concat(adata.uns[name]["corAB"]["B"])
+        labelA, labelB = ("A", "B") if labels is None else labels
 
     groupsA = np.ones(corA.shape[0])
     groupsA[len(genesetA) :] = 2
@@ -122,12 +147,27 @@ def slide_cors(
     )
 
     nwin = len(freqs)
-    fig, axs = plt.subplots(2, nwin, figsize=(nwin * fig_height / 2, fig_height))
 
-    fig.subplots_adjust(hspace=0.05, wspace=0.05)
+    focus_true = False if focus is None else True
+
+    fig = plt.figure(figsize=((nwin + focus_true * 2) * fig_height / 2, fig_height))
+
+    gs0 = gridspec.GridSpec(
+        1,
+        1 + focus_true * 1,
+        figure=fig,
+        width_ratios=[nwin, 2] if focus_true else None,
+        wspace=0.05,
+    )
+
+    gs00 = gridspec.GridSpecFromSubplotSpec(
+        2, nwin, subplot_spec=gs0[0], hspace=0.05, wspace=0.05
+    )
+
     emb = adata.obsm["X_" + basis]
 
     for i in range(nwin):
+        ax_emb = fig.add_subplot(gs00[0, i])
         freq = freqs[i]
         if basis == "dendro":
             if "s" in kwargs:
@@ -140,16 +180,16 @@ def slide_cors(
                 s=s,
                 cmap=gr,
                 show=False,
-                ax=axs[0, i],
+                ax=ax_emb,
                 show_info=False,
                 title="",
                 alpha=0,
                 **kwargs,
             )
-            axs[0, i].set_xlabel("")
-            axs[0, i].set_ylabel("")
+            ax_emb.set_xlabel("")
+            ax_emb.set_ylabel("")
 
-        axs[0, i].scatter(
+        ax_emb.scatter(
             emb[np.argsort(freq), 0],
             emb[np.argsort(freq), 1],
             s=10,
@@ -157,13 +197,13 @@ def slide_cors(
             cmap=gr,
             rasterized=True,
         )
-        axs[0, i].grid(b=None)
-        axs[0, i].set_xticks([])
-        axs[0, i].set_yticks([])
+        ax_emb.grid(b=None)
+        ax_emb.set_xticks([])
+        ax_emb.set_yticks([])
         ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
-        axs[0, i].set_aspect(ratio)
+        ax_emb.set_aspect(ratio)
         if frame_emb == False:
-            axs[0, i].axis("off")
+            ax_emb.axis("off")
 
     c_mil = (
         [
@@ -176,8 +216,9 @@ def slide_cors(
     c_mil = col if col is not None else c_mil
     genesets = [genesetA, genesetB]
     for i in range(nwin):
+        ax_scat = fig.add_subplot(gs00[1, i])
         for j in range(2):
-            axs[1, i].scatter(
+            ax_scat.scatter(
                 corA.loc[groupsB == (j + 1), str(i)],
                 corB.loc[groupsB == (j + 1), str(i)],
                 color=c_mil[j],
@@ -189,21 +230,85 @@ def slide_cors(
             np.corrcoef(groupsA, corA.iloc[:, i])[0][1]
             + np.corrcoef(groupsB, corB.iloc[:, i])[0][1]
         ) / 2
-        axs[1, i].annotate(
+        ax_scat.annotate(
             str(round(rep, 2)),
             xy=(0.7, 0.88),
             xycoords="axes fraction",
             fontsize=fontsize,
         )
-        axs[1, i].grid(b=None)
-        axs[1, i].axvline(0, linestyle="dashed", color="grey", zorder=0)
-        axs[1, i].axhline(0, linestyle="dashed", color="grey", zorder=0)
-        axs[1, i].set_xlim([-maxlim, maxlim])
-        axs[1, i].set_ylim([-maxlim, maxlim])
-        axs[1, i].set_xticks([])
-        axs[1, i].set_yticks([])
+        ax_scat.grid(b=None)
+        ax_scat.axvline(0, linestyle="dashed", color="grey", zorder=0)
+        ax_scat.axhline(0, linestyle="dashed", color="grey", zorder=0)
+        ax_scat.set_xlim([-maxlim, maxlim])
+        ax_scat.set_ylim([-maxlim, maxlim])
+        ax_scat.set_xticks([])
+        ax_scat.set_yticks([])
+        if i == focus:
+            ax_focus = ax_scat
+            ax_focus.tick_params(color="red", labelcolor="red")
+            for spine in ax_focus.spines.values():
+                spine.set_edgecolor("red")
+                spine.set_linewidth(spine.get_linewidth() * 2)
 
-    if show == False:
-        return axs
+    if focus_true:
+        ax_scat = fig.add_subplot(gs0[1])
+        for j in range(2):
+            ax_scat.scatter(
+                corA.loc[groupsB == (j + 1), str(focus)],
+                corB.loc[groupsB == (j + 1), str(focus)],
+                color=c_mil[j],
+                alpha=0.5,
+                rasterized=True,
+                s=point_size * 2,
+            )
+        ax_scat.grid(b=None)
+        ax_scat.axvline(0, linestyle="dashed", color="grey", zorder=0)
+        ax_scat.axhline(0, linestyle="dashed", color="grey", zorder=0)
+        ax_scat.set_xlim([-maxlim, maxlim])
+        ax_scat.set_ylim([-maxlim, maxlim])
+        ax_scat.set_xticks([])
+        ax_scat.set_yticks([])
+        ax_scat.set_xlabel("correlation with %s" % labelA, fontsize=18)
+        ax_scat.set_ylabel("correlation with %s" % labelB, fontsize=18)
+
+        con = ConnectionPatch(
+            xyA=(maxlim * 0.75, -maxlim),
+            coordsA="data",
+            xyB=(-maxlim * 0.75, -maxlim),
+            coordsB="data",
+            axesA=ax_focus,
+            axesB=ax_scat,
+            arrowstyle="->",
+            connectionstyle="bar,fraction=.025",
+            **kwargs_con,
+        )
+        ax_scat.add_artist(con)
+        con.set_linewidth(2)
+        con.set_color("red")
+
+        fA = pd.concat(
+            [corA.loc["genesetA"][str(focus)], corB.loc["genesetA"][str(focus)]], axis=1
+        )
+        fB = pd.concat(
+            [corA.loc["genesetB"][str(focus)], corB.loc["genesetB"][str(focus)]], axis=1
+        )
+
+        if top_focus > 0:
+            topA = np.flip(
+                pairwise_distances(np.array([0, 0]).reshape(1, -1), fA).argsort()
+            )[0][:top_focus]
+            topB = np.flip(
+                pairwise_distances(np.array([0, 0]).reshape(1, -1), fB).argsort()
+            )[0][:top_focus]
+            texts_A = [
+                ax_scat.text(fA.loc[t][0], fA.loc[t][1], t, **kwargs_text)
+                for t in fA.index[topA]
+            ]
+            texts_B = [
+                ax_scat.text(fB.loc[t][0], fB.loc[t][1], t, **kwargs_text)
+                for t in fB.index[topB]
+            ]
+            texts = texts_A + texts_B
+            adjust_text(texts, **kwargs_adjust)
 
     savefig_or_show("slide_cors", show=show, save=save)
