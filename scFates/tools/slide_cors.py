@@ -119,13 +119,13 @@ def slide_cells(
         )
 
     elif len(milestones) == 1:
-        paths = [str(p[0]) for p in paths]
-
-        pps = graph["pp_info"].seg.isin(paths).index
-
-        seg_progenies = list(set.intersection(*[set(path) for path in paths]))
-        seg_progenies = [str(seg) for seg in seg_progenies]
-        segs_cur = seg_progenies
+        pps = (
+            graph["pp_info"]
+            .PP[graph["pp_info"].seg.isin(np.array(paths[0]).astype(str))]
+            .index
+        )
+        seg_progenies = [str(seg) for seg in paths[0]]
+        segs_cur = np.array(seg_progenies)
 
     def region_extract(pt_cur, segs_cur, nbranch):
         freq = list()
