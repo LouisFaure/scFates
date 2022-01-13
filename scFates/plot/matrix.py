@@ -61,7 +61,6 @@ def matrix(
     If `show==False` an array of :class:`~matplotlib.axes.Axes`
 
     """
-
     adata = adata[:, features].copy()
 
     if (layer == "fitted") & ("fitted" not in adata.layers):
@@ -117,7 +116,7 @@ def matrix(
         sharey=True,
         figsize=(
             len(order) * 0.85 + 0.85 + annot_var * 0.85,
-            (len(features) + 1 * annot_top + 1.5 * annot_var) / 5,
+            (len(features) + 1 * annot_top + 1 + 1 * annot_var) / 5,
         )
         if figsize is None
         else figsize,
