@@ -586,6 +586,7 @@ def single_trend(
     wspace: Union[None, float] = None,
     figsize: tuple = (8, 4),
     ax_trend=None,
+    ax_emb=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs,
@@ -633,7 +634,9 @@ def single_trend(
     figsize
         figure size in inches.
     ax_trend
-        existing ax for tredns, only works when emb plot is disabled.
+        existing ax for trends, only works when emb plot is disabled.
+    ax_emb
+        existing ax for embedding plot.
     show
         show the plot.
     save
@@ -703,17 +706,17 @@ def single_trend(
 
         color_exp = mil_col[miles_cat == branch][0]
     ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
-    if plot_emb:
-        fig, (ax_emb, ax_trend) = plt.subplots(
-            1,
-            2,
-            figsize=figsize,
-            gridspec_kw=dict(width_ratios=[1 * ratio, 1], wspace=wspace),
-        )
-    else:
-        if ax_trend is None:
+    if (ax_emb is None) & (ax_trend is None):
+        if plot_emb:
+            fig, (ax_emb, ax_trend) = plt.subplots(
+                1,
+                2,
+                figsize=figsize,
+                gridspec_kw=dict(width_ratios=[1 * ratio, 1], wspace=wspace),
+            )
+        else:
             fig, ax_trend = plt.subplots(1, 1, figsize=figsize)
-        # axs = ["empty", axs]
+            # axs = ["empty", axs]
 
     for s in df.seg.unique():
         if color_exp is None:
