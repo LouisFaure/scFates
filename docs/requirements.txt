@@ -1,11 +1,12 @@
 typing_extensions
 importlib_metadata
 sphinx_rtd_theme==0.5.2
-sphinx-autodoc-typehints==1.12
+#sphinx-autodoc-typehints==1.12
+scanpydoc[typehints]>=0.7.4
 sphinxext-opengraph
 sphinx-copybutton
 matplotlib==3.3.1
-sphinx==3.5.4
+sphinx>=4.1,<4.2
 docutils
 readthedocs-sphinx-ext
 Jinja2==2.11.3
@@ -15,4 +16,3 @@ anndata
 numpy
 pandas
 cycler
-scanpydoc
