@@ -28,6 +28,7 @@ def slide_cors(
     labels: Union[None, tuple] = None,
     fig_height: float = 6,
     fontsize: int = 16,
+    fontsize_focus: int = 18,
     point_size: int = 20,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -70,6 +71,8 @@ def slide_cors(
         figure height.
     fontsize
         repulsion score font size.
+    fontsize_focus
+        fontsize of x and y labels in focus plot.
     point_size
         correlation plot point size.
     show
@@ -200,8 +203,21 @@ def slide_cors(
         ax_emb.grid(b=None)
         ax_emb.set_xticks([])
         ax_emb.set_yticks([])
-        ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
-        ax_emb.set_aspect(ratio)
+        ma = np.max(plt.rcParams["figure.figsize"])
+        mi = np.min(plt.rcParams["figure.figsize"])
+        toreduce = plt.rcParams["figure.figsize"] / ma
+        if len(np.argwhere(toreduce != 1)) == 0:
+            pass
+        elif np.argwhere(toreduce != 1)[0][0] == 0:
+            span = ax_emb.get_xlim()[1] - ax_emb.get_xlim()[0]
+            midpoint = ax_emb.get_xlim()[0] + span / 2
+            enlargment = (ax_emb.get_xlim()[1] - ax_emb.get_xlim()[0]) * (ma / mi) / 2
+            ax_emb.set_xlim([midpoint - enlargment, midpoint + enlargment])
+        elif np.argwhere(toreduce != 1)[0][0] == 1:
+            span = ax_emb.get_ylim()[1] - ax_emb.get_ylim()[0]
+            midpoint = ax_emb.get_ylim()[0] + span / 2
+            enlargment = (ax_emb.get_ylim()[1] - ax_emb.get_ylim()[0]) * (ma / mi) / 2
+            ax_emb.set_ylim([midpoint - enlargment, midpoint + enlargment])
         if frame_emb == False:
             ax_emb.axis("off")
 
@@ -268,8 +284,8 @@ def slide_cors(
         ax_scat.set_ylim([-maxlim, maxlim])
         ax_scat.set_xticks([])
         ax_scat.set_yticks([])
-        ax_scat.set_xlabel("correlation with %s" % labelA, fontsize=18)
-        ax_scat.set_ylabel("correlation with %s" % labelB, fontsize=18)
+        ax_scat.set_xlabel("correlation with %s" % labelA, fontsize=fontsize_focus)
+        ax_scat.set_ylabel("correlation with %s" % labelB, fontsize=fontsize_focus)
 
         con = ConnectionPatch(
             xyA=(maxlim * 0.75, -maxlim),
@@ -289,10 +305,15 @@ def slide_cors(
         fA = pd.concat(
             [corA.loc["genesetA"][str(focus)], corB.loc["genesetA"][str(focus)]], axis=1
         )
+        fA = fA.loc[
+            (fA.iloc[:, 0].values > 0) & (fA.iloc[:, 1].values < 0),
+        ]
         fB = pd.concat(
             [corA.loc["genesetB"][str(focus)], corB.loc["genesetB"][str(focus)]], axis=1
         )
-
+        fB = fB.loc[
+            (fB.iloc[:, 1].values > 0) & (fB.iloc[:, 0].values < 0),
+        ]
         if top_focus > 0:
             topA = np.flip(
                 pairwise_distances(np.array([0, 0]).reshape(1, -1), fA).argsort()
