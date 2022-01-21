@@ -21,6 +21,8 @@ def matrix(
     annot_var: bool = False,
     annot_top: bool = True,
     link_seg: bool = True,
+    feature_style: str = "normal",
+    feature_spacing: float = 1,
     figsize: Union[None, tuple] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -45,6 +47,10 @@ def matrix(
         Display milestones gradient for each segment on top of plots.
     link_seg
         Link the segment together to keep track of the the tree progression.
+    feature_style
+        Font style of the feature labels.
+    feature_spacing
+        When figsize is None, controls the the height of each rows.
     figsize
         Custom figure size.
     show
@@ -112,11 +118,12 @@ def matrix(
     fig, axs = plt.subplots(
         1,
         len(order) + 1 * annot_var,
-        constrained_layout=True,
+        constrained_layout=False,
         sharey=True,
         figsize=(
-            len(order) * 0.85 + 0.85 + annot_var * 0.85,
-            (len(features) + 1 * annot_top + 1 + 1 * annot_var) / 5,
+            len(order) * 0.85 + 0.85 + annot_var * 1,
+            (len(features) + 0.8 * annot_top + 1 + 0.8 * annot_var)
+            / (5 - feature_spacing),
         )
         if figsize is None
         else figsize,
@@ -151,7 +158,7 @@ def matrix(
         axs[i].set_xticklabels("")
         axs[i].set_xticks([])
         plt.margins(y=10)
-        plt.setp(axs[i].get_yticklabels(), style="italic")
+        plt.setp(axs[i].get_yticklabels(), style=feature_style)
         if annot_top:
             divider = make_axes_locatable(axs[i])
             cax = divider.new_vertical(size=0.2, pad=0.05, pack_start=False)
