@@ -264,6 +264,7 @@ def tree(
             Nodes = int(adata.shape[0] / 2)
 
     if method == "ppt":
+        simpleppt.settings.verbosity = settings.verbosity
         ppt = simpleppt.ppt(
             X,
             W,
@@ -277,6 +278,7 @@ def tree(
             device=device,
             gpu_tbp=ppt_gpu_tpb,
             seed=seed,
+            progress=settings.verbosity > 1,
         )
 
         ppt = vars(ppt)
