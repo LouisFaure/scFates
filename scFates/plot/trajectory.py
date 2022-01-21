@@ -27,6 +27,9 @@ def graph(
     adata: AnnData,
     basis: str = "umap",
     size_nodes: float = None,
+    alpha_nodes: float = 1,
+    linewidth: float = 2,
+    alpha_seg: float = 1,
     color_cells: Union[str, None] = None,
     tips: bool = True,
     forks: bool = True,
@@ -47,7 +50,13 @@ def graph(
     basis
         Name of the `obsm` basis to use.
     size_nodes
-        size of the projected prinicpal points.
+        Size of the projected prinicpal points.
+    alpha_nodes
+        Alpha of nodes.
+    linewidth
+        Line width of the segments.
+    alpha_seg
+        Alpha of segments.
     color_cells
         cells color
     tips
@@ -108,10 +117,12 @@ def graph(
     segs = al.tolist()
     vertices = proj.tolist()
     lines = [[tuple(vertices[j]) for j in i] for i in segs]
-    lc = matplotlib.collections.LineCollection(lines, colors="k", linewidths=2)
+    lc = matplotlib.collections.LineCollection(
+        lines, colors="k", linewidths=linewidth, alpha=alpha_seg
+    )
     ax.add_collection(lc)
 
-    ax.scatter(proj[:, 0], proj[:, 1], s=size_nodes, c="k")
+    ax.scatter(proj[:, 0], proj[:, 1], s=size_nodes, c="k", alpha=alpha_nodes)
 
     bbox = dict(facecolor="white", alpha=0.6, edgecolor="white", pad=0.1)
 
