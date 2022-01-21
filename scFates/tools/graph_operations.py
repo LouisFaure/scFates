@@ -646,6 +646,98 @@ def extend_tips(adata: AnnData, restrict_seg: bool = False, copy: bool = False):
     return adata if copy else None
 
 
+def simplify(adata: AnnData, n_nodes: int = 10, copy: bool = False):
+
+    """\
+    While keeping nodes defining forks and tips (milestones), reduce the number of nodes composing the segments.
+
+    This can be helpful to simplify visualisations.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    n_nodes
+        Number of nodes to keep per segments in between milestone nodes.
+    copy
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        Dataset with simplified graph.
+
+    """
+
+    logg.info("simplifying graph", reset=True)
+
+    adata = adata.copy() if copy else adata
+
+    use_rep = adata.uns["graph"]["use_rep"]
+    metric = adata.uns["graph"]["metrics"]
+    res = []
+    miles = {}
+    mils = np.array(list(adata.uns["graph"]["milestones"].values()))
+    R = adata.obsm["X_R"]
+    pp_info = adata.uns["graph"]["pp_info"]
+    for s in pp_info.seg.unique():
+        pp_info = adata.uns["graph"]["pp_info"]
+        pp_info = pp_info.loc[pp_info.seg == s]
+        pp_info.sort_values("time", inplace=True)
+
+        tokeep = pp_info.index[np.isin(pp_info.index, mils)]
+        tosimplify = pp_info.index[~np.isin(pp_info.index, mils)]
+        for tk in tokeep:
+            res.append(R[:, tk])
+            miles[tk] = len(res) - 1
+        idxs = np.array_split(tosimplify, n_nodes)
+        for idx in idxs:
+            res.append(R[:, idx].mean(axis=1))
+
+    newR = np.vstack(res).T
+    newR = newR / newR.sum(axis=1).reshape(-1, 1)
+
+    rep = adata.obsm[use_rep]
+    F_mat = np.dot(rep.T, newR) / newR.sum(axis=0)
+
+    d = pairwise_distances(F_mat.T, metric=metric)
+
+    csr = csr_matrix(np.triu(d, k=-1))
+    Tcsr = minimum_spanning_tree(csr)
+    mat = Tcsr.toarray()
+    mat = mat + mat.T - np.diag(np.diag(mat))
+    B = (mat > 0).astype(int)
+
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+    forks = np.argwhere(np.array(g.degree()) > 2).flatten()
+
+    adata.obsm["X_R"] = newR
+    adata.uns["graph"]["B"] = B
+    adata.uns["graph"]["F"] = F_mat
+    adata.uns["graph"]["tips"] = tips
+    adata.uns["graph"]["forks"] = forks
+
+    newmil = {}
+    for m in adata.uns["graph"]["milestones"].keys():
+        newmil[m] = miles[adata.uns["graph"]["milestones"][m]]
+
+    milroot = (
+        pd.Series(adata.uns["graph"]["milestones"]) == adata.uns["graph"]["root"]
+    ).idxmax()
+    newroot = newmil[milroot]
+
+    root(adata, newroot)
+    pseudotime(adata)
+
+    adata.uns["graph"]["milestones"] = newmil
+
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint("graph simplified")
+
+    return adata if copy else None
+
+
 def getpath(adata, root_milestone, milestones, include_root=False):
     """\
     Obtain dataframe of cell of a given path.
