@@ -23,6 +23,7 @@ def synchro_path(
     alpha_multi: float = 0.1,
     knots_multi: Union[int, None] = None,
     max_t: Union[float, None] = None,
+    figsize: Union[tuple, None] = None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -44,7 +45,9 @@ def synchro_path(
     knots_multi
         knots for overall mappings (plot disabled if not set).
     max_t
-        set max pseutotime to show
+        set max pseudotime to show.
+    figsize
+        figure size.
     show
         show the plot.
     save
@@ -89,7 +92,9 @@ def synchro_path(
     allcor = adata.uns[name]["synchro"]
     runs = ["real", "permuted"] if len(list(allcor.keys())) == 2 else ["real"]
 
-    fig, axs = plt.subplots(3, len(runs), figsize=(len(runs) * 6, 6))
+    fig, axs = plt.subplots(
+        3, len(runs), figsize=(len(runs) * 6, 6) if figsize is None else figsize
+    )
     fig.subplots_adjust(hspace=0.05, wspace=0.025, top=0.95)
     i = 0
 
