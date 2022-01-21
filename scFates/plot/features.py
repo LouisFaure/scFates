@@ -24,7 +24,7 @@ from .dendrogram import dendrogram
 Rpy2, R, rstats, rmgcv, Formula = importeR("fitting associated features")
 check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
-from .modules import get_modules
+from ..get import modules as get_modules
 from .trajectory import remove_info
 from .utils import gen_milestones_gradients
 from .. import logging as logg
@@ -681,7 +681,9 @@ def single_trend(
         miles_cat = adata.obs.milestones.cat.categories
         mil_col = np.array(adata.uns["milestones_colors"])
 
-        X_early, X_late = get_modules(adata, root_milestone, milestones, layer)
+        X_modules = get_modules(adata, root_milestone, milestones, layer)
+        X_early, X_late = X_modules.iloc[:, :2], X_modules.iloc[:, 2:]
+
         X = pd.concat([X_early, X_late], axis=1)
         X["t"] = adata.obs.loc[X.index, "t"].values
 
