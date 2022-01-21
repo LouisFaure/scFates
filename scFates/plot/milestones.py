@@ -8,6 +8,7 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
 from ..tools.dendrogram import hierarchy_pos
+from .. import logging as logg
 
 
 def milestones(
@@ -64,6 +65,9 @@ def milestones(
                 dct[str(adata.uns["graph"]["root"])],
                 dct[str(adata.uns["graph"]["root2"])],
             ]
+            if layout == "dendro":
+                logg.warn("two roots detected, reverting to reingold_tilford layout")
+                layout = "reingold_tilford"
 
     if color is None:
         if "milestones_colors" not in adata.uns:
