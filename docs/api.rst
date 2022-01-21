@@ -123,3 +123,14 @@ Plot
     pl.slide_cors
     pl.synchro_path
     pl.module_inclusion
+
+
+Getting analysed data
+---------------------
+
+.. autosummary::
+    :toctree: .
+
+    get.fork_stats
+    get.modules
+    get.slide_cors

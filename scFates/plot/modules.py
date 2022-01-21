@@ -13,6 +13,7 @@ from ..tools.utils import getpath
 from .trajectory import trajectory as plot_trajectory
 from .utils import setup_axes
 from ..tools.graph_operations import subset_tree
+from ..get import modules as get_modules
 from .. import settings
 
 import scanpy as sc
@@ -65,9 +66,10 @@ def modules(
 
     plt.rcParams["axes.grid"] = False
 
-    X_early, X_late = get_modules(adata, root_milestone, milestones, layer)
+    X_modules = get_modules(adata, root_milestone, milestones, layer)
 
-    cells = X_early.index
+    cells = X_modules.index
+    X_early, X_late = X_modules.iloc[:, :2], X_modules.iloc[:, 2:]
     verb = settings.verbosity
     settings.verbosity = 1
     nmil = len(adata.uns["graph"]["milestones"])
@@ -152,96 +154,3 @@ def modules(
         ax_late.set_ylabel("late " + milestones[1])
 
     savefig_or_show("modules", show=show, save=save)
-
-
-def get_modules(adata, root_milestone, milestones, layer):
-    graph = adata.uns["graph"]
-
-    dct = graph["milestones"]
-
-    leaves = list(map(lambda leave: dct[leave], milestones))
-    root = dct[root_milestone]
-
-    name = root_milestone + "->" + "<>".join(milestones)
-
-    stats = adata.uns[name]["fork"]
-
-    if "milestones_colors" not in adata.uns or len(adata.uns["milestones_colors"]) == 1:
-        from . import palette_tools
-
-        palette_tools._set_default_colors_for_categorical_obs(adata, "milestones")
-
-    mlsc = adata.uns["milestones_colors"].copy()
-    mls = adata.obs.milestones.cat.categories.tolist()
-    dct = dict(zip(mls, mlsc))
-    df = adata.obs.copy(deep=True)
-    edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
-    img = igraph.Graph()
-    img.add_vertices(
-        np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
-    )
-    img.add_edges(edges)
-
-    cells = np.unique(
-        np.concatenate(
-            [
-                getpath(
-                    img, root, adata.uns["graph"]["tips"], leaves[0], graph, df
-                ).index,
-                getpath(
-                    img, root, adata.uns["graph"]["tips"], leaves[1], graph, df
-                ).index,
-            ]
-        )
-    )
-
-    if layer is None:
-        if sparse.issparse(adata.X):
-            X = pd.DataFrame(
-                np.array(adata[cells, stats.index].X.A),
-                index=cells,
-                columns=stats.index,
-            )
-        else:
-            X = pd.DataFrame(
-                np.array(adata[cells, stats.index].X),
-                index=cells,
-                columns=stats.index,
-            )
-    else:
-        if sparse.issparse(adata.layers[layer]):
-            X = pd.DataFrame(
-                np.array(adata[cells, stats.index].layers[layer].A),
-                index=cells,
-                columns=stats.index,
-            )
-        else:
-            X = pd.DataFrame(
-                np.array(adata[:, stats.index].layers[layer]),
-                index=cells,
-                columns=stats.index,
-            )
-
-    early_1 = (stats.branch.values == milestones[0]) & (stats.module.values == "early")
-    late_1 = (stats.branch.values == milestones[0]) & (stats.module.values == "late")
-
-    early_2 = (stats.branch.values == milestones[1]) & (stats.module.values == "early")
-    late_2 = (stats.branch.values == milestones[1]) & (stats.module.values == "late")
-
-    X_early = pd.DataFrame(
-        {
-            "early_" + milestones[0]: X.loc[:, early_1].mean(axis=1),
-            "early_" + milestones[1]: X.loc[:, early_2].mean(axis=1),
-        },
-        index=X.index,
-    )
-
-    X_late = pd.DataFrame(
-        {
-            "late_" + milestones[0]: X.loc[:, late_1].mean(axis=1),
-            "late_" + milestones[1]: X.loc[:, late_2].mean(axis=1),
-        },
-        index=X.index,
-    )
-
-    return X_early, X_late
