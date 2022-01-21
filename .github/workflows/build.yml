@@ -28,8 +28,8 @@ jobs:
     - name: Test with pytest
       run: |
         coverage run -m pytest scFates/tests/test_w_plots.py
-        coverage report -m
-        coverage xml
+        coverage report -i -m
+        coverage xml -i
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
