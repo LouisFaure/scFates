@@ -1,4 +1,5 @@
 from typing import Optional, Union
+from typing_extensions import Literal
 from anndata import AnnData
 import numpy as np
 import pandas as pd
@@ -33,7 +34,7 @@ def curve(
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 2,
     epg_verbose: bool = False,
-    device: str = "cpu",
+    device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
     seed: Optional[int] = None,
@@ -145,7 +146,7 @@ def tree(
     use_rep: str = None,
     ndims_rep: Optional[int] = None,
     weight_rep: str = None,
-    method: str = None,
+    method: Literal["ppt", "epg"] = "ppt",
     init: Optional[DataFrame] = None,
     ppt_sigma: Optional[Union[float, int]] = 0.1,
     ppt_lambda: Optional[Union[float, int]] = 1,
@@ -158,7 +159,7 @@ def tree(
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 2,
     epg_verbose: bool = False,
-    device: str = "cpu",
+    device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
     seed: Optional[int] = None,
@@ -342,7 +343,7 @@ def circle(
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 3,
     epg_verbose: bool = False,
-    device: str = "cpu",
+    device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
     seed: Optional[int] = None,
