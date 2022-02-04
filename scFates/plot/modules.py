@@ -28,6 +28,8 @@ def modules(
     show_traj: bool = False,
     layer: Optional[str] = None,
     smooth: bool = False,
+    ax_early=None,
+    ax_late=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs,
@@ -51,6 +53,12 @@ def modules(
         show trajectory on the early module plot.
     layer
         layer to use to compute mean of module.
+    smooth
+        whether to smooth the data using knn graph.
+    ax_early
+        existing axes for early module.
+    ax_late
+        existing axes for late module.
     show
         show the plot.
     save
@@ -100,14 +108,17 @@ def modules(
         )
 
     if module == "all":
-        axs, _, _, _ = setup_axes(panels=[0, 1])
-        ax_early, ax_late = axs
+        if (ax_early is None) & (ax_late is None):
+            axs, _, _, _ = setup_axes(panels=[0, 1])
+            ax_early, ax_late = axs
     elif module == "early":
-        axs, _, _, _ = setup_axes(panels=[0])
-        ax_early = axs[0]
+        if ax_early is None:
+            axs, _, _, _ = setup_axes(panels=[0])
+            ax_early = axs[0]
     elif module == "late":
-        axs, _, _, _ = setup_axes(panels=[0])
-        ax_late = axs[0]
+        if ax_late is None:
+            axs, _, _, _ = setup_axes(panels=[0])
+            ax_late = axs[0]
 
     color = "old_milestones" if ((color == "milestones") & (nmil > 4)) else color
 
@@ -154,3 +165,11 @@ def modules(
         ax_late.set_ylabel("late " + milestones[1])
 
     savefig_or_show("modules", show=show, save=save)
+
+    if show == False:
+        if module == "all":
+            return ax_early, ax_late
+        elif module == "early":
+            return ax_early
+        elif module == "late":
+            return ax_late
