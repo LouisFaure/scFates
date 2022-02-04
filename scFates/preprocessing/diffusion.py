@@ -1,5 +1,6 @@
 from anndata import AnnData
 from typing import Optional
+from typing_extensions import Literal
 from scipy.sparse import csr_matrix, find, issparse
 import pandas as pd
 import numpy as np
@@ -10,14 +11,15 @@ from .. import settings
 
 def diffusion(
     adata: AnnData,
-    n_components=10,
-    knn=30,
-    alpha=0,
+    n_components: int = 10,
+    knn: int = 30,
+    alpha: float = 0,
     multiscale: bool = True,
     n_eigs: int = None,
-    device="cpu",
-    n_pcs=50,
-    copy=False,
+    device: Literal["cpu", "gpu"] = "cpu",
+    n_pcs: int = 50,
+    save_uns: bool = False,
+    copy: bool = False,
 ):
     """\
     Wrapper to generate diffusion maps using Palantir.
@@ -156,16 +158,16 @@ def diffusion(
         adata.obsm["X_diffusion_multiscale"] = determine_multiscale_space(
             res, n_eigs=n_eigs
         ).values
-        logstr = "    .obsm['X_diffusion_multiscale'], multiscale diffusion space.\n"
+        logstr = "    .obsm['X_diffusion_multiscale'], multiscale diffusion space."
     else:
         adata.obsm["X_diffusion"] = res["EigenVectors"].iloc[:, 1:].values
-        logstr = "    .obsm['X_diffusion'], diffusion space.\n"
+        logstr = "    .obsm['X_diffusion'], diffusion space."
 
-    adata.uns["diffusion"] = res
+    if save_uns:
+        adata.uns["diffusion"] = res
+        uns_str = "\n    .uns['diffusion'] dict containing diffusion maps results."
+    else:
+        uns_str = ""
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint(
-        "added \n"
-        + logstr
-        + "    .uns['diffusion'] dict containing diffusion maps results."
-    )
+    logg.hint("added \n" + logstr + uns_str)
