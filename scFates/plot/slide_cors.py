@@ -14,6 +14,8 @@ from adjustText import adjust_text
 from matplotlib import gridspec
 from sklearn.metrics import pairwise_distances
 
+from .. import get
+
 
 def slide_cors(
     adata: AnnData,
@@ -124,9 +126,9 @@ def slide_cors(
         labelA, labelB = ("A", "B") if labels is None else labels
 
     groupsA = np.ones(corA.shape[0])
-    groupsA[len(genesetA) :] = 2
+    groupsA[: len(genesetA)] = 2
     groupsB = np.ones(corA.shape[0])
-    groupsB[: len(genesetA)] = 2
+    groupsB[len(genesetA) :] = 2
 
     gr = LinearSegmentedColormap.from_list("greyreds", ["lightgrey", "black"])
 
@@ -287,6 +289,8 @@ def slide_cors(
         ax_scat.set_xlabel("correlation with %s" % labelA, fontsize=fontsize_focus)
         ax_scat.set_ylabel("correlation with %s" % labelB, fontsize=fontsize_focus)
 
+        fra = 0.1 / (len(freqs) - focus)
+
         con = ConnectionPatch(
             xyA=(maxlim * 0.75, -maxlim),
             coordsA="data",
@@ -295,7 +299,7 @@ def slide_cors(
             axesA=ax_focus,
             axesB=ax_scat,
             arrowstyle="->",
-            connectionstyle="bar,fraction=.025",
+            connectionstyle=f"bar,fraction={fra}",
             **kwargs_con,
         )
         ax_scat.add_artist(con)
