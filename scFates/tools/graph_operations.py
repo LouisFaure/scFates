@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 from typing_extensions import Literal
 from anndata import AnnData
 import numpy as np
@@ -138,14 +138,18 @@ def cleanup(
 
 def subset_tree(
     adata: AnnData,
-    root_milestone,
-    milestones,
-    mode: Literal["extract", "substract"] = "extract",
+    root_milestone: Optional[str] = None,
+    milestones: Optional[Iterable] = None,
+    mode: Literal["extract", "substract", "pseudotime"] = "extract",
+    t_min: Optional[float] = None,
+    t_max: Optional[float] = None,
     copy: bool = False,
 ):
 
     """\
     Subset the fitted tree.
+
+    if pseudotime parameter used, cutoff tree by removing cells/nodes after or before defined pseudotime.
 
     Parameters
     ----------
@@ -177,6 +181,18 @@ def subset_tree(
     logg.info("subsetting tree", reset=True)
 
     adata = adata.copy() if copy else adata
+
+    if ((t_min is not None) | (t_max is not None)) & (mode != "pseudotime"):
+        logg.warn("setting mode to `pseudotime`")
+        mode = "pseudotime"
+    if mode == "pseudotime":
+        _subset_t(adata, t_min, t_max)
+        logg.info(
+            "    finished", time=True, end=" " if settings.verbosity > 2 else "\n"
+        )
+        logg.hint("tree subsetted")
+
+        return adata if copy else None
 
     adata.obs["old_milestones"] = adata.obs.milestones.copy()
 
@@ -317,58 +333,29 @@ def subset_tree(
     return adata if copy else None
 
 
-def limit_pseudotime(adata: AnnData, max_t: float, copy: Union[bool, None] = None):
-    """\
-    Cutoff tree by removing cells/nodes after !
-
-    Given that the datasets were initially processed together.
-
-    Parameters
-    ----------
-    adata
-        Annotated data matrix.
-    max_t
-        Maximum pseudotime value to keep.
-    copy
-        Return a copy instead of writing to adata.
-
-    Returns
-    -------
-    adata : anndata.AnnData
-        subsetted dataset if `copy=True` it returns or else subsets these fields to `adata`:
-
-        `.uns['graph']['B']`
-            subsetted adjacency matrix of the principal points.
-        `.uns['graph']['R']`
-            subsetted updated soft assignment of cells to principal point in representation space.
-        `.uns['graph']['F']`
-            subsetted coordinates of principal points in representation space.
-    """
-
-    adata = adata.copy() if copy else adata
-
-    sub_cells = adata.obs.t < max_t
-    adata._inplace_subset_obs(adata.obs_names[sub_cells])
-    r = adata.uns["graph"]["root"]
+def _subset_t(adata: AnnData, t_min=None, t_max=None):
+    t_min = adata.obs.t.min() - 0.1 if t_min is None else t_min
+    t_max = adata.obs.t.max() + 0.1 if t_max is None else t_max
     pp_info = adata.uns["graph"]["pp_info"]
-    newroot = np.argwhere(pp_info.loc[pp_info.time < max_t].index == r)[0][0]
-    adata.obsm["X_R"] = adata.obsm["X_R"][:, pp_info.time < max_t]
-    adata.uns["graph"]["B"] = adata.uns["graph"]["B"][pp_info.time < max_t, :][
-        :, pp_info.time < max_t
-    ]
-    adata.uns["graph"]["F"] = adata.uns["graph"]["F"][:, pp_info.time < max_t]
-
+    keep = pp_info.index[(pp_info.time > t_min) & (pp_info.time < t_max)]
+    pp_info = pp_info.loc[keep]
+    adata.uns["graph"]["B"] = adata.uns["graph"]["B"][keep, :][:, keep]
+    adata.uns["graph"]["F"] = adata.uns["graph"]["F"][:, keep]
+    R = adata.obsm["X_R"][:, keep]
+    Rsum = R.sum(axis=1)
+    norm_R_cpu(R, Rsum)
+    adata.obsm["X_R"] = R
     g = igraph.Graph.Adjacency(
         (adata.uns["graph"]["B"] > 0).tolist(), mode="undirected"
     )
-
-    adata.uns["graph"]["tips"] = np.argwhere(np.array(g.degree()) == 1).flatten()
-    adata.uns["graph"]["forks"] = np.argwhere(np.array(g.degree()) > 2).flatten()
-
-    root(adata, newroot)
+    adata.uns["graph"]["tips"] = np.argwhere(np.array(g.degree()) == 1).ravel()
+    adata.uns["graph"]["forks"] = np.argwhere(np.array(g.degree()) > 2).ravel()
+    adata.uns["graph"]["pp_info"] = pp_info.reset_index(drop=True)
+    root(adata, adata.uns["graph"]["pp_info"].time.idxmin())
+    adata._inplace_subset_obs(
+        adata.obs_names[(adata.obs.t > t_min) & (adata.obs.t < t_max)]
+    )
     pseudotime(adata)
-
-    return adata if copy else None
 
 
 def attach_tree(

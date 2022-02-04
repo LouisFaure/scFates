@@ -2,7 +2,6 @@ from .graph_operations import (
     cleanup,
     getpath,
     subset_tree,
-    limit_pseudotime,
     attach_tree,
     extend_tips,
     simplify,
