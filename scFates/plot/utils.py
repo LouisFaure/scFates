@@ -154,9 +154,7 @@ def strings_to_categoricals(adata):
     from pandas import Categorical
 
     def is_valid_dtype(values):
-        return (
-            is_string_dtype(values) or is_integer_dtype(values) or is_bool_dtype(values)
-        )
+        return is_string_dtype(values) or is_integer_dtype(values)
 
     df = adata.obs
     df_keys = [key for key in df.columns if is_valid_dtype(df[key])]
