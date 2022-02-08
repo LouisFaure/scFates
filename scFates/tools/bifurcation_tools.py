@@ -321,6 +321,8 @@ def gt_fun(data):
         weights=sdf["w"],
     )
 
+    tmin = np.min([sdf.loc[sdf.i == i, "t"].max() for i in sdf.i.unique()])
+    sdf = sdf.loc[sdf.t <= tmin]
     Amps = sdf.groupby("i").apply(lambda x: np.mean(x.exp))
     res = Amps - Amps.max()
     res["de_p"] = rmgcv.summary_gam(m)[3][1]
