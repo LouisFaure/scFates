@@ -1,6 +1,7 @@
 import scFates as scf
 import scanpy as sc
 import numpy as np
+import pandas as pd
 
 
 def test_pipeline():
@@ -63,6 +64,8 @@ def test_pipeline():
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
     scf.tl.dendrogram(adata)
+
+    adata_s = scf.tl.simplify(adata, copy=True)
 
     scf.pl.binned_pseudotime_meta(adata, "leiden", show_colorbar=True)
 
@@ -168,7 +171,10 @@ def test_pipeline():
     scf.tl.branch_specific(
         adata, root_milestone="80", milestones=["25", "19"], effect=0.6
     )
-    branch_spe = adata.uns["80->25<>19"]["fork"].branch.values
+
+    branch_spe = scf.get.fork_stats(
+        adata, root_milestone="80", milestones=["25", "19"]
+    ).branch.values
 
     scf.tl.module_inclusion(adata, root_milestone="80", milestones=["25", "19"])
     mod_inc = adata.uns["80->25<>19"]["module_inclusion"]["19"]["0"].values
@@ -206,6 +212,32 @@ def test_pipeline():
     )
 
     scf.pl.slide_cors(adata, root_milestone="80", milestones=["25", "19"])
+
+    adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"] = pd.DataFrame(
+        0.2,
+        index=np.array(["a", "b", "c", "d"]),
+        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+    )
+    adata.uns["80->25<>19"]["corAB"]["25"]["genesetB"] = pd.DataFrame(
+        -0.2,
+        index=np.array(["a", "b", "c", "d"]),
+        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+    )
+    adata.uns["80->25<>19"]["corAB"]["19"]["genesetA"] = pd.DataFrame(
+        -0.2,
+        index=np.array(["a", "b", "c", "d"]),
+        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+    )
+    adata.uns["80->25<>19"]["corAB"]["19"]["genesetB"] = pd.DataFrame(
+        0.2,
+        index=np.array(["a", "b", "c", "d"]),
+        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+    )
+
+    scf.pl.slide_cors(
+        adata, root_milestone="80", milestones=["25", "19"], win_keep=range(3), focus=1
+    )
+
     scf.pl.slide_cors(adata, root_milestone="80", milestones=["25"])
 
     scf.tl.synchro_path(
