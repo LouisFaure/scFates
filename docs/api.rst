@@ -58,8 +58,10 @@ Pseudotime analysis
     tl.pseudotime
     tl.dendrogram
     tl.test_association
+    tl.test_association_covariate
     tl.fit
     tl.cluster
+    tl.test_covariate
     tl.linearity_deviation
     tl.get_path
 
