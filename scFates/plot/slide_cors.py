@@ -249,7 +249,7 @@ def slide_cors(
             + np.corrcoef(groupsB, corB.iloc[:, i])[0][1]
         ) / 2
         ax_scat.annotate(
-            str(round(rep, 2)),
+            str(round(np.abs(rep), 2)),
             xy=(0.7, 0.88),
             xycoords="axes fraction",
             fontsize=fontsize,
