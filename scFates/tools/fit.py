@@ -30,6 +30,7 @@ check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 def fit(
     adata: AnnData,
+    features: Optional[Iterable] = None,
     root=None,
     leaves=None,
     layer: Optional[str] = None,
@@ -88,12 +89,13 @@ def fit(
 
     adata = adata.copy() if copy else adata
 
-    if "signi" not in adata.var.columns:
-        raise ValueError(
-            "You need to run `tl.test_association` before fitting features."
-        )
+    if features is None:
+        if "signi" not in adata.var.columns:
+            raise ValueError(
+                "You need to run `tl.test_association` before fitting features."
+            )
 
-    genes = adata.var_names[adata.var.signi]
+        features = adata.var_names[adata.var.signi]
 
     graph = adata.uns["graph"]
     tips = graph["tips"]
@@ -162,7 +164,7 @@ def fit(
         subtree = subtree[["t", "branch"]]
         subtree["gamma"] = gamma
 
-        Xgenes = get_X(adata, subtree.index, genes, layer, togenelist=True)
+        Xgenes = get_X(adata, subtree.index, features, layer, togenelist=True)
 
         data = list(zip([subtree] * len(Xgenes), Xgenes))
 
@@ -178,7 +180,7 @@ def fit(
 
     for i in range(len(stat_assoc)):
         stat_assoc[i] = pd.concat(stat_assoc[i], axis=1)
-        stat_assoc[i].columns = adata.var_names[adata.var.signi]
+        stat_assoc[i].columns = features
 
     names = np.arange(len(stat_assoc)).astype(str).tolist()
     dictionary = dict(zip(names, stat_assoc))
@@ -193,7 +195,7 @@ def fit(
         adata.raw = adata
 
     adata._inplace_subset_obs(np.unique(dictionary["0"].index))
-    adata._inplace_subset_var(genes)
+    adata._inplace_subset_var(features)
 
     adata.layers["fitted"] = fitted.loc[adata.obs_names, :]
 
