@@ -28,8 +28,6 @@ def diffusion(
     ----------
     adata
         Annotated data matrix.
-    use_highly_variable
-        Use only variable genes for calculating PC components.
     n_components
         Number of diffusion components.
     knn
