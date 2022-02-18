@@ -16,3 +16,4 @@ anndata
 numpy
 pandas
 cycler
+markupsafe==2.0.1
