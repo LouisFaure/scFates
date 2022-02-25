@@ -45,9 +45,13 @@ def test_fork(
     """\
     Test for branch differential gene expression and differential upregulation from progenitor to terminal state.
 
-    First, differential gene expression between two branches is performed. This is performed by
-    comparing the full model :math:`g_{i} \\sim\ pseudotime*Branch` to the reduced one
-    :math:`g_{i} \\sim\ pseudotime` using F-test.
+    First, differential gene expression between two branches is performed. The following model is used:
+
+    :math:`g_{i} \\sim\ s(pseudotime)+s(pseudotime):Branch+Branch`
+
+    Where :math:`s()` denotes the penalized regression spline function and
+    :math:`s(pseudotime):Branch` denotes interaction between the smoothed pseudotime and branch terms.
+    From this interaction term, the p-value is extracted.
 
     Then, each feature is tested for its upregulation along the path from progenitor to terminal state,
     using the linear model :math:`g_{i} \sim\ pseudotime`.

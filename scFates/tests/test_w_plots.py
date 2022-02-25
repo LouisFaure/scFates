@@ -113,6 +113,16 @@ def test_pipeline():
     scf.tl.fit(adata_2, layer="scaled")
     scf.tl.fit(adata)
     fitted = adata.layers["fitted"][0, :5]
+
+    adata.obs["covariate"] = "A"
+    cells = np.random.choice(
+        adata.obs_names, size=int(adata.shape[0] / 2), replace=False
+    )
+    adata.obs.loc[cells, "covariate"] = "B"
+    scf.tl.test_association_covariate(adata, "covariate")
+    adata.var["signi"] = True
+    scf.tl.test_covariate(adata, "covariate")
+
     scf.pl.matrix(adata, adata.var_names, annot_var=True)
 
     scf.tl.test_association(adata_2, root="80", leaves=["19"])

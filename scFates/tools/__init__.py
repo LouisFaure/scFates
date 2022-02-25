@@ -24,3 +24,4 @@ from .bifurcation_tools import test_fork, branch_specific, activation, activatio
 from .conversion import cellrank_to_tree
 from .linearity_deviation import linearity_deviation
 from .dendrogram import dendrogram
+from .covariate import test_covariate, test_association_covariate

@@ -71,7 +71,7 @@ def test_association(
     n_jobs
         number of cpu processes used to perform the test.
     spline_df
-        dimension of the basis used to represent the smooth term (has no effect for now).
+        dimension of the basis used to represent the smooth term.
     fdr_cut
         FDR (Benjamini-Hochberg adjustment) cutoff on significance; significance if FDR < fdr_cut.
     A_cut
@@ -81,7 +81,7 @@ def test_association(
     reapply_filters
         avoid recomputation and reapply fitlers.
     plot
-        call scf.pl.test_associationa after the test.
+        call scf.pl.test_association after the test.
     root
         restrain the test to a subset of the tree (in combination with leaves).
     leaves
@@ -197,7 +197,7 @@ def test_association(
             file=sys.stdout,
             use_tqdm=n_map == 1,
             desc="    single mapping ",
-        )(delayed(gt_fun_exp)(data[d]) for d in range(len(data)))
+        )(delayed(test_assoc)(data[d], spline_df) for d in range(len(data)))
         stat = pd.DataFrame(stat, index=genes, columns=["p_val", "A"])
         stat["fdr"] = multipletests(stat.p_val, method="bonferroni")[1]
         return stat
@@ -237,7 +237,7 @@ def test_association(
     return adata if copy else None
 
 
-def gt_fun_exp(data):
+def test_assoc(data, spline_df):
     sdf = data[0]
     sdf["exp"] = data[1]
 
@@ -245,7 +245,9 @@ def gt_fun_exp(data):
     global rstats
 
     def gamfit(s):
-        m = rmgcv.gam(Formula("exp~s(t,k=5)"), data=sdf.loc[sdf["seg"] == s, :])
+        m = rmgcv.gam(
+            Formula(f"exp~s(t,k={spline_df})"), data=sdf.loc[sdf["seg"] == s, :]
+        )
         return dict({"d": m[5][0], "df": m[42][0], "p": rmgcv.predict_gam(m)})
 
     mdl = list(map(gamfit, sdf.seg.unique()))
