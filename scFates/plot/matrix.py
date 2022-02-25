@@ -24,6 +24,7 @@ def matrix(
     feature_style: str = "normal",
     feature_spacing: float = 1,
     figsize: Union[None, tuple] = None,
+    return_data: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
     **kwargs
@@ -131,6 +132,8 @@ def matrix(
 
     pos = np.arange(len(order), 0, -1)
     caxs = []
+    if return_data:
+        datas = dict()
     for i, s in enumerate(order):
         adata_sub = adata[adata.obs.seg == adata.obs.seg.cat.categories[s]].copy()
         adata_sub.obs["split"] = pd.cut(adata_sub.obs.t, bins=nbins)
@@ -169,6 +172,25 @@ def matrix(
             cbar = fig.colorbar(mappable, cax=cax, orientation="horizontal")
             cbar.set_ticks([])
             cbar.outline.set_linewidth(1.5)
+
+        if return_data:
+            data = pd.DataFrame(
+                0, index=features, columns=adata_sub.obs.split.cat.categories
+            )
+            allidx = data.stack().index
+            for group in data.columns:
+                data.loc[data.index, group] = np.array(
+                    adata_sub[adata_sub.obs.split == group, data.index].X.mean(axis=0)
+                ).ravel()
+
+            k = "->".join(
+                vs2mils[
+                    graph["pp_seg"].loc[int(adata.obs.seg.cat.categories[s])][
+                        ["from", "to"]
+                    ]
+                ]
+            )
+            datas[k] = data
 
     if annot_var:
         Amps = adata.var.loc[features, "A"]
@@ -243,3 +265,5 @@ def matrix(
 
     if show == False:
         return axs
+    if return_data:
+        return datas
