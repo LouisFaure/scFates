@@ -118,11 +118,13 @@ def graph(
     vertices = proj.tolist()
     lines = [[tuple(vertices[j]) for j in i] for i in segs]
     lc = matplotlib.collections.LineCollection(
-        lines, colors="k", linewidths=linewidth, alpha=alpha_seg
+        lines, colors="k", linewidths=linewidth, alpha=alpha_seg, rasterized=True
     )
     ax.add_collection(lc)
 
-    ax.scatter(proj[:, 0], proj[:, 1], s=size_nodes, c="k", alpha=alpha_nodes)
+    ax.scatter(
+        proj[:, 0], proj[:, 1], s=size_nodes, c="k", alpha=alpha_nodes, rasterized=True
+    )
 
     bbox = dict(facecolor="white", alpha=0.6, edgecolor="white", pad=0.1)
 
