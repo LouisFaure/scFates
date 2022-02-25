@@ -29,13 +29,17 @@ References
     *Cell population structure prior to bifurcation predicts efficiency of directed differentiation in human induced pluripotent cells*,
     `PNAS <https://doi.org/10.1073/pnas.1621412114>`__.
 
-.. [Lange21] Lange *et al. (2021)*,
+.. [Lange22] Lange *et al. (2022)*,
     *CellRank for directed single-cell fate mapping*,
-    `biorxiv <https://www.biorxiv.org/content/10.1101/2020.10.19.345983v2>`__.
+    `Nature Methods <https://doi.org/10.1038/s41592-021-01346-6>`__.
 
 .. [Kameneva21] Kameneva *et al. (2021)*
     *Single-cell transcriptomics of human embryos identifies multiple sympathoblast lineages with potential implications for neuroblastoma origin*,
     `Nature Genetics <https://www.nature.com/articles/s41588-021-00818-x>`__.
+
+.. [Ji22] Ji *et al. (2022)*
+    *A statistical framework for differential pseudotime analysis with multiple single-cell RNA-seq samples*,
+    `biorxiv <https://doi.org/10.1101/2021.07.10.451910>`__.
 
 .. image:: _static/scFates_logo_dark.png
    :width: 1%
