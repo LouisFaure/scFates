@@ -4,6 +4,23 @@
 Release Notes
 =============
 
+Version 0.4.0 :small:`February 25, 2022`
+---------------------------------------
+
+.. rubric:: Additions
+
+- :func:`scFates.tl.test_association_covariate`, to separately test for associated features between two coviariates on the same trajectory path.
+- :func:`scFates.tl.test_covariate`, to test for branch differential gene expression between two covariate on the same trajectory path.
+
+.. rubric:: Improvements
+
+- :func:`scFates.tl.fit` can be called for any features.
+- :func:`scFates.tl.test_association` has now spline.df parameter.
+- :func:`scFates.pl.graph` : Segments and nodes are now rasterized in pl.graph for lighter plotting.
+- :func:`scFates.pl.matrix` can now return related dataset.
+- :func:`scFates.pl.slide_cors` : Absolute repulsion score is now shown.
+
+
 Version 0.3.2 :small:`February 12, 2022`
 ---------------------------------------
 

@@ -44,11 +44,11 @@ def test_covariate(
 
     **Test of trend difference**
 
-    The full model:
+    Inspired from a preprint [Ji22]_, this test compares the following full model:
 
     :math:`g_{i} \\sim\ s(pseudotime)+s(pseudotime):Covariate+Covariate`
 
-    is compared to the following reduced one:
+    to the following reduced one:
 
     :math:`g_{i} \\sim\ s(pseudotime)+s(pseudotime)+Covariate`
 
@@ -94,6 +94,8 @@ def test_covariate(
 
     teststr = "trend" if trend_test else "amplitude"
     logg.info(f"testing covariates ({teststr})", reset=True)
+
+    adata = adata.copy() if copy else adata
 
     if adata.obs[group_key].dtype.name != "category":
         adata.obs[group_key] = adata.obs[group_key].astype("category")
@@ -198,9 +200,42 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
             return (pval, lfc)
 
 
-def test_association_covariate(adata: AnnData, group_key, **kwargs):
+def test_association_covariate(
+    adata: AnnData, group_key: str, copy: bool = False, **kwargs
+):
+    """\
+    Separately test for associated features between two coviariates on the same trajectory path.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    group_key
+        key in `.obs` for the covariates to test.
+    copy
+        Return a copy instead of writing to adata.
+    **kwargs
+        Arguments passed to :func:`scFates.tl.test_association`
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+
+        `.var['cov_pval' or 'covtrend_pval']`
+            pvalues extracted from tests.
+        `.var['cov_fdr' or 'covtrend_fdr']`
+            FDR extracted from the pvalues.
+        `.var['cov_signi' or 'covtrend_signi']`
+            is the feature significant.
+        `.var['A->B_lfc']`
+            logfoldchange in expression between covariate A and B.
+
+    """
 
     logg.info("test association covariates", reset=True)
+
+    adata = adata.copy() if copy else adata
 
     if adata.obs[group_key].dtype.name != "category":
         adata.obs[group_key] = adata.obs[group_key].astype("category")
