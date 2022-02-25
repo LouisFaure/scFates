@@ -9,8 +9,8 @@ Version 0.4.0 :small:`February 25, 2022`
 
 .. rubric:: Additions
 
-- :func:`scFates.tl.test_association_covariate`, to separately test for associated features between two coviariates on the same trajectory path.
-- :func:`scFates.tl.test_covariate`, to test for branch differential gene expression between two covariate on the same trajectory path.
+- :func:`scFates.tl.test_association_covariate`, to separately test for associated features for each covariates on the same trajectory path.
+- :func:`scFates.tl.test_covariate`, to test for branch differential gene expression between two covariates on the same trajectory path.
 
 .. rubric:: Improvements
 

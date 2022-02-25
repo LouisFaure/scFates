@@ -28,7 +28,7 @@ def test_covariate(
     copy: bool = False,
 ):
     """\
-    Test for branch differential gene expression between two covariate on the same trajectory path.
+    Test for branch differential gene expression between covariates on the same trajectory path.
 
     **Test of amplitude difference**
 
@@ -204,7 +204,7 @@ def test_association_covariate(
     adata: AnnData, group_key: str, copy: bool = False, **kwargs
 ):
     """\
-    Separately test for associated features between two coviariates on the same trajectory path.
+    Separately test for associated features for each covariates on the same trajectory path.
 
     Parameters
     ----------
