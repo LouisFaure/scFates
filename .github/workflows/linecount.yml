@@ -1,0 +1,31 @@
+on: [push]
+name: Count Lines
+
+jobs:
+  linecount_job:
+    runs-on: ubuntu-latest
+    name: Test Run
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Make Code Badge
+        uses: shadowmoose/GHA-LoC-Badge@1.0.0
+        id: badge
+        with:
+          debug: true
+          directory: ./
+          badge: ./output/badge.svg
+          patterns: 'scFates/**/*.py'
+
+      - name: Print the output
+        run: |
+          echo "Scanned: ${{ steps.badge.outputs.counted_files }}";
+          echo "Line Count: ${{ steps.badge.outputs.total_lines }}";
+
+      - name: Deploy to linecount branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_dir: ./output
+          publish_branch: linecount
+          github_token: ${{ secrets.GITHUB_TOKEN }}
