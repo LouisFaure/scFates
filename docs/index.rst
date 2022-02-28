@@ -4,8 +4,8 @@
     :target: https://pypi.python.org/pypi/scFates/
 .. |Doc Badge| image:: https://readthedocs.org/projects/scfates/badge/?version=latest
     :target: https://scfates.readthedocs.io/en/latest/
-.. |Build Badge| image:: https://github.com/LouisFaure/scFates/actions/workflows/build.yml/badge.svg
-    :target: https://github.com/LouisFaure/scFates/actions/workflows/build.yml
+.. |Build Badge| image:: https://github.com/LouisFaure/scFates/actions/workflows/load_test_upload.yml/badge.svg
+    :target: https://github.com/LouisFaure/scFates/actions/workflows/load_test_upload.yml
 .. |codecov Badge| image:: https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/LouisFaure/scFates
 .. |License| image:: https://img.shields.io/github/license/LouisFaure/scFates

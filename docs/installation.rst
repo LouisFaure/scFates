@@ -15,10 +15,13 @@ or the latest development version can be installed from GitHub_ using::
     pip install git+https://github.com/LouisFaure/scFates
 
 
-Dependencies
-------------
+With all dependencies
+---------------------
 
-scFates installed via pip gives a base package that can perform tree fitting on adata objects, here is a list of dependencies needed for each related functions:
+- :func:`scFates.pp.find_overdispersed`, :func:`scFates.tl.test_association`, :func:`scFates.tl.fit`, :func:`scFates.tl.test_fork`, :func:`scFates.tl.activation`: Require R package mgcv interfaced via python package rpy2::
+
+    conda create -n scFates -c conda-forge -c r python=3.8 r-mgcv rpy2 -y
+    pip install scFates
 
 - :func:`scFates.tl.tree`: ElPiGraph can be also used for learning a principal graph from the data (`method="epg"`). Elpigraph can be installed from its github repository with the following command::
 
@@ -27,12 +30,6 @@ scFates installed via pip gives a base package that can perform tree fitting on 
 - :func:`scFates.tl.cellrank_to_tree`: Requires cellrank to be installed in order to function::
 
     pip install cellrank
-
-- :func:`scFates.pp.find_overdispersed`, :func:`scFates.tl.test_association`, :func:`scFates.tl.fit`, :func:`scFates.tl.test_fork`, :func:`scFates.tl.activation`: Require R package mgcv interfaced via python package rpy2::
-
-    pip install rpy2
-
-    install.packages('mgcv') # run in R session
 
 
 GPU dependencies (optional)
