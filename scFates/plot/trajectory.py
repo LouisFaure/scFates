@@ -416,6 +416,7 @@ def trajectory(
         linewidths=7.5 * scale_path,
         zorder=100,
         path_effects=[path_effects.Stroke(capstyle="round")],
+        rasterized=True,
     )
     ax.add_collection(lc)
 
@@ -443,6 +444,7 @@ def trajectory(
                 headlength=10 * scale_path,
                 units="dots",
                 zorder=101,
+                rasterized=True,
             )
             c_arrow = vals[
                 (
@@ -462,6 +464,7 @@ def trajectory(
                 units="dots",
                 color=sm.to_rgba(c_arrow),
                 zorder=102,
+                rasterized=True,
             )
 
     lc = matplotlib.collections.LineCollection(
@@ -470,6 +473,7 @@ def trajectory(
         linewidths=5 * scale_path,
         zorder=104,
         path_effects=[path_effects.Stroke(capstyle="round")],
+        rasterized=True,
     )
 
     ax.scatter(
@@ -478,6 +482,7 @@ def trajectory(
         zorder=103,
         c="k",
         s=200 * scale_path,
+        rasterized=True,
     )
     ax.add_collection(lc)
 
@@ -487,6 +492,7 @@ def trajectory(
         zorder=105,
         c=color_mils,
         s=140 * scale_path,
+        rasterized=True,
     )
 
     if show == False:
