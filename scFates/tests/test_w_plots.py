@@ -133,7 +133,7 @@ def test_pipeline():
 
     scf.tl.cluster(adata, knn=3)
 
-    scf.pl.trends(adata, features=adata.var_names, save_genes="genes.tsv")
+    g = scf.pl.trends(adata, features=adata.var_names, return_genes=True)
     scf.pl.trends(
         adata,
         features=adata.var_names,
