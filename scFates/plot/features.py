@@ -65,7 +65,7 @@ def trends(
     show: Optional[bool] = None,
     output_mean: bool = False,
     save: Union[str, bool, None] = None,
-    save_genes: Optional[bool] = None,
+    return_genes: Optional[bool] = None,
     **kwargs,
 ):
 
@@ -138,8 +138,8 @@ def trends(
         show the plot.
     save
         save the plot.
-    save_genes
-        save list of genes following the order displayed on the heatmap.
+    return_genes
+        return list of genes following the order displayed on the heatmap.
     **kwargs
         if `plot_emb=True`, arguments passed to :func:`scFates.pl.trajectory` or :func:`scFates.pl.dendrogram` if `basis="dendro"`
 
@@ -553,10 +553,8 @@ def trends(
                 **kwargs,
             )
 
-    if save_genes is not None:
-        with open(save_genes, "w") as f:
-            for item in fitted_sorted.index:
-                f.write("%s\n" % item)
+    if return_genes is not None:
+        return fitted_sorted.index
 
     if show == False:
         return axs if plot_heatmap else axemb

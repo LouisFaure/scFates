@@ -130,6 +130,9 @@ def matrix(
         else figsize,
     )
 
+    if (len(order) + 1 * annot_var) == 1:
+        axs = [axs]
+
     pos = np.arange(len(order), 0, -1)
     caxs = []
     if return_data:
