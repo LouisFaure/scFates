@@ -36,7 +36,7 @@ def fork_stats(
 
     """
 
-    key = f"{root_milestone}->{milestones[0]}<>{milestones[1]}"
+    key = root_milestone + "->" + "<>".join(milestones)
     df = adata.uns[key]["fork"]
 
     if module is not None:
