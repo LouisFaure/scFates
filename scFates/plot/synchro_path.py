@@ -10,9 +10,10 @@ from typing import Union, Optional
 
 from scanpy.plotting._utils import savefig_or_show
 
-from scFates.tools.utils import importeR
+from ..tools.utils import importeR
 
 Rpy2, R, rstats, rmgcv, Formula = importeR("Plotting syncho path fit")
+check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 
 def synchro_path(
@@ -58,6 +59,12 @@ def synchro_path(
     If `show==False` a matrix of :class:`~matplotlib.axes.Axes`
 
     """
+
+    if any(check):
+        idx = np.argwhere(
+            [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
+        ).min()
+        raise Exception(np.array([Rpy2, R, rstats, rmgcv, Formula])[idx])
 
     plt.rcParams["axes.grid"] = False
 
