@@ -15,8 +15,8 @@ def cellrank_to_tree(
     Nodes: int,
     method: Literal["ppt", "epg"] = "ppt",
     ppt_lambda=20,
-    auto_root=True,
-    min_val=False,
+    auto_root: bool = False,
+    root_params: dict = {},
     reassign_pseudotime=True,
     copy=False,
     **kwargs
@@ -127,7 +127,7 @@ def cellrank_to_tree(
 
     if auto_root:
         logg.info("\nauto selecting a tip as a root using " + time + ".\n")
-        root(adata, time, tips_only=True, min_val=rev_root)
+        root(adata, time, **root_params)
         pseudotime(adata)
 
     newt = ""
@@ -135,9 +135,9 @@ def cellrank_to_tree(
         adata.obs["t"] = adata.obs[time]
 
         adata.uns["pseudotime_list"]["0"]["t"] = adata.obs[time]
-        for n in range(adata.uns["graph"]["R"].shape[1]):
+        for n in range(adata.obsm["X_R"].shape[1]):
             adata.uns["graph"]["pp_info"].loc[n, "time"] = np.average(
-                adata.obs.t, weights=adata.uns["graph"]["R"][:, n]
+                adata.obs.t, weights=adata.obsm["X_R"][:, n]
             )
 
         for n in adata.uns["graph"]["pp_seg"].index:
