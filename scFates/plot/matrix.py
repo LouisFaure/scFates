@@ -1,4 +1,5 @@
 from typing import Union, Sequence, Optional
+from typing_extensions import Literal
 import numpy as np
 import pandas as pd
 import igraph
@@ -12,12 +13,15 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scanpy.plotting._utils import savefig_or_show
 from anndata import AnnData
 
+from .. import logging as logg
+
 
 def matrix(
     adata: AnnData,
     features: Sequence,
     nbins: int = 5,
     layer: str = "fitted",
+    norm: Literal["max", "minmax", "none"] = "max",
     annot_var: bool = False,
     annot_top: bool = True,
     link_seg: bool = True,
@@ -27,7 +31,7 @@ def matrix(
     return_data: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
-    **kwargs
+    **kwargs,
 ):
     """\
     Plot a set of features as per-segment matrix plots of binned pseudotimes.
@@ -42,6 +46,8 @@ def matrix(
         Number of pseudotime bins per segment.
     layer
         Layer to use for the expression to display.
+    norm
+        How to normalize the expression.
     annot_var
         Annotate overall tree amplitude of expression of the marker (from .var['A']).
     annot_top
@@ -75,7 +81,12 @@ def matrix(
         layer = None
     X = get_X(adata, adata.obs_names, adata.var_names, layer=layer)
 
-    adata.X = X / X.max(axis=0).ravel()
+    if norm == "max":
+        adata.X = X / X.max(axis=0).ravel()
+    elif norm == "minmax":
+        adata.X = (X - X.min(axis=0).ravel()) / (
+            X.max(axis=0).ravel() - X.min(axis=0).ravel()
+        )
 
     graph = adata.uns["graph"]
 
@@ -140,6 +151,16 @@ def matrix(
     for i, s in enumerate(order):
         adata_sub = adata[adata.obs.seg == adata.obs.seg.cat.categories[s]].copy()
         adata_sub.obs["split"] = pd.cut(adata_sub.obs.t, bins=nbins)
+
+        # remove unsed categories
+        counts = adata_sub.obs.split.value_counts()
+        counts = np.array(counts[counts == 0].index.values)
+        empty = np.argwhere(
+            np.isin(np.array(adata_sub.obs.split.cat.categories), counts)
+        )
+        if len(empty) > 0:
+            logg.warn(f"removed {len(empty)} empty interval")
+            adata_sub.obs.split = adata_sub.obs.split.cat.remove_unused_categories()
 
         ss = int(adata.obs.seg.cat.categories[s])
         sel = (
