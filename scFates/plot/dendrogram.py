@@ -64,11 +64,19 @@ def dendrogram(
         settings.verbosity = verb
 
     if color_milestones:
-        ax = sc.pl.embedding(adata, basis="dendro", show=False, **kwargs)
+        if "sort_order" not in kwargs:
+            order = adata.obs.t.sort_values().index
+        else:
+            if kwargs["sort_order"]:
+                order = adata.obs.t.sort_values().index
+            else:
+                order = adata.obs_names
+
+        ax = sc.pl.embedding(adata[order], basis="dendro", show=False, **kwargs)
         ax.scatter(
-            adata.obsm["X_dendro"][:, 0],
-            adata.obsm["X_dendro"][:, 1],
-            c=gen_milestones_gradients(adata)[adata.obs_names].values,
+            adata[order].obsm["X_dendro"][:, 0],
+            adata[order].obsm["X_dendro"][:, 1],
+            c=gen_milestones_gradients(adata)[order].values,
             s=120000 / adata.shape[0] if "s" not in kwargs else kwargs["s"],
             marker=".",
         )
