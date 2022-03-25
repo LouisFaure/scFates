@@ -12,6 +12,7 @@ import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scanpy.plotting._utils import savefig_or_show
 from anndata import AnnData
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 from .. import logging as logg
 
@@ -27,6 +28,8 @@ def matrix(
     link_seg: bool = True,
     feature_style: str = "normal",
     feature_spacing: float = 1,
+    colorbar: bool = True,
+    colorbar_title: Optional[str] = None,
     figsize: Union[None, tuple] = None,
     return_data: bool = False,
     show: Optional[bool] = None,
@@ -58,6 +61,10 @@ def matrix(
         Font style of the feature labels.
     feature_spacing
         When figsize is None, controls the the height of each rows.
+    colorbar
+        Show the colorbar.
+    colorbar_title
+        Set a custom colorbar title.
     figsize
         Custom figure size.
     show
@@ -79,14 +86,16 @@ def matrix(
     if (layer == "fitted") & ("fitted" not in adata.layers):
         print("Features not fitted, using X expression matrix instead")
         layer = None
-    X = get_X(adata, adata.obs_names, adata.var_names, layer=layer)
 
+    X = get_X(adata, adata.obs_names, adata.var_names, layer=layer)
     if norm == "max":
         adata.X = X / X.max(axis=0).ravel()
     elif norm == "minmax":
         adata.X = (X - X.min(axis=0).ravel()) / (
             X.max(axis=0).ravel() - X.min(axis=0).ravel()
         )
+
+    maxval = max(X.max(axis=0)) if norm == "none" else 1
 
     graph = adata.uns["graph"]
 
@@ -179,7 +188,9 @@ def matrix(
         if "use_raw" not in kwargs:
             kwargs["use_raw"] = False
 
-        M = sc.pl.MatrixPlot(adata_sub, features, "split", vmin=0, vmax=1, **kwargs)
+        M = sc.pl.MatrixPlot(
+            adata_sub, features, "split", vmin=0, vmax=maxval, **kwargs
+        )
         M.swap_axes()
         M._mainplot(axs[i])
         axs[i].set_xticklabels("")
@@ -284,6 +295,38 @@ def matrix(
                     cax.annotate("", xy=[1, 1], xytext=[2.4, 1], **kw)
                 else:
                     cax.annotate("", xy=[1, 1], xytext=[1.2, 1], **kwclose)
+
+    if colorbar:
+        ax = axs[i + 1 * annot_var]
+        position = inset_axes(
+            ax,
+            width=1,
+            height=0.15,
+            bbox_to_anchor=(1.04, 0),
+            bbox_transform=ax.transAxes,
+            loc=3,
+            borderpad=2,
+        )
+
+        cmap = plt.rcParams["image.cmap"] if "cmap" not in kwargs else kwargs["cmap"]
+
+        mappable = cm.ScalarMappable(cmap=cm.get_cmap(cmap))
+        cbar = fig.colorbar(mappable, cax=position, orientation="horizontal", aspect=50)
+        cbar.set_ticks([0, 1])
+        cbar.set_ticklabels(
+            [
+                "min" if norm == "minmax" else "0",
+                "%.2f" % maxval if norm == "none" else "max",
+            ]
+        )
+        title = "expression"
+        if norm == "minmax":
+            title = "minmax\nnormalized\nexpression"
+        elif norm == "max":
+            title = "max\nnormalized\nexpression"
+        elif colorbar_title is not None:
+            title = colorbar_title
+        cbar.ax.set_title(title, loc="center")
 
     savefig_or_show("matrix", show=show, save=save)
 
