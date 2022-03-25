@@ -4,6 +4,17 @@
 Release Notes
 =============
 
+Version 0.4.1 :small:`March 25, 2022`
+---------------------------------------
+
+Minor release focused mainly in plotting improvements:
+
+- Better handling of cases between plot module trends and feature trends for :func:`scFates.pl.single_trend`.
+- Added colorbar and normalization parameter to :func:`scFates.pl.matrix`.
+- Ordering cells according to pseudotime in :func:`scFates.pl.dendrogram` when coloring by milestone gradients.
+- Rasterize segments in :func:`scFates.pl.trajectory`.
+- Fixed auto root selection for :func:`scFates.tl.cellrank_to_tree`
+
 Version 0.4.0 :small:`February 25, 2022`
 ---------------------------------------
 
