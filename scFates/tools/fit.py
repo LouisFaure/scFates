@@ -171,7 +171,7 @@ def fit(
         stat = ProgressParallel(
             n_jobs=n_jobs,
             total=len(data),
-            use_tqdm=n_map == 1,
+            use_tqdm=(n_map == 1) & settings.verbosity > 1,
             file=sys.stdout,
             desc="    single mapping ",
         )(delayed(gt_fun)(data[d]) for d in range(len(data)))

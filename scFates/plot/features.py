@@ -17,7 +17,9 @@ from scanpy.plotting._utils import savefig_or_show
 import scanpy as sc
 
 from .. import logging as logg
-from ..tools.utils import getpath, importeR
+from ..tools.utils import getpath, importeR, get_X
+from ..tools import subset_tree
+from ..tools.fit import fit
 from .trajectory import trajectory
 from .dendrogram import dendrogram
 
@@ -28,6 +30,7 @@ from ..get import modules as get_modules
 from .trajectory import remove_info
 from .utils import gen_milestones_gradients
 from .. import logging as logg
+from .. import settings
 
 
 def trends(
@@ -566,7 +569,7 @@ def trends(
 
 def single_trend(
     adata: AnnData,
-    feature: Union[str, None] = None,
+    feature: Optional[str] = None,
     root_milestone: Union[None, str] = None,
     milestones: Union[None, str] = None,
     module: Union[None, Literal["early", "late"]] = None,
@@ -577,11 +580,11 @@ def single_trend(
     alpha_expr: float = 0.3,
     size_expr: float = 2,
     fitted_linewidth: float = 2,
-    layer: Union[str, None] = None,
+    layer: Optional[str] = None,
     cmap_seg: str = "RdBu_r",
     cmap_cells: str = "RdBu_r",
     plot_emb: bool = True,
-    wspace: Union[None, float] = None,
+    wspace: Optional[float] = None,
     figsize: tuple = (8, 4),
     ax_trend=None,
     ax_emb=None,
@@ -645,66 +648,80 @@ def single_trend(
     If `show==False` a tuple of two :class:`~matplotlib.axes.Axes`
 
     """
-    if root_milestone is None:
+    if feature is not None:
+        adata = adata[:, feature].copy()
+        if root_milestone is not None:
+            reset = False
+            if settings.verbosity > 2:
+                temp_verb = settings.verbosity
+                settings.verbosity = 1
+                reset = True
+            if len(adata.uns["graph"]["tips"]) > 3:
+                adata = subset_tree(adata, root_milestone, milestones, copy=True)
+            fit(adata, [feature])
+            if reset:
+                settings.verbosity = temp_verb
         color_key = "seg_colors"
         if color_key not in adata.uns:
             from . import palette_tools
 
             palette_tools._set_default_colors_for_categorical_obs(adata, "seg")
 
-        if layer is None:
-            if sparse.issparse(adata.X):
-                Xfeature = adata[:, feature].X.A.T.flatten()
-            else:
-                Xfeature = adata[:, feature].X.T.flatten()
-        else:
-            if sparse.issparse(adata.layers[layer]):
-                Xfeature = adata[:, feature].layers[layer].A.T.flatten()
-            else:
-                Xfeature = adata[:, feature].layers[layer].T.flatten()
+        Xfeature = np.array(get_X(adata, adata.obs_names, feature, layer)).ravel()
 
         df = pd.DataFrame(
             {
                 "t": adata.obs.t,
-                "fitted": adata[:, feature].layers["fitted"].flatten(),
+                "fitted": np.array(
+                    get_X(adata, adata.obs_names, feature, "fitted")
+                ).ravel(),
                 "expression": Xfeature,
                 "seg": adata.obs.seg,
             }
         ).sort_values("t")
-    else:
-        if plot_emb:
-            logg.warn("trajectory plotting is not yet implemented for module plot!")
-            plot_emb = False
-        graph = adata.uns["graph"]
-        miles_cat = adata.obs.milestones.cat.categories
-        mil_col = np.array(adata.uns["milestones_colors"])
-
-        X_modules = get_modules(adata, root_milestone, milestones, layer)
-        X_early, X_late = X_modules.iloc[:, :2], X_modules.iloc[:, 2:]
-
-        X = pd.concat([X_early, X_late], axis=1)
-        X["t"] = adata.obs.loc[X.index, "t"].values
-
-        def gamfit(f):
-            m = rmgcv.gam(
-                Formula(f),
-                data=X,
-                gamma=1.5,
+    elif feature is None:
+        if any([p is None for p in [root_milestone, milestones, module, branch]]):
+            raise Exception(
+                "the following parameters are required used to plot gene modules:\n"
+                + "root_milestone, milestones, module, branch."
             )
-            return pd.Series(rmgcv.predict_gam(m), index=X.index)
 
-        predictions = gamfit("{}_{}~s(t,bs='ts')".format(module, branch))
+        mod = get_modules(adata, root_milestone, milestones, layer, module)[
+            module + "_" + branch
+        ]
+        adata = sc.AnnData(
+            mod.to_frame(), obs=adata.obs, obsm=adata.obsm, uns=adata.uns
+        )
+        feature = module + " " + branch
+        adata.var_names = [feature]
+        module = None
+        branch = None
+        return single_trend(
+            adata,
+            feature,
+            root_milestone,
+            milestones,
+            module,
+            branch,
+            basis,
+            ylab,
+            color_exp,
+            alpha_expr,
+            size_expr,
+            fitted_linewidth,
+            layer,
+            cmap_seg,
+            cmap_cells,
+            plot_emb,
+            wspace,
+            figsize,
+            ax_trend,
+            ax_emb,
+            show,
+            save,
+            **kwargs,
+        )
 
-        df = pd.DataFrame(
-            {
-                "t": adata[X.index].obs.t,
-                "fitted": predictions.values,
-                "expression": X["_".join([module, branch])].values,
-                "seg": adata[X.index].obs.seg,
-            }
-        ).sort_values("t")
-
-        color_exp = mil_col[miles_cat == branch][0]
     ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
     if (ax_emb is None) & (ax_trend is None):
         if plot_emb:
