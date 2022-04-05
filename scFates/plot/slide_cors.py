@@ -244,9 +244,10 @@ def slide_cors(
                 rasterized=True,
                 s=point_size,
             )
+        tokeep = ~corA.iloc[:, i].isna()
         rep = (
-            np.corrcoef(groupsA, corA.iloc[:, i])[0][1]
-            + np.corrcoef(groupsB, corB.iloc[:, i])[0][1]
+            np.corrcoef(groupsA[tokeep], corA.loc[tokeep].iloc[:, i])[0][1]
+            + np.corrcoef(groupsB[tokeep], corB.loc[tokeep].iloc[:, i])[0][1]
         ) / 2
         ax_scat.annotate(
             str(round(np.abs(rep), 2)),
