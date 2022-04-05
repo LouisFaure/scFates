@@ -28,6 +28,7 @@ def matrix(
     link_seg: bool = True,
     feature_style: str = "normal",
     feature_spacing: float = 1,
+    cmap: Optional[str] = None,
     colorbar: bool = True,
     colorbar_title: Optional[str] = None,
     figsize: Union[None, tuple] = None,
@@ -61,6 +62,8 @@ def matrix(
         Font style of the feature labels.
     feature_spacing
         When figsize is None, controls the the height of each rows.
+    cmap
+        colormap to use, by default is plt.rcParams["image.cmap"].
     colorbar
         Show the colorbar.
     colorbar_title
@@ -82,6 +85,8 @@ def matrix(
 
     """
     adata = adata[:, features].copy()
+
+    cmap = plt.rcParams["image.cmap"] if cmap is None else cmap
 
     if (layer == "fitted") & ("fitted" not in adata.layers):
         print("Features not fitted, using X expression matrix instead")
@@ -189,7 +194,7 @@ def matrix(
             kwargs["use_raw"] = False
 
         M = sc.pl.MatrixPlot(
-            adata_sub, features, "split", vmin=0, vmax=maxval, **kwargs
+            adata_sub, features, "split", vmin=0, vmax=maxval, cmap=cmap, **kwargs
         )
         M.swap_axes()
         M._mainplot(axs[i])
@@ -307,8 +312,6 @@ def matrix(
             loc=3,
             borderpad=2,
         )
-
-        cmap = plt.rcParams["image.cmap"] if "cmap" not in kwargs else kwargs["cmap"]
 
         mappable = cm.ScalarMappable(cmap=cm.get_cmap(cmap))
         cbar = fig.colorbar(mappable, cax=position, orientation="horizontal", aspect=50)
