@@ -84,6 +84,7 @@ def matrix(
     If `show==False` an array of :class:`~matplotlib.axes.Axes`
 
     """
+    features = features[::-1]
     adata = adata[:, features].copy()
 
     cmap = plt.rcParams["image.cmap"] if cmap is None else cmap
@@ -148,8 +149,7 @@ def matrix(
         sharey=True,
         figsize=(
             len(order) * 0.85 + 0.85 + annot_var * 1,
-            (len(features) + 0.8 * annot_top + 1 + 0.8 * annot_var)
-            / (5 - feature_spacing),
+            (len(features)) / (5 - feature_spacing) + 0.4 * annot_top,
         )
         if figsize is None
         else figsize,
