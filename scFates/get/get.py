@@ -76,7 +76,7 @@ def slide_cors(
 
     """
 
-    key = f"{root_milestone}->{milestones[0]}<>{milestones[1]}"
+    key = root_milestone + "->" + "<>".join(milestones)
 
     dct = dict(zip(milestones, ["genesetA", "genesetB"]))
     geneset_branch = dct[geneset_branch]

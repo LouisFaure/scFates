@@ -176,19 +176,20 @@ def matrix(
             logg.warn(f"removed {len(empty)} empty interval")
             adata_sub.obs.split = adata_sub.obs.split.cat.remove_unused_categories()
 
-        ss = int(adata.obs.seg.cat.categories[s])
-        sel = (
-            adata.obs.milestones.cat.categories
-            == vs2mils[graph["pp_seg"].loc[ss]["from"]]
-        )
-        start = np.array(adata.uns["milestones_colors"])[sel][0]
-        sel = (
-            adata.obs.milestones.cat.categories
-            == vs2mils[graph["pp_seg"].loc[ss]["to"]]
-        )
-        end = np.array(adata.uns["milestones_colors"])[sel][0]
+        if annot_top:
+            ss = int(adata.obs.seg.cat.categories[s])
+            sel = (
+                adata.obs.milestones.cat.categories
+                == vs2mils[graph["pp_seg"].loc[ss]["from"]]
+            )
+            start = np.array(adata.uns["milestones_colors"])[sel][0]
+            sel = (
+                adata.obs.milestones.cat.categories
+                == vs2mils[graph["pp_seg"].loc[ss]["to"]]
+            )
+            end = np.array(adata.uns["milestones_colors"])[sel][0]
 
-        my_cm = LinearSegmentedColormap.from_list("aspect", [start, end])
+            my_cm = LinearSegmentedColormap.from_list("aspect", [start, end])
 
         if "use_raw" not in kwargs:
             kwargs["use_raw"] = False
@@ -323,12 +324,12 @@ def matrix(
             ]
         )
         title = "expression"
-        if norm == "minmax":
+        if colorbar_title is not None:
+            title = colorbar_title
+        elif norm == "minmax":
             title = "minmax\nnormalized\nexpression"
         elif norm == "max":
             title = "max\nnormalized\nexpression"
-        elif colorbar_title is not None:
-            title = colorbar_title
         cbar.ax.set_title(title, loc="center")
 
     savefig_or_show("matrix", show=show, save=save)
