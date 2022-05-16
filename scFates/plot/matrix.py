@@ -84,7 +84,6 @@ def matrix(
     If `show==False` an array of :class:`~matplotlib.axes.Axes`
 
     """
-    features = features[::-1]
     adata = adata[:, features].copy()
 
     cmap = plt.rcParams["image.cmap"] if cmap is None else cmap

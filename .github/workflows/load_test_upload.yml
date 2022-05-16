@@ -43,7 +43,7 @@ jobs:
         sudo apt-get clean && sudo apt-get update
         sudo apt-get install -y r-base r-cran-mgcv
         pip install rpy2
-        pip install wheel coverage cmake pytest mock git+https://github.com/j-bac/elpigraph-python.git
+        pip install wheel coverage cmake pytest mock elpigraph-python
         pip install .
     - name: Test with pytest
       run: |
