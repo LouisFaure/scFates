@@ -264,12 +264,12 @@ def test_pipeline():
 
     assert np.allclose(
         F_PC1_epgc_cpu,
-        [7.58077519, -23.63881596, -13.71322111, -5.53347147, -13.44127461],
+        [9.27506488, -23.41654899, -14.26729458, -5.30612656, -20.13940938],
     )
     # assert np.allclose(F_PC1_epgt_cpu, F_PC1_epgt_gpu)
     assert np.allclose(
         F_PC1_epgt_cpu,
-        [-2.52311629, -22.52998568, 9.00639977, -14.63753648, -15.91888575],
+        [-14.34719592, 9.01751279, -5.89520198, -9.81069308, -23.43028584],
     )
     # assert np.allclose(F_PC1_ppt_cpu, F_PC1_ppt_gpu, rtol=1e-2)
     assert np.allclose(
