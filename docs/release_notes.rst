@@ -4,6 +4,16 @@
 Release Notes
 =============
 
+
+Version 0.4.2 :small:`May 16, 2022`
+---------------------------------------
+
+Minor release:
+
+- Updated to latest elpigraph version available on pypi, induced slightly changes in principal graph results.
+- Added cmap parameter to :func:`scFates.pl.matrix`, more responsive plotting.
+- Fix presence of NAs as repulsion scores in :func:`scFates.pl.slide_cors`.
+
 Version 0.4.1 :small:`March 25, 2022`
 ---------------------------------------
 
