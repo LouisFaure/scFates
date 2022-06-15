@@ -85,6 +85,12 @@ def modules(
         adata_c = subset_tree(adata, root_milestone, milestones, copy=True)
         adata_c.obsm["X_early"] = X_early.loc[adata_c.obs_names].values
         adata_c.obsm["X_late"] = X_late.loc[adata_c.obs_names].values
+        adata_c.uns["seg_colors"] = [
+            np.array(adata_c.uns["milestones_colors"])[
+                pd.Series(adata_c.uns["graph"]["milestones"]) == t
+            ][0]
+            for t in adata_c.uns["graph"]["pp_seg"].to
+        ]
     else:
         adata_c = AnnData(
             X_early.values,
