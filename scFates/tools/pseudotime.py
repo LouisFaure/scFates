@@ -66,13 +66,19 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
 
     logg.info("projecting cells onto the principal graph", reset=True)
 
+    from sklearn.metrics import pairwise_distances
+
+    P = pairwise_distances(
+        adata.uns["graph"]["F"].T, metric=adata.uns["graph"]["metrics"]
+    )
+
     if n_map == 1:
-        df_l = [map_cells(graph, R=adata.obsm["X_R"], multi=False)]
+        df_l = [map_cells(graph, R=adata.obsm["X_R"], P=P, multi=False)]
     else:
         df_l = ProgressParallel(
             n_jobs=n_jobs, total=n_map, file=sys.stdout, desc="    mappings"
         )(
-            delayed(map_cells)(graph=graph, R=adata.obsm["X_R"], multi=True)
+            delayed(map_cells)(graph=graph, R=adata.obsm["X_R"], P=P, multi=True)
             for m in range(n_map)
         )
 
@@ -166,12 +172,13 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     return adata if copy else None
 
 
-def map_cells(graph, R, multi=False):
+def map_cells(graph, R, P, multi=False):
     import igraph
 
     g = igraph.Graph.Adjacency((graph["B"] > 0).tolist(), mode="undirected")
     # Add edge weights and node labels.
-    g.es["weight"] = graph["B"][graph["B"].nonzero()]
+    g.es["weight"] = np.array(P[graph["B"].nonzero()].ravel()).tolist()[0]
+
     if multi:
         rrm = (
             np.apply_along_axis(
@@ -187,16 +194,15 @@ def map_cells(graph, R, multi=False):
         vcells = np.argwhere(rrm == v)
 
         if vcells.shape[0] > 0:
-            nv = np.array(g.neighborhood(v, order=1))
-            nvd = np.array(g.shortest_paths(v, nv)[0])
+            nv = np.array(g.neighborhood(v, order=1))[1:]
+            nvd = g.shortest_paths(v, nv, weights=g.es["weight"])
 
-            spi = np.apply_along_axis(np.argmax, axis=1, arr=R[vcells, nv[1:]])
             ndf = pd.DataFrame(
                 {
                     "cell": vcells.flatten(),
                     "v0": v,
-                    "v1": nv[1:][spi],
-                    "d": nvd[1:][spi],
+                    "v1": np.argmin(nvd),
+                    "d": np.min(nvd),
                 }
             )
 
@@ -205,18 +211,14 @@ def map_cells(graph, R, multi=False):
                 list(map(lambda x: R[vcells[x], ndf.v1[x]], range(len(vcells))))
             ).flatten()
 
-            alpha = np.random.uniform(size=len(vcells))
-            f = np.abs(
-                (np.sqrt(alpha * p1 ** 2 + (1 - alpha) * p0 ** 2) - p0) / (p1 - p0)
-            )
-            ndf["t"] = (
-                graph["pp_info"].loc[ndf.v0, "time"].values
-                + (
-                    graph["pp_info"].loc[ndf.v1, "time"].values
-                    - graph["pp_info"].loc[ndf.v0, "time"].values
+            ndf["t"] = [
+                np.average(
+                    graph["pp_info"].time[ndf.iloc[i, [1, 2]].astype(int)],
+                    weights=[p0[i], p1[i]],
                 )
-                * alpha
-            )
+                for i in range(ndf.shape[0])
+            ]
+
             ndf["seg"] = 0
             isinfork = (graph["pp_info"].loc[ndf.v0, "PP"].isin(graph["forks"])).values
             ndf.loc[isinfork, "seg"] = (
