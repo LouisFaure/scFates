@@ -396,8 +396,8 @@ def module_inclusion(
     milestones,
     w: int = 300,
     step: int = 30,
-    pseudotime_offset: Union["all", float] = "all",
-    module: Literal["all", "early"] = "all",
+    pseudotime_offset: Union["all", float] = 0,
+    module: Literal["all", "early"] = "early",
     n_perm: int = 10,
     n_map: int = 1,
     map_cutoff: float = 0.8,
@@ -699,6 +699,9 @@ def module_inclusion(
     for m in milestones:
         props = 1 - np.isnan(matSwitch[m]).sum(axis=1) / n_map
         matSwitch[m] = matSwitch[m].loc[props > map_cutoff]
+
+    adata.uns[name]["fork"]["props_incl"] = np.nan
+    adata.uns[name]["fork"].loc[props.index, "props_incl"] = props.values
 
     adata.uns[name]["module_inclusion" + perm_str] = matSwitch
 
