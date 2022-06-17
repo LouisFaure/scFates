@@ -123,7 +123,7 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
             .values
         )
 
-    milestones = pd.Series(index=adata.obs_names)
+    milestones = pd.Series(index=adata.obs_names, dtype=str)
     for seg in graph["pp_seg"].n:
         cell_seg = adata.obs.loc[adata.obs["seg"] == seg, "t"]
         if len(cell_seg) > 0:
