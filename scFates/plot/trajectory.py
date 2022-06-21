@@ -19,6 +19,7 @@ import math
 
 from .utils import is_categorical, get_basis
 from . import palette_tools
+from .milestones import milestones as milestones_plot
 from ..tools.graph_operations import subset_tree
 from .. import settings
 
@@ -171,7 +172,7 @@ def graph(
 
 def trajectory(
     adata: AnnData,
-    basis: Union[None, str],
+    basis: Union[None, str] = None,
     root_milestone: Union[str, None] = None,
     milestones: Union[str, None] = None,
     color_seg: str = "t",
@@ -315,14 +316,11 @@ def trajectory(
             for c in adata_c.obs[color_cells].cat.categories
         ]
 
+    plotter = milestones_plot if color_cells == "milestones" else sc.pl.embedding
     if ax is None:
-        ax = sc.pl.embedding(
-            adata, color=color_cells, basis=basis, show=False, **kwargs
-        )
+        ax = plotter(adata, color=color_cells, basis=basis, show=False, **kwargs)
     else:
-        sc.pl.embedding(
-            adata, color=color_cells, basis=basis, ax=ax, show=False, **kwargs
-        )
+        plotter(adata, color=color_cells, basis=basis, ax=ax, show=False, **kwargs)
 
     anndata_logger.level = prelog
     if show_info == False and color_cells is not None:

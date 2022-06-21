@@ -2,10 +2,11 @@ from typing_extensions import Literal
 import igraph
 import numpy as np
 import pandas as pd
-from typing import Union, Optional
+from typing import Union, Optional, Iterable
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 
 from ..tools.dendrogram import hierarchy_pos
 from .. import logging as logg
@@ -17,8 +18,9 @@ import scanpy as sc
 def milestones(
     adata,
     basis: Union[None, str] = None,
-    annotate: bool = True,
+    annotate: bool = False,
     title: str = "milestones",
+    subset: Optional[Iterable] = None,
     ax=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -35,6 +37,10 @@ def milestones(
         Reduction to use for plotting.
     annotate
         Display milestone labels on the plot.
+    title
+        Plot title to display.
+    subset
+        Subset cells.
     ax
         Add plot to existing ax.
     show
@@ -60,9 +66,18 @@ def milestones(
             order = adata.obs.t.sort_values().index
         else:
             order = adata.obs_names
+    order = order[order.isin(subset)] if subset is not None else order
+    if "color" in kwargs:
+        kwargs.pop("color")
+    # if ax is None:
+    #    ax = sc.pl.embedding(adata[order], basis=basis, alpha=0, show=False, **kwargs)
 
     if ax is None:
-        ax = sc.pl.embedding(adata[order], basis=basis, alpha=0, show=False, **kwargs)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
+    if "edgecolor" not in kwargs:
+        kwargs["edgecolor"] = "none"
     ax.scatter(
         adata[order].obsm[f"X_{basis}"][:, 0],
         adata[order].obsm[f"X_{basis}"][:, 1],
@@ -70,8 +85,13 @@ def milestones(
         s=120000 / adata.shape[0] if "s" not in kwargs else kwargs["s"],
         marker=".",
         rasterized=True,
+        plotnonfinite=True,
+        **kwargs,
     )
 
+    ax.set_yticks([])
+    ax.set_xticks([])
+    ax.autoscale_view()
     if annotate:
         R = adata.obsm["X_R"]
         proj = (np.dot(emb.T, R) / R.sum(axis=0)).T

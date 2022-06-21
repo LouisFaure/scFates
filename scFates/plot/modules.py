@@ -13,6 +13,7 @@ from ..tools.utils import getpath
 from .trajectory import trajectory as plot_trajectory
 from .utils import setup_axes
 from ..tools.graph_operations import subset_tree
+from .milestones import milestones as milestones_plot
 from ..get import modules as get_modules
 from .. import settings
 
@@ -126,7 +127,11 @@ def modules(
             axs, _, _, _ = setup_axes(panels=[0])
             ax_late = axs[0]
 
-    color = "old_milestones" if ((color == "milestones") & (nmil > 4)) else color
+    if (color == "milestones") & ("old_milestones" in adata_c.obs):
+        color = "old_milestones"
+
+    if (color == "seg") & ("old_seg" in adata_c.obs):
+        color = "old_seg"
 
     if (module == "early") | (module == "all"):
         if show_traj:
@@ -143,30 +148,50 @@ def modules(
                 **kwargs,
             )
         else:
-            sc.pl.embedding(
-                adata_c[cells],
-                basis="early",
-                color=color,
-                legend_loc="none",
-                title="",
-                show=False,
-                ax=ax_early,
-                **kwargs,
-            )
+            if color == "old_milestones":
+                milestones_plot(
+                    adata_c,
+                    basis="early",
+                    subset=cells,
+                    title="",
+                    show=False,
+                    ax=ax_early,
+                )
+            else:
+                sc.pl.embedding(
+                    adata_c[cells],
+                    basis="early",
+                    color=color,
+                    legend_loc="none",
+                    title="",
+                    show=False,
+                    ax=ax_early,
+                    **kwargs,
+                )
         ax_early.set_xlabel("early " + milestones[0])
         ax_early.set_ylabel("early " + milestones[1])
 
     if (module == "late") | (module == "all"):
-        sc.pl.embedding(
-            adata_c[cells],
-            basis="late",
-            color=color,
-            legend_loc="none",
-            show=False,
-            title="",
-            ax=ax_late,
-            **kwargs,
-        )
+        if color == "old_milestones":
+            milestones_plot(
+                adata_c,
+                basis="late",
+                subset=cells,
+                title="",
+                show=False,
+                ax=ax_late,
+            )
+        else:
+            sc.pl.embedding(
+                adata_c[cells],
+                basis="late",
+                color=color,
+                legend_loc="none",
+                show=False,
+                title="",
+                ax=ax_late,
+                **kwargs,
+            )
         ax_late.set_xlabel("late " + milestones[0])
         ax_late.set_ylabel("late " + milestones[1])
 

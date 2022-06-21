@@ -207,7 +207,9 @@ def subset_tree(
     else:
         old_dct = None
 
+    adata.obs["old_seg"] = adata.obs.seg.copy()
     if "seg_colors" in adata.uns:
+        adata.uns["old_seg_colors"] = adata.uns["seg_colors"].copy()
         oldseg = adata.obs.seg.cat.categories.copy()
         oldseg_col = np.array(adata.uns["seg_colors"].copy())
     else:
