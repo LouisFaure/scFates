@@ -28,7 +28,7 @@ check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 from ..get import modules as get_modules
 from .trajectory import remove_info
-from .utils import gen_milestones_gradients
+from .utils import gen_milestones_gradients, get_basis
 from .. import logging as logg
 from .. import settings
 
@@ -51,7 +51,7 @@ def trends(
     plot_heatmap: bool = True,
     wspace: Union[None, float] = None,
     show_segs: bool = True,
-    basis: str = "umap",
+    basis: Union[None, str] = None,
     heatmap_space: float = 0.5,
     offset_names: float = 0.15,
     fontsize: int = 9,
@@ -156,6 +156,7 @@ def trends(
 
     if plot_emb:
         adata_temp = adata.copy()
+        basis = get_basis(adata, basis)
 
     graph = adata.uns["graph"]
 

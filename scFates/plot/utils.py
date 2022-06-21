@@ -204,3 +204,19 @@ def gen_milestones_gradients(adata, seg_order=None):
         return pd.Series(list(map(to_hex, cm(pst))), index=pst.index)
 
     return pd.concat(list(map(milestones_prog, seg_order)))
+
+
+def get_basis(adata, basis):
+    if basis is None:
+        if "X_draw_graph_fa" in adata.obsm:
+            return "draw_graph_fa"
+        elif "X_umap" in adata.obsm:
+            return "umap"
+        elif "X_tsne" in adata.obsm:
+            return "tsne"
+        else:
+            raise Exception(
+                "No basis found in adata (tSNE, UMAP or FA2), please specify basis"
+            )
+    else:
+        return basis

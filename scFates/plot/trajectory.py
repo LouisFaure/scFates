@@ -17,7 +17,7 @@ from matplotlib.colors import Normalize, hex2color, rgb2hex
 from numba import njit
 import math
 
-from .utils import is_categorical
+from .utils import is_categorical, get_basis
 from . import palette_tools
 from ..tools.graph_operations import subset_tree
 from .. import settings
@@ -25,7 +25,7 @@ from .. import settings
 
 def graph(
     adata: AnnData,
-    basis: str = "umap",
+    basis: Union[None, str] = None,
     size_nodes: float = None,
     alpha_nodes: float = 1,
     linewidth: float = 2,
@@ -86,6 +86,8 @@ def graph(
         )
 
     graph = adata.uns["graph"]
+
+    basis = get_basis(adata, basis)
 
     emb = adata.obsm[f"X_{basis}"]
 
@@ -169,7 +171,7 @@ def graph(
 
 def trajectory(
     adata: AnnData,
-    basis: str = "umap",
+    basis: Union[None, str],
     root_milestone: Union[str, None] = None,
     milestones: Union[str, None] = None,
     color_seg: str = "t",
@@ -251,6 +253,8 @@ def trajectory(
         settings.verbosity = verb_temp
 
     graph = adata.uns["graph"]
+
+    basis = get_basis(adata, basis) if basis is None else basis
 
     emb = adata.obsm[f"X_{basis}"]
 
