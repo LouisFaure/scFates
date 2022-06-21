@@ -53,7 +53,7 @@ def dendrogram(
 
     Returns
     -------
-    If `show==False` a tuple of :class:`~matplotlib.axes.Axes`
+    If `show==False` an object of :class:`~matplotlib.axes.Axes`
 
     """
 
@@ -72,13 +72,16 @@ def dendrogram(
             else:
                 order = adata.obs_names
 
-        ax = sc.pl.embedding(adata[order], basis="dendro", show=False, **kwargs)
+        ax = sc.pl.embedding(
+            adata[order], basis="dendro", alpha=0, show=False, **kwargs
+        )
         ax.scatter(
             adata[order].obsm["X_dendro"][:, 0],
             adata[order].obsm["X_dendro"][:, 1],
             c=gen_milestones_gradients(adata)[order].values,
             s=120000 / adata.shape[0] if "s" not in kwargs else kwargs["s"],
             marker=".",
+            rasterized=True,
         )
     else:
         ax = sc.pl.embedding(adata, basis="dendro", show=False, **kwargs)

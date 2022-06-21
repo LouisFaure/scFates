@@ -751,6 +751,7 @@ def single_trend(
                 c=adata.uns["seg_colors"][
                     np.argwhere(adata.obs.seg.cat.categories == s)[0][0]
                 ],
+                rasterized=True,
             )
             ax_trend.plot(
                 df.loc[df.seg == s, "t"],
@@ -787,6 +788,7 @@ def single_trend(
                 c=color_exp,
                 alpha=alpha_expr,
                 s=size_expr,
+                rasterized=True,
             )
             ax_trend.plot(
                 df.loc[df.seg == s, "t"],
