@@ -406,7 +406,7 @@ def module_inclusion(
     autocor_cut: float = 0.95,
     iterations: int = 15,
     parallel_mode: Literal["window", "mappings"] = "window",
-    identify_early_features: bool = True,
+    identify_early_features: bool = False,
     layer=None,
     perm: bool = False,
     winp: int = 10,
@@ -526,9 +526,7 @@ def module_inclusion(
                 if module == "early"
                 else sel
             )
-            geneset = adata.uns[name]["fork"].index[
-                adata.uns[name]["fork"].branch == milestone
-            ]
+            geneset = adata.uns[name]["fork"].index[sel]
             cells = getpath(
                 img,
                 root,
