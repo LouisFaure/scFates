@@ -194,7 +194,17 @@ def matrix(
             kwargs["use_raw"] = False
 
         M = sc.pl.MatrixPlot(
-            adata_sub, features, "split", vmin=0, vmax=maxval, cmap=cmap, **kwargs
+            adata_sub,
+            features,
+            "split",
+            vmin=0,
+            vmax=maxval,
+            cmap=cmap,
+            antialiaseds=True,
+            linewidth=0.0,
+            snap=True,
+            edgecolors="none",
+            **kwargs,
         )
         M.swap_axes()
         M._mainplot(axs[i])
