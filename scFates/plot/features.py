@@ -221,7 +221,39 @@ def trends(
         adata.layers["fitted"], index=adata.obs_names, columns=adata.var_names
     ).T.copy(deep=True)
     g = adata.obs.groupby("seg")
-    seg_order = g.apply(lambda x: np.min(x.t)).sort_values().index.tolist()
+
+    dct = graph["milestones"]
+    keys = np.array(list(dct.keys()))
+    vals = np.array(list(dct.values()))
+    edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
+    img = igraph.Graph(directed=True)
+    img.add_vertices(vals.astype(str))
+    img.add_edges(edges)
+
+    allpaths = img.get_all_shortest_paths(
+        str(graph["root"]), to=graph["tips"].astype(str)
+    )
+
+    allpaths = np.array(allpaths, dtype=object)[
+        np.argsort(np.array([len(p) for p in allpaths]))
+    ]
+
+    order = allpaths[0]
+    for i in range(1, len(allpaths)):
+        order = order + np.array(allpaths[i])[~np.isin(allpaths[i], order)].tolist()
+
+    order = np.array(order)[1:]
+
+    order = pd.Series(graph["milestones"].keys(), index=graph["milestones"].values())[
+        np.array(img.vs["name"])[order].astype(int)
+    ]
+    seg_order = pd.Series(
+        range(len(adata.obs.seg.cat.categories)), index=graph["pp_seg"]["to"]
+    )[order.index].values
+
+    seg_order = adata.obs.seg.cat.categories[seg_order]
+    vs2mils = pd.Series(dct.keys(), index=dct.values())
+
     cell_order = np.concatenate(
         list(
             map(
@@ -230,7 +262,6 @@ def trends(
         )
     )
     fitted = fitted.loc[:, cell_order]
-    # fitted=fitted.apply(lambda x: (x-x.mean())/x.std(),axis=1)
 
     fitted = fitted.apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1)
 
