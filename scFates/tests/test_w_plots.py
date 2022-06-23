@@ -11,16 +11,10 @@ def test_pipeline():
     scf.tl.curve(adata, Nodes=10, use_rep="pca", device="cpu", seed=1)
     F_PC1_epgc_cpu = adata.uns["graph"]["F"][0, :5]
 
-    # scf.tl.curve(adata,Nodes=10,use_rep="pca",device="gpu",seed=1)
-    # F_PC1_epgc_gpu = adata.uns['graph']['F'][0,:5]
-
     scf.tl.tree(adata, Nodes=10, use_rep="pca", method="epg", device="cpu", seed=1)
     F_PC1_epgt_cpu = adata.uns["graph"]["F"][0, :5]
 
     scf.tl.circle(adata, Nodes=10, use_rep="pca", device="cpu", seed=1)
-
-    # scf.tl.tree(adata,Nodes=10,use_rep="pca",method="epg",device="gpu",seed=1)
-    # F_PC1_epgt_gpu = adata.uns['graph']['F'][0,:5]
 
     scf.tl.tree(
         adata,
@@ -45,19 +39,22 @@ def test_pipeline():
         method="ppt",
         device="cpu",
         ppt_sigma=1,
-        ppt_lambda=10000,
+        ppt_lambda=200,
         seed=1,
     )
+
+    scf.tl.cleanup(adata)
+
     F_PC1_ppt_cpu = adata.uns["graph"]["F"][0, :5]
 
     scf.pl.graph(adata)
 
     adata_2 = scf.tl.roots(
-        adata, roots=[80, 25], meeting=adata.uns["graph"]["forks"][0], copy=True
+        adata, roots=[43, 18], meeting=adata.uns["graph"]["forks"][0], copy=True
     )
     scf.tl.root(adata, "n_counts")
     scf.tl.root(adata, "Phox2a", tips_only=True, min_val=True)
-    scf.tl.root(adata, 80)
+    scf.tl.root(adata, 43)
     pp_info_time = adata.uns["graph"]["pp_info"]["time"][:5].values
 
     scf.tl.pseudotime(adata_2, n_map=2)
@@ -74,25 +71,28 @@ def test_pipeline():
     obs_t = adata.obs.t[:5].values
 
     scf.pl.trajectory(adata, arrows=True)
-    scf.pl.milestones(adata)
-    scf.pl.milestones(adata, color="t")
+    scf.pl.milestones(adata, annotate=True)
+    scf.pl.graph(adata_2)
+    scf.pl.trajectory(adata_2, color_seg="milestones", arrows=True)
+    scf.pl.trajectory(adata_2, color_seg="seg", arrows=True)
 
-    df = scf.tl.getpath(adata, root_milestone="80", milestones=["19"])
+    df = scf.tl.getpath(adata, root_milestone="43", milestones=["18"])
 
     adata.obsm["X_umap3d"] = np.concatenate(
         [adata.obsm["X_umap"], adata.obsm["X_umap"][:, 0].reshape(-1, 1)], axis=1
     )
+
     scf.pl.trajectory_3d(adata)
     scf.pl.trajectory_3d(adata, color="seg")
 
     adata_s1 = scf.tl.subset_tree(
-        adata, root_milestone="29", milestones=["19"], mode="substract", copy=True
+        adata, root_milestone="88", milestones=["18"], mode="substract", copy=True
     )
     adata_s2 = scf.tl.subset_tree(
-        adata, root_milestone="29", milestones=["19"], mode="extract", copy=True
+        adata, root_milestone="88", milestones=["18"], mode="extract", copy=True
     )
     adata_at = scf.tl.attach_tree(adata_s1, adata_s2)
-    adata_at = scf.tl.attach_tree(adata_s1, adata_s2, linkage=("25", "19"))
+    adata_at = scf.tl.attach_tree(adata_s1, adata_s2, linkage=("24", "88"))
 
     adata_lim = scf.tl.subset_tree(adata, t_max=adata.obs.t.max() / 4 * 3, copy=True)
 
@@ -104,11 +104,11 @@ def test_pipeline():
 
     scf.pl.test_association(adata)
 
-    scf.tl.linearity_deviation(adata, start_milestone="80", end_milestone="29")
+    scf.tl.linearity_deviation(adata, start_milestone="43", end_milestone="88")
 
-    lindev = adata.var["80->29_rss"].values[:5]
+    lindev = adata.var["43->88_rss"].values[:5]
 
-    scf.pl.linearity_deviation(adata, start_milestone="80", end_milestone="29")
+    scf.pl.linearity_deviation(adata, start_milestone="43", end_milestone="88")
 
     scf.tl.fit(adata_2, layer="scaled")
     scf.tl.fit(adata)
@@ -124,9 +124,6 @@ def test_pipeline():
     scf.tl.test_covariate(adata, "covariate")
 
     scf.pl.matrix(adata, adata.var_names, annot_var=True)
-
-    scf.tl.test_association(adata_2, root="80", leaves=["19"])
-    scf.tl.fit(adata_2, root="80", leaves=["19"])
 
     scf.tl.rename_milestones(adata_2, ["A", "B", "C", "D"])
     scf.pl.trajectory(adata_2, root_milestone="A", milestones=["B"])
@@ -146,8 +143,8 @@ def test_pipeline():
         adata,
         features=adata.var_names,
         annot="seg",
-        root_milestone="80",
-        milestones=["19"],
+        root_milestone="43",
+        milestones=["88"],
         ordering="pearson",
         show=False,
     )
@@ -162,105 +159,103 @@ def test_pipeline():
     )
 
     scf.pl.dendrogram(
-        adata, show_info=False, color="t", root_milestone="80", milestones=["25", "19"]
+        adata, show_info=False, color="t", root_milestone="43", milestones=["24", "18"]
     )
 
     scf.tl.test_fork(
-        adata, layer="scaled", root_milestone="80", milestones=["25", "19"], n_jobs=2
+        adata, layer="scaled", root_milestone="43", milestones=["24", "18"], n_jobs=2
     )
-    scf.tl.test_fork(adata, root_milestone="80", milestones=["25", "19"], n_jobs=2)
-    signi_fdr_nonscaled = adata.uns["80->25<>19"]["fork"].signi_fdr.sum()
-    adata.uns["80->25<>19"]["fork"]["fdr"] = 0.02
-    scf.pl.test_fork(adata, root_milestone="80", milestones=["25", "19"])
+    scf.tl.test_fork(adata, root_milestone="43", milestones=["24", "18"], n_jobs=2)
+    signi_fdr_nonscaled = adata.uns["43->24<>18"]["fork"].signi_fdr.sum()
+    adata.uns["43->24<>18"]["fork"]["fdr"] = 0.02
+    scf.pl.test_fork(adata, root_milestone="43", milestones=["24", "18"])
 
     scf.tl.test_fork(
-        adata, root_milestone="80", milestones=["25", "19"], n_jobs=2, rescale=True
+        adata, root_milestone="43", milestones=["24", "18"], n_jobs=2, rescale=True
     )
-    signi_fdr_rescaled = adata.uns["80->25<>19"]["fork"].signi_fdr.sum()
+    signi_fdr_rescaled = adata.uns["43->24<>18"]["fork"].signi_fdr.sum()
 
     scf.tl.branch_specific(
-        adata, root_milestone="80", milestones=["25", "19"], effect=0.6
+        adata, root_milestone="43", milestones=["24", "18"], effect=0.6
     )
 
     branch_spe = scf.get.fork_stats(
-        adata, root_milestone="80", milestones=["25", "19"]
+        adata, root_milestone="43", milestones=["24", "18"]
     ).branch.values
 
-    scf.tl.module_inclusion(adata, root_milestone="80", milestones=["25", "19"])
-    mod_inc = adata.uns["80->25<>19"]["module_inclusion"]["19"]["0"].values
+    scf.tl.activation(adata, root_milestone="43", milestones=["24", "18"], n_jobs=1)
+    activation = adata.uns["43->24<>18"]["fork"].activation.values
+
+    scf.tl.activation_lm(adata, root_milestone="43", milestones=["24", "18"], n_jobs=1)
+    activation_lm = adata.uns["43->24<>18"]["fork"].slope.values
+    adata.uns["43->24<>18"]["fork"]["module"] = "early"
+    scf.tl.module_inclusion(adata, root_milestone="43", milestones=["24", "18"])
+    mod_inc = adata.uns["43->24<>18"]["module_inclusion"]["18"]["0"].values
     scf.pl.module_inclusion(
-        adata, root_milestone="80", milestones=["25", "19"], bins=12, branch="19"
+        adata, root_milestone="43", milestones=["24", "18"], bins=12, branch="18"
     )
 
-    scf.tl.activation(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
-    activation = adata.uns["80->25<>19"]["fork"].activation.values
-
-    scf.tl.activation_lm(adata, root_milestone="80", milestones=["25", "19"], n_jobs=1)
-    activation_lm = adata.uns["80->25<>19"]["fork"].slope.values
-
-    scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"])
-    scf.pl.modules(adata, root_milestone="80", milestones=["25", "19"], show_traj=True)
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"])
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], show_traj=True)
 
     scf.pl.single_trend(
-        adata, root_milestone="80", milestones=["25", "19"], module="early", branch="25"
+        adata, root_milestone="43", milestones=["24", "18"], module="early", branch="24"
     )
 
-    scf.tl.slide_cells(adata, root_milestone="80", milestones=["25", "19"], win=200)
-    cell_freq_sum = adata.uns["80->25<>19"]["cell_freq"][0].sum()
+    scf.tl.slide_cells(adata, root_milestone="43", milestones=["24", "18"], win=200)
+    cell_freq_sum = adata.uns["43->24<>18"]["cell_freq"][0].sum()
 
-    scf.tl.slide_cells(adata, root_milestone="80", milestones=["25"], win=200)
-    adata.uns["80->25<>19"]["fork"].loc["Etv1", "module"] = "early"
-    scf.tl.slide_cors(adata, root_milestone="80", milestones=["25", "19"])
-    corAB = adata.uns["80->25<>19"]["corAB"]["19"]["genesetA"].iloc[0, :5].values
+    scf.tl.slide_cells(adata, root_milestone="43", milestones=["24"], win=200)
+    adata.uns["43->24<>18"]["fork"].loc["Etv1", "module"] = "early"
+    scf.tl.slide_cors(adata, root_milestone="43", milestones=["24", "18"])
+    corAB = adata.uns["43->24<>18"]["corAB"]["18"]["genesetA"].iloc[0, :5].values
 
     scf.tl.slide_cors(
         adata,
-        root_milestone="80",
-        milestones=["25"],
+        root_milestone="43",
+        milestones=["24"],
         genesetA=adata.var_names[[0, 1]],
         genesetB=adata.var_names[[2, 3]],
     )
 
-    scf.pl.slide_cors(adata, root_milestone="80", milestones=["25", "19"])
+    scf.pl.slide_cors(adata, root_milestone="43", milestones=["24", "18"])
 
-    adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"] = pd.DataFrame(
+    adata.uns["43->24<>18"]["corAB"]["24"]["genesetA"] = pd.DataFrame(
         0.2,
         index=np.array(["a", "b", "c", "d"]),
-        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+        columns=adata.uns["43->24<>18"]["corAB"]["24"]["genesetA"].columns,
     )
-    adata.uns["80->25<>19"]["corAB"]["25"]["genesetB"] = pd.DataFrame(
+    adata.uns["43->24<>18"]["corAB"]["24"]["genesetB"] = pd.DataFrame(
         -0.2,
         index=np.array(["a", "b", "c", "d"]),
-        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+        columns=adata.uns["43->24<>18"]["corAB"]["24"]["genesetA"].columns,
     )
-    adata.uns["80->25<>19"]["corAB"]["19"]["genesetA"] = pd.DataFrame(
+    adata.uns["43->24<>18"]["corAB"]["18"]["genesetA"] = pd.DataFrame(
         -0.2,
         index=np.array(["a", "b", "c", "d"]),
-        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+        columns=adata.uns["43->24<>18"]["corAB"]["24"]["genesetA"].columns,
     )
-    adata.uns["80->25<>19"]["corAB"]["19"]["genesetB"] = pd.DataFrame(
+    adata.uns["43->24<>18"]["corAB"]["18"]["genesetB"] = pd.DataFrame(
         0.2,
         index=np.array(["a", "b", "c", "d"]),
-        columns=adata.uns["80->25<>19"]["corAB"]["25"]["genesetA"].columns,
+        columns=adata.uns["43->24<>18"]["corAB"]["24"]["genesetA"].columns,
     )
 
     scf.pl.slide_cors(
-        adata, root_milestone="80", milestones=["25", "19"], win_keep=range(3), focus=1
+        adata, root_milestone="43", milestones=["24", "18"], win_keep=range(3), focus=1
     )
 
-    scf.pl.slide_cors(adata, root_milestone="80", milestones=["25"])
+    scf.pl.slide_cors(adata, root_milestone="43", milestones=["24"])
 
     scf.tl.synchro_path(
         adata,
-        root_milestone="80",
-        milestones=["25", "19"],
+        root_milestone="43",
+        milestones=["24", "18"],
         w=500,
         step=30,
     )
-    # scf.pl.synchro_path(
-    #    adata, root_milestone="80", milestones=["25", "19"]
-    # )
-    syncAB = adata.uns["80->25<>19"]["synchro"]["real"]["25"]["corAB"].values[:5]
+
+    syncAB = adata.uns["43->24<>18"]["synchro"]["real"]["24"]["corAB"].values[:5]
 
     assert np.allclose(
         F_PC1_epgc_cpu,
@@ -269,51 +264,59 @@ def test_pipeline():
     # assert np.allclose(F_PC1_epgt_cpu, F_PC1_epgt_gpu)
     assert np.allclose(
         F_PC1_epgt_cpu,
-        [-14.34719592, 9.01751279, -5.89520198, -9.81069308, -23.43028584],
+        [-10.81716492, 9.02788641, -14.80570284, -23.39084922, -20.12368624],
     )
     # assert np.allclose(F_PC1_ppt_cpu, F_PC1_ppt_gpu, rtol=1e-2)
     assert np.allclose(
         F_PC1_ppt_cpu,
-        [-14.80722458, -11.65633904, -3.38224082, -9.81132852, -10.80313121],
+        [-23.27292273, -12.22871375, 7.1627, -8.76348289, -14.22426111],
         rtol=1e-2,
     )
     assert np.allclose(
         pp_info_time,
-        [18.80301214, 12.79578319, 0.64553512, 9.62211211, 12.26296244],
+        [63.58330042, 40.27148842, 3.17146368, 28.9625195, 38.6481921],
         rtol=1e-2,
     )
     assert np.allclose(
         obs_t,
-        [18.80780351, 18.83173969, 18.81651117, 18.83505737, 18.82784781],
+        [63.8508307, 63.84462296, 63.84324671, 55.24862655, 58.64053484],
         rtol=1e-2,
     )
-    assert df.shape[0] == 877
+    assert df.shape[0] == 857
     assert np.allclose(
-        A, [0.01329398, 0.17759706, 0.1007363, 0.14490752, 0.07136825], rtol=1e-2
+        A, [0.01253371, 0.23076978, 0.06073513, 0.11296414, 0.05083225], rtol=1e-2
     )
     assert np.allclose(
         lindev,
-        [0.31511654, -0.94609691, 0.16721359, -0.53114662, 0.28442143],
+        [0.30906181, -2.71939561, 0.61090579, -1.1489122, 0.12358796],
         rtol=1e-2,
     )
-    assert nsigni == 5
+    assert nsigni == 6
     assert np.allclose(
-        fitted, [0.44351696, 0.68493632, 0.24545846, 0.16027536, 0.79252075], rtol=1e-2
+        fitted,
+        [
+            2.94194510e-04,
+            4.63294288e-01,
+            6.39626984e-01,
+            5.60286879e-01,
+            9.50514575e-01,
+        ],
+        rtol=1e-2,
     )
-    assert signi_fdr_nonscaled == 0
+    assert signi_fdr_nonscaled == 5
     assert signi_fdr_rescaled == 5
-    assert np.all(branch_spe == ["19", "19", "25"])
-    assert np.allclose(mod_inc, [0.01487196, 0.01487196], rtol=1e-2)
-    assert np.allclose(activation, [4.42785624, 4.61626781, 0.31774091], rtol=1e-2)
-    assert np.allclose(activation_lm, [0.03350972, 0.01856113, 0.05883641], rtol=1e-2)
-    assert np.allclose(cell_freq_sum, 187.5316, rtol=1e-2)
+    assert np.all(branch_spe == ["18", "18", "24"])
+    assert np.allclose(mod_inc, [7.6982633, 7.6982633], rtol=1e-2)
+    assert np.allclose(activation, [24.64678374, 24.64678374, 42.29117514], rtol=1e-2)
+    assert np.allclose(activation_lm, [-0.01767213, -0.00753814, 0.02148092], rtol=1e-2)
+    assert np.allclose(cell_freq_sum, 197.02803472363118, rtol=1e-2)
     assert np.allclose(
         corAB,
-        [-0.19718103, -0.25194172, -0.47820323, -0.24967024, -0.06222028],
+        [-0.08104039, -0.2667385, -0.33143075, -0.05329868, -0.01551609],
         rtol=1e-2,
     )
     assert np.allclose(
         syncAB,
-        [-0.31113123, -0.28931709, -0.30131992, -0.31664843, -0.34292551],
+        [-0.31524637, -0.31332134, -0.3392098, -0.33832952, -0.31277207],
         rtol=1e-2,
     )
