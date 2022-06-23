@@ -1,0 +1,24 @@
+name: Fast load
+
+on:
+  push:
+
+jobs:
+  install_and_load:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - uses: mamba-org/provision-with-micromamba@main
+    - name: Install and Test
+      shell: bash -l {0}
+      run: |
+        micromamba install -c conda-forge -c r python=3.8 r-mgcv rpy2 -y
+        pip install .
+    - name: Load package
+      run: |
+        python -c "import scFates"
