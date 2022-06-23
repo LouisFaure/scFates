@@ -5,6 +5,38 @@ from cycler import Cycler, cycler
 from matplotlib import rcParams
 from . import palettes
 from matplotlib.colors import to_hex
+from matplotlib.colors import is_color_like
+
+
+def _validate_palette(adata, key):
+    """
+    checks if the list of colors in adata.uns[f'{key}_colors'] is valid
+    and updates the color list in adata.uns[f'{key}_colors'] if needed.
+    Not only valid matplotlib colors are checked but also if the color name
+    is a valid R color name, in which case it will be translated to a valid name
+    """
+
+    _palette = []
+    color_key = f"{key}_colors"
+
+    for color in adata.uns[color_key]:
+        if not is_color_like(color):
+            # check if the color is a valid R color and translate it
+            # to a valid hex color value
+            if color in additional_colors:
+                color = additional_colors[color]
+            else:
+                logg.warning(
+                    f"The following color value found in adata.uns['{key}_colors'] "
+                    f"is not valid: '{color}'. Default colors will be used instead."
+                )
+                _set_default_colors_for_categorical_obs(adata, key)
+                _palette = None
+                break
+        _palette.append(color)
+    # Don't modify if nothing changed
+    if _palette is not None and list(_palette) != list(adata.uns[color_key]):
+        adata.uns[color_key] = _palette
 
 
 def _set_colors_for_categorical_obs(

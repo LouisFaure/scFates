@@ -135,6 +135,9 @@ def modules(
 
     if (module == "early") | (module == "all"):
         if show_traj:
+            if color != "milestones":
+                kwargs["legend_loc"] = "none"
+
             plot_trajectory(
                 adata_c,
                 basis="early",
@@ -143,7 +146,6 @@ def modules(
                 color_cells=color,
                 show=False,
                 title="",
-                legend_loc="none",
                 ax=ax_early,
                 **kwargs,
             )

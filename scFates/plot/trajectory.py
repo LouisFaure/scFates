@@ -315,6 +315,20 @@ def trajectory(
             ]
             for c in adata_c.obs[color_cells].cat.categories
         ]
+    if is_categorical(adata, color_seg):
+        if (
+            color_seg + "_colors" not in adata.uns
+            or len(adata.uns[color_seg + "_colors"]) == 1
+        ):
+
+            palette_tools._set_default_colors_for_categorical_obs(adata, color_seg)
+
+        adata_c.uns[color_seg + "_colors"] = [
+            adata.uns[color_seg + "_colors"][
+                np.argwhere(adata.obs[color_seg].cat.categories == c)[0][0]
+            ]
+            for c in adata_c.obs[color_seg].cat.categories
+        ]
 
     plotter = milestones_plot if color_cells == "milestones" else sc.pl.embedding
     if ax is None:
@@ -380,12 +394,25 @@ def trajectory(
         color_mils = [
             mil_col[miles_cat == mm][0] for mm in [rev_dict[m] for m in miles_ids]
         ]
-
+    elif color_seg == "seg":
+        seg_edges = (
+            graph["pp_info"]
+            .loc[np.array(edges).ravel(), "seg"]
+            .values.reshape(-1, 2)[:, 0]
+        )
+        seg_col = pd.Series(adata.uns["seg_colors"], index=adata.obs.seg.cat.categories)
+        color_segs = [hex2color(seg_col.loc[s]) for s in seg_edges]
+        color_mils = [
+            hex2color(seg_col.loc[graph["pp_info"].loc[m].seg])
+            for m in graph["milestones"].values()
+        ]
     else:
         vals = pd.Series(
             _get_color_values(adata, color_seg, layer=layer_seg)[0],
             index=adata.obs_names,
         )
+        if not np.issubdtype(vals.dtype, np.number):
+            raise Exception("can only color numerical values")
         R = pd.DataFrame(adata.obsm["X_R"], index=adata.obs_names)
         R = R.loc[adata.obs_names]
         vals = vals[~np.isnan(vals)]
@@ -448,13 +475,16 @@ def trajectory(
                 zorder=101,
                 rasterized=True,
             )
-            c_arrow = vals[
-                (
-                    np.array([e.split("|") for e in adata.obs.edge], dtype=int)
-                    == path[mid]
-                ).sum(axis=1)
-                == 1
-            ].mean()
+            closest = (
+                np.array([e.split("|") for e in adata.obs.edge], dtype=int) == path[mid]
+            ).sum(axis=1) == 1
+            if color_seg == "seg":
+                c_arrow = seg_col.loc[adata.obs.seg.loc[closest]]
+            elif color_seg == "milestones":
+                mid_edge = np.argwhere((np.array(edges) == path[mid]).sum(axis=1))[0][0]
+                c_arrow = np.array(color_segs)[mid_edge]
+            else:
+                c_arrow = sm.to_rgba(vals[closest].mean())
             ax.quiver(
                 proj.loc[path[mid], 0],
                 proj.loc[path[mid], 1],
@@ -464,7 +494,7 @@ def trajectory(
                 headaxislength=10 * scale_path,
                 headlength=10 * scale_path,
                 units="dots",
-                color=sm.to_rgba(c_arrow),
+                color=c_arrow,
                 zorder=102,
                 rasterized=True,
             )

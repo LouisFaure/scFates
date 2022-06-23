@@ -28,7 +28,7 @@ check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 from ..get import modules as get_modules
 from .trajectory import remove_info
-from .utils import gen_milestones_gradients, get_basis
+from .utils import gen_milestones_gradients, get_basis, is_categorical
 from .. import logging as logg
 from .. import settings
 
@@ -160,6 +160,12 @@ def trends(
 
     graph = adata.uns["graph"]
 
+    if is_categorical(adata, annot):
+        if annot + "_colors" not in adata.uns or len(adata.uns[annot + "_colors"]) == 1:
+            from . import palette_tools
+
+            palette_tools._set_default_colors_for_categorical_obs(adata, annot)
+
     if milestones is not None:
         adata = adata.copy()
         dct = graph["milestones"]
@@ -200,7 +206,7 @@ def trends(
                 )
             )
         )
-
+        seg_col = pd.Series(adata.uns["seg_colors"], index=adata.obs.seg.cat.categories)
         adata = adata[cells]
 
     if (features is None) & (cluster is None):
@@ -247,9 +253,10 @@ def trends(
     order = pd.Series(graph["milestones"].keys(), index=graph["milestones"].values())[
         np.array(img.vs["name"])[order].astype(int)
     ]
-    seg_order = pd.Series(
-        range(len(adata.obs.seg.cat.categories)), index=graph["pp_seg"]["to"]
-    )[order.index].values
+    to_mil = graph["pp_seg"].loc[adata.obs.seg.cat.categories.astype(int), "to"]
+    seg_order = pd.Series(range(len(adata.obs.seg.cat.categories)), index=to_mil)[
+        order[order.index.isin(to_mil)].index
+    ].values
 
     seg_order = adata.obs.seg.cat.categories[seg_order]
     vs2mils = pd.Series(dct.keys(), index=dct.values())
@@ -337,9 +344,9 @@ def trends(
     if annot == "milestones":
         annot_cmap = gen_milestones_gradients(adata, seg_order)
 
-    elif type(annot) == str:
-        if len(adata.obs[annot].unique()) > 1:
-            color_key = annot + "_colors"
+    elif annot == "seg":
+        if len(adata.obs.seg.unique()) > 1:
+            color_key = "seg_colors"
             if color_key not in adata.uns or len(adata.uns[color_key]) == 1:
                 from . import palette_tools
 
@@ -355,6 +362,12 @@ def trends(
                 ),
                 index=fitted_sorted.columns,
             )
+        elif (len(adata.obs.seg.unique()) == 1) & (milestones is not None):
+            annot_cmap = pd.Series(
+                [seg_col[seg_order].values[0] for i in range(fitted_sorted.shape[1])],
+                index=fitted_sorted.columns,
+            )
+
     else:
         annot = None
 
@@ -726,7 +739,7 @@ def single_trend(
 
         mod = get_modules(adata, root_milestone, milestones, layer, module)[
             module + "_" + branch
-        ]
+        ].loc[adata.obs_names]
         adata = sc.AnnData(
             mod.to_frame(), obs=adata.obs, obsm=adata.obsm, uns=adata.uns
         )
