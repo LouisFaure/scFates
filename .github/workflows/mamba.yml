@@ -19,5 +19,6 @@ jobs:
       run: |
         pip install .
     - name: Load package
+      shell: bash -l {0}
       run: |
         python -c "import scFates"
