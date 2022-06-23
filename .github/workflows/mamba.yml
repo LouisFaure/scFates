@@ -17,7 +17,6 @@ jobs:
     - name: Install and Test
       shell: bash -l {0}
       run: |
-        micromamba install -c conda-forge -c r python=3.8 r-mgcv rpy2 -y
         pip install .
     - name: Load package
       run: |
