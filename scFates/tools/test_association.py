@@ -40,8 +40,6 @@ def test_association(
     st_cut: float = 0.8,
     reapply_filters: bool = False,
     plot: bool = False,
-    root=None,
-    leaves=None,
     copy: bool = False,
     layer: Optional[str] = None,
 ):
@@ -122,20 +120,6 @@ def test_association(
 
     graph = adata.uns["graph"]
 
-    mlsc_temp = None
-    if leaves is not None:
-        # weird hack to keep milestones colors saved
-        if "milestones_colors" in adata.uns:
-            mlsc = adata.uns["milestones_colors"].copy()
-            mlsc_temp = mlsc.copy()
-
-        dct = graph["milestones"]
-        keys = np.array(list(dct.keys()))
-        vals = np.array(list(dct.values()))
-
-        leaves = list(map(lambda leave: dct[leave], leaves))
-        root = dct[root]
-
     if reapply_filters & ("stat_assoc_list" in adata.uns):
         stat_assoc_l = list(adata.uns["stat_assoc_list"].values())
         # stat_assoc_l = list(map(lambda x: pd.DataFrame(x,index=x["features"]),stat_assoc_l))
@@ -153,29 +137,7 @@ def test_association(
         return adata if copy else None
 
     genes = adata.var_names
-    if root is None:
-        cells = adata.obs_names
-    else:
-        df = adata.obs.copy()
-        edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
-        img = igraph.Graph()
-        img.add_vertices(
-            np.unique(graph["pp_seg"][["from", "to"]].values.flatten().astype(str))
-        )
-        img.add_edges(edges)
-
-        cells = np.unique(
-            np.concatenate(
-                list(
-                    map(
-                        lambda leave: getpath(
-                            img, root, graph["tips"], leave, graph, df
-                        ).index,
-                        leaves,
-                    )
-                )
-            )
-        )
+    cells = adata.obs_names
 
     Xgenes = get_X(adata, cells, genes, layer, togenelist=True)
 
@@ -209,12 +171,8 @@ def test_association(
         use_tqdm=n_map > 1,
         desc="    multi mapping ",
     )(delayed(test_assoc_map)(m) for m in range(n_map))
-    # stat_assoc_l = stat_assoc_l + [stat]
 
     adata = apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut)
-
-    if mlsc_temp is not None:
-        adata.uns["milestones_colors"] = mlsc_temp
 
     logg.info(
         "    found " + str(sum(adata.var["signi"])) + " significant features",

@@ -31,8 +31,6 @@ check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 def fit(
     adata: AnnData,
     features: Optional[Iterable] = None,
-    root=None,
-    leaves=None,
     layer: Optional[str] = None,
     n_map: int = 1,
     n_jobs: int = 1,
@@ -53,10 +51,6 @@ def fit(
     ----------
     adata
         Annotated data matrix.
-    root
-        restrain the fit to a subset of the tree (in combination with leaves).
-    leaves
-        restrain the fit to a subset of the tree (in combination with root).
     layer
         adata layer to use for the fitting.
     n_map
@@ -99,30 +93,12 @@ def fit(
 
     graph = adata.uns["graph"]
     tips = graph["tips"]
-
-    mlsc_temp = None
-    if leaves is not None:
-        # weird hack to keep milestones colors saved
-        if "milestones_colors" in adata.uns:
-            mlsc = adata.uns["milestones_colors"].copy()
-            mlsc_temp = mlsc.copy()
-        dct = graph["milestones"]
-        keys = np.array(list(dct.keys()))
-        vals = np.array(list(dct.values()))
-
-        leaves = list(map(lambda leave: dct[leave], leaves))
-        root = dct[root]
-
-    if root is None:
-        root = graph["root"]
-        tips = tips[~np.isin(tips, root)]
+    root = graph["root"]
+    tips = tips[~np.isin(tips, root)]
     root2 = None
     if "root2" in graph:
         root2 = graph["root2"]
         tips = tips[~np.isin(tips, graph["root2"])]
-
-    if leaves is not None:
-        tips = leaves
 
     logg.info("fit features associated with the trajectory", reset=True, end="\n")
 
@@ -194,13 +170,9 @@ def fit(
     if save_raw:
         adata.raw = adata
 
-    adata._inplace_subset_obs(np.unique(dictionary["0"].index))
     adata._inplace_subset_var(features)
 
     adata.layers["fitted"] = fitted.loc[adata.obs_names, :]
-
-    if mlsc_temp is not None:
-        adata.uns["milestones_colors"] = mlsc_temp
 
     logg.info(
         "    finished (adata subsetted to keep only fitted features!)",
