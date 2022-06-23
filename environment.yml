@@ -1,0 +1,9 @@
+name: scFates
+channels:
+  - conda-forge
+  - r
+
+dependencies:
+  - python=3.8
+  - r-mgcv
+  - rpy2
