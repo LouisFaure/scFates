@@ -201,7 +201,7 @@ def map_cells(graph, R, P, multi=False):
                 {
                     "cell": vcells.flatten(),
                     "v0": v,
-                    "v1": np.argmin(nvd),
+                    "v1": nv[np.argmin(nvd)],
                     "d": np.min(nvd),
                 }
             )
