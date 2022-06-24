@@ -6,6 +6,7 @@ from joblib import delayed
 from tqdm import tqdm
 import sys
 import igraph
+from typing import Optional
 
 from .utils import ProgressParallel
 
@@ -13,7 +14,13 @@ from .. import logging as logg
 from .. import settings
 
 
-def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = False):
+def pseudotime(
+    adata: AnnData,
+    n_jobs: int = 1,
+    n_map: int = 1,
+    seed: Optional[int] = None,
+    copy: bool = False,
+):
     """\
     Compute pseudotime.
 
@@ -27,6 +34,8 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
         Number of cpu processes to use in case of performing multiple mapping.
     n_map
         number of probabilistic mapping of cells onto the tree to use. If n_map=1 then likelihood cell mapping is used.
+    seed
+        A numpy random seed for reproducibility for muliple mappings
     copy
         Return a copy instead of writing to adata.
     Returns
@@ -75,10 +84,17 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     if n_map == 1:
         df_l = [map_cells(graph, R=adata.obsm["X_R"], P=P, multi=False)]
     else:
+        if seed is not None:
+            np.random.seed(seed)
+            map_seeds = np.random.randint(999999999, size=n_map)
+        else:
+            map_seeds = [None for i in range(n_map)]
         df_l = ProgressParallel(
             n_jobs=n_jobs, total=n_map, file=sys.stdout, desc="    mappings"
         )(
-            delayed(map_cells)(graph=graph, R=adata.obsm["X_R"], P=P, multi=True)
+            delayed(map_cells)(
+                graph=graph, R=adata.obsm["X_R"], P=P, multi=True, map_seed=map_seeds[m]
+            )
             for m in range(n_map)
         )
 
@@ -172,7 +188,7 @@ def pseudotime(adata: AnnData, n_jobs: int = 1, n_map: int = 1, copy: bool = Fal
     return adata if copy else None
 
 
-def map_cells(graph, R, P, multi=False):
+def map_cells(graph, R, P, multi=False, map_seed=None):
     import igraph
 
     g = igraph.Graph.Adjacency((graph["B"] > 0).tolist(), mode="undirected")
@@ -180,6 +196,7 @@ def map_cells(graph, R, P, multi=False):
     g.es["weight"] = np.array(P[graph["B"].nonzero()].ravel()).tolist()[0]
 
     if multi:
+        np.random.seed(map_seed)
         rrm = (
             np.apply_along_axis(
                 lambda x: np.random.choice(np.arange(len(x)), size=1, p=x),
