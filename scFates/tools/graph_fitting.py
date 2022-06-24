@@ -462,14 +462,8 @@ def tree_epg(
     verbose: bool = True,
 ):
 
-    try:
-        import elpigraph
+    import elpigraph
 
-    except Exception as e:
-        warnings.warn(
-            'ElPiGraph package is not installed \
-            \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
-        )
     logg.hint(
         "parameters used \n"
         "    "
@@ -484,9 +478,14 @@ def tree_epg(
         np.random.seed(seed)
 
     if device == "gpu":
-        import cupy as cp
-        from cuml.metrics import pairwise_distances
-        from .utils import cor_mat_gpu
+        try:
+            import cupy as cp
+            from cuml.metrics import pairwise_distances
+            from .utils import cor_mat_gpu
+        except ModuleNotFoundError:
+            raise Exception(
+                "Some of the GPU dependencies are missing, use device='cpu' instead!"
+            )
 
         Tree = elpigraph.computeElasticPrincipalTree(
             X.values.astype(np.float64),
@@ -536,10 +535,6 @@ def tree_epg(
     g.add_edges(
         pd.DataFrame(Tree[0]["Edges"][0]).astype(int).apply(tuple, axis=1).values
     )
-
-    # mat = np.asarray(g.get_adjacency().data)
-    # mat = mat + mat.T - np.diag(np.diag(mat))
-    # B=((mat>0).astype(int))
 
     B = np.asarray(g.get_adjacency().data)
 
@@ -603,14 +598,7 @@ def curve_epg(
     seed: Optional[int] = None,
     verbose: bool = True,
 ):
-    try:
-        import elpigraph
-
-    except Exception as e:
-        warnings.warn(
-            'ElPiGraph package is not installed \
-            \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
-        )
+    import elpigraph
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
 
@@ -618,9 +606,14 @@ def curve_epg(
         np.random.seed(seed)
 
     if device == "gpu":
-        import cupy as cp
-        from .utils import cor_mat_gpu
-        from cuml.metrics import pairwise_distances
+        try:
+            import cupy as cp
+            from .utils import cor_mat_gpu
+            from cuml.metrics import pairwise_distances
+        except ModuleNotFoundError:
+            raise Exception(
+                "Some of the GPU dependencies are missing, use device='cpu' instead!"
+            )
 
         Curve = elpigraph.computeElasticPrincipalCurve(
             X.values.astype(np.float64),
@@ -670,10 +663,6 @@ def curve_epg(
     g.add_edges(
         pd.DataFrame(Curve[0]["Edges"][0]).astype(int).apply(tuple, axis=1).values
     )
-
-    # mat = np.asarray(g.get_adjacency().data)
-    # mat = mat + mat.T - np.diag(np.diag(mat))
-    # B=((mat>0).astype(int))
 
     B = np.asarray(g.get_adjacency().data)
 
@@ -750,14 +739,7 @@ def circle_epg(
     seed: Optional[int] = None,
     verbose: bool = True,
 ):
-    try:
-        import elpigraph
-
-    except Exception as e:
-        warnings.warn(
-            'ElPiGraph package is not installed \
-            \nPlease use "pip install git+https://github.com/j-bac/elpigraph-python.git" to install it'
-        )
+    import elpigraph
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
 
@@ -765,9 +747,14 @@ def circle_epg(
         np.random.seed(seed)
 
     if device == "gpu":
-        import cupy as cp
-        from .utils import cor_mat_gpu
-        from cuml.metrics import pairwise_distances
+        try:
+            import cupy as cp
+            from .utils import cor_mat_gpu
+            from cuml.metrics import pairwise_distances
+        except ModuleNotFoundError:
+            raise Exception(
+                "Some of the GPU dependencies are missing, use device='cpu' instead!"
+            )
 
         Curve = elpigraph.computeElasticPrincipalCircle(
             X.values.astype(np.float64),
@@ -817,10 +804,6 @@ def circle_epg(
     g.add_edges(
         pd.DataFrame(Curve[0]["Edges"][0]).astype(int).apply(tuple, axis=1).values
     )
-
-    # mat = np.asarray(g.get_adjacency().data)
-    # mat = mat + mat.T - np.diag(np.diag(mat))
-    # B=((mat>0).astype(int))
 
     B = np.asarray(g.get_adjacency().data)
 

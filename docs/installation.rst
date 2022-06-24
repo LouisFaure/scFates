@@ -24,10 +24,6 @@ With all dependencies
     conda activate scFates
     pip install scFates
 
-- :func:`scFates.tl.tree`: ElPiGraph can be also used for learning a principal graph from the data (`method="epg"`). Elpigraph can be installed from its github repository with the following command::
-
-    pip install git+https://github.com/j-bac/elpigraph-python.git
-
 - :func:`scFates.tl.cellrank_to_tree`: Requires cellrank to be installed in order to function::
 
     pip install cellrank

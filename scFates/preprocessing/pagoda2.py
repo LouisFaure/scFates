@@ -68,8 +68,13 @@ def filter_cells(
         X.data = np.ones_like(X.data)
         log1p_n_genes_by_counts = np.log1p(np.array(X.sum(axis=1))).ravel()
     elif device == "gpu":
-        import cupy as cp
-        from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
+        try:
+            import cupy as cp
+            from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
+        except ModuleNotFoundError:
+            raise Exception(
+                "Some of the GPU dependencies are missing, use device='cpu' instead!"
+            )
 
         X = csr_matrix_gpu(X)
         log1p_total_counts = cp.log1p(X.sum(axis=1)).get().ravel()
@@ -214,9 +219,14 @@ def batch_correct(
         X = X.multiply(1.0 / d[None, :].T)
 
     elif device == "gpu":
-        import cupy as cp
-        import cudf
-        from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
+        try:
+            import cupy as cp
+            import cudf
+            from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
+        except ModuleNotFoundError:
+            raise Exception(
+                "Some of the GPU dependencies are missing, use device='cpu' instead!"
+            )
 
         X = csr_matrix_gpu(X)
         depth = X.sum(axis=1)

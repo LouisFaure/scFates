@@ -77,9 +77,14 @@ def diffusion(
         logg.warn(
             "GPU implementation uses eigsh from cupy.sparse, which is not currently reproducible and can give unstable results!"
         )
-        import cupy as cp
-        from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
-        from cupyx.scipy.sparse.linalg import eigsh
+        try:
+            import cupy as cp
+            from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
+            from cupyx.scipy.sparse.linalg import eigsh
+        except ModuleNotFoundError:
+            raise Exception(
+                "Some of the GPU dependencies are missing, use device='cpu' instead!"
+            )
 
         # Determine the kernel
         N = data_df.shape[0]

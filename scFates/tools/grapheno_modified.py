@@ -1,12 +1,18 @@
 # Grapheno was modified to accept non cudf entries and is working with rapids-0.17
 
 import time
-import cuml
-import cudf
-import cugraph
-import cupy as cp
-import numpy as np
-from cupy.sparse import csr_matrix
+
+try:
+    import cuml
+    import cudf
+    import cugraph
+    import cupy as cp
+    import numpy as np
+    from cupy.sparse import csr_matrix
+except ModuleNotFoundError:
+    raise Exception(
+        "Some of the GPU dependencies are missing, use device='cpu' instead!"
+    )
 
 
 def find_neighbors(X, n_neighbors, metric, algorithm, distributed):

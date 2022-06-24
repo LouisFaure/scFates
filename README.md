@@ -74,13 +74,9 @@ With all dependencies
 
 -`pp.find_overdispersed`, `tl.test_association`, `tl.fit`, `tl.test_fork`, `tl.activation`, `tl.test_association_covariate`, `tl.test_covariate`: Require R package mgcv interfaced via python package rpy2:
 
-    conda create -n scFates -c conda-forge -c r python=3.8 r-mgcv rpy2 -y
+    conda create -n scFates -c conda-forge -c r python=3.8 r-mgcv rpy2=3.4.2 -y
     conda activate scFates
     pip install scFates
-
--`tl.tree`: ElPiGraph can be also used for learning a principal graph from the data (`method="epg"`). Elpigraph can be installed from its github repository with the following command:
-
-    pip install git+https://github.com/j-bac/elpigraph-python.git
 
 -`tl.cellrank_to_tree`: Requires cellrank to be installed in order to function::
 
