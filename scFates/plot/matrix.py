@@ -319,7 +319,9 @@ def matrix(
             fro = pp_seg.loc[int(s), "from"]
             to = pp_seg.loc[int(s), "to"]
             for n in pp_seg.index[pp_seg["from"] == to]:
-                if dsts[str(n)] - dsts[s] > 1:
+                if str(n) not in dsts.index:
+                    pass
+                elif dsts[str(n)] - dsts[s] > 1:
                     cax.annotate("", xy=[1, 1], xytext=[2.4, 1], **kw)
                 else:
                     cax.annotate("", xy=[1, 1], xytext=[1.2, 1], **kwclose)
