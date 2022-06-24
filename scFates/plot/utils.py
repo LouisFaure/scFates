@@ -12,6 +12,8 @@ from matplotlib.colors import to_hex
 
 from matplotlib.colors import LinearSegmentedColormap
 import pandas as pd
+import igraph
+from ..tools.utils import getpath
 
 
 def setup_axes(
@@ -220,3 +222,44 @@ def get_basis(adata, basis):
             )
     else:
         return basis
+
+
+def subset_cells(adata, root_milestone, milestones):
+    dct = adata.uns["graph"]["milestones"]
+
+    leaves = list(map(lambda leave: dct[leave], milestones))
+    root = dct[root_milestone]
+    df = adata.obs.copy(deep=True)
+    edges = (
+        adata.uns["graph"]["pp_seg"][["from", "to"]]
+        .astype(str)
+        .apply(tuple, axis=1)
+        .values
+    )
+    img = igraph.Graph()
+    img.add_vertices(
+        np.unique(
+            adata.uns["graph"]["pp_seg"][["from", "to"]].values.flatten().astype(str)
+        )
+    )
+    img.add_edges(edges)
+
+    cells = np.unique(
+        np.concatenate(
+            list(
+                map(
+                    lambda leave: getpath(
+                        img,
+                        root,
+                        adata.uns["graph"]["tips"],
+                        leave,
+                        adata.uns["graph"],
+                        df,
+                    ).index,
+                    leaves,
+                )
+            )
+        )
+    )
+
+    return adata[cells]

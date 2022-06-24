@@ -134,42 +134,40 @@ def modules(
         color = "old_seg"
 
     if (module == "early") | (module == "all"):
+        if color == "old_milestones":
+            milestones_plot(
+                adata_c,
+                basis="early",
+                subset=cells,
+                title="",
+                show=False,
+                ax=ax_early,
+            )
+        else:
+            sc.pl.embedding(
+                adata_c[cells],
+                basis="early",
+                color=color,
+                legend_loc="none",
+                title="",
+                show=False,
+                ax=ax_early,
+                **kwargs,
+            )
         if show_traj:
             if color != "milestones":
                 kwargs["legend_loc"] = "none"
-
             plot_trajectory(
                 adata_c,
                 basis="early",
                 root_milestone=root_milestone,
                 milestones=milestones,
-                color_cells=color,
+                alpha=0,
                 show=False,
                 title="",
                 ax=ax_early,
                 **kwargs,
             )
-        else:
-            if color == "old_milestones":
-                milestones_plot(
-                    adata_c,
-                    basis="early",
-                    subset=cells,
-                    title="",
-                    show=False,
-                    ax=ax_early,
-                )
-            else:
-                sc.pl.embedding(
-                    adata_c[cells],
-                    basis="early",
-                    color=color,
-                    legend_loc="none",
-                    title="",
-                    show=False,
-                    ax=ax_early,
-                    **kwargs,
-                )
         ax_early.set_xlabel("early " + milestones[0])
         ax_early.set_ylabel("early " + milestones[1])
 

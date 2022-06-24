@@ -17,7 +17,7 @@ from scanpy.plotting._utils import savefig_or_show
 import scanpy as sc
 
 from .. import logging as logg
-from ..tools.utils import getpath, importeR, get_X
+from ..tools.utils import importeR, get_X
 from ..tools import subset_tree
 from ..tools.fit import fit
 from .trajectory import trajectory
@@ -28,7 +28,7 @@ check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 
 from ..get import modules as get_modules
 from .trajectory import remove_info
-from .utils import gen_milestones_gradients, get_basis, is_categorical
+from .utils import gen_milestones_gradients, get_basis, is_categorical, subset_cells
 from .. import logging as logg
 from .. import settings
 
@@ -168,46 +168,8 @@ def trends(
 
     if milestones is not None:
         adata = adata.copy()
-        dct = graph["milestones"]
-
-        leaves = list(map(lambda leave: dct[leave], milestones))
-        root = dct[root_milestone]
-        df = adata.obs.copy(deep=True)
-        edges = (
-            adata.uns["graph"]["pp_seg"][["from", "to"]]
-            .astype(str)
-            .apply(tuple, axis=1)
-            .values
-        )
-        img = igraph.Graph()
-        img.add_vertices(
-            np.unique(
-                adata.uns["graph"]["pp_seg"][["from", "to"]]
-                .values.flatten()
-                .astype(str)
-            )
-        )
-        img.add_edges(edges)
-
-        cells = np.unique(
-            np.concatenate(
-                list(
-                    map(
-                        lambda leave: getpath(
-                            img,
-                            root,
-                            adata.uns["graph"]["tips"],
-                            leave,
-                            adata.uns["graph"],
-                            df,
-                        ).index,
-                        leaves,
-                    )
-                )
-            )
-        )
         seg_col = pd.Series(adata.uns["seg_colors"], index=adata.obs.seg.cat.categories)
-        adata = adata[cells]
+        adata = subset_cells(adata, root_milestone, milestones)
 
     if (features is None) & (cluster is None):
         features = adata.var_names

@@ -17,7 +17,7 @@ from matplotlib.colors import Normalize, hex2color, rgb2hex
 from numba import njit
 import math
 
-from .utils import is_categorical, get_basis
+from .utils import is_categorical, get_basis, subset_cells
 from . import palette_tools
 from .milestones import milestones as milestones_plot
 from ..tools.graph_operations import subset_tree
@@ -291,15 +291,16 @@ def trajectory(
         else:
             sc.pl.embedding(adata, show=False, ax=ax, basis=basis, **kwargs)
 
-    c_edges = np.array([e.split("|") for e in adata.obs.edge], dtype=int)
-    cells = [any(np.isin(c_e, nodes)) for c_e in c_edges]
-
     import logging
 
     anndata_logger = logging.getLogger("anndata")
     prelog = anndata_logger.level
     anndata_logger.level = 40
-    adata_c = adata[cells, :]
+    adata_s = (
+        subset_cells(adata, root_milestone, milestones)
+        if milestones is not None
+        else adata.copy()
+    )
 
     if is_categorical(adata, color_cells):
         if (
@@ -309,11 +310,11 @@ def trajectory(
 
             palette_tools._set_default_colors_for_categorical_obs(adata, color_cells)
 
-        adata_c.uns[color_cells + "_colors"] = [
+        adata_s.uns[color_cells + "_colors"] = [
             adata.uns[color_cells + "_colors"][
                 np.argwhere(adata.obs[color_cells].cat.categories == c)[0][0]
             ]
-            for c in adata_c.obs[color_cells].cat.categories
+            for c in adata_s.obs[color_cells].cat.categories
         ]
     if is_categorical(adata, color_seg):
         if (
@@ -323,18 +324,20 @@ def trajectory(
 
             palette_tools._set_default_colors_for_categorical_obs(adata, color_seg)
 
-        adata_c.uns[color_seg + "_colors"] = [
+        adata_s.uns[color_seg + "_colors"] = [
             adata.uns[color_seg + "_colors"][
                 np.argwhere(adata.obs[color_seg].cat.categories == c)[0][0]
             ]
-            for c in adata_c.obs[color_seg].cat.categories
+            for c in adata_s.obs[color_seg].cat.categories
         ]
 
     plotter = milestones_plot if color_cells == "milestones" else sc.pl.embedding
+    if ("s" not in kwargs) & (milestones is not None):
+        kwargs["s"] = 120000 / adata.shape[0]
     if ax is None:
-        ax = plotter(adata, color=color_cells, basis=basis, show=False, **kwargs)
+        ax = plotter(adata_s, color=color_cells, basis=basis, show=False, **kwargs)
     else:
-        plotter(adata, color=color_cells, basis=basis, ax=ax, show=False, **kwargs)
+        plotter(adata_s, color=color_cells, basis=basis, ax=ax, show=False, **kwargs)
 
     anndata_logger.level = prelog
     if show_info == False and color_cells is not None:

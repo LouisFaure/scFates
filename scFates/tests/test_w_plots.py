@@ -72,6 +72,7 @@ def test_pipeline():
 
     scf.pl.trajectory(adata, arrows=True)
     scf.pl.milestones(adata, annotate=True)
+    scf.pl.milestones_graph(adata)
     scf.pl.graph(adata_2)
     scf.pl.trajectory(adata_2, color_seg="milestones", arrows=True)
     scf.pl.trajectory(adata_2, color_seg="seg", arrows=True)
@@ -124,6 +125,8 @@ def test_pipeline():
     scf.tl.test_covariate(adata, "covariate")
 
     scf.pl.matrix(adata, adata.var_names, annot_var=True)
+
+    scf.pl.matrix(adata, adata.var_names, root_milestone="88", milestones=["18"])
 
     scf.tl.rename_milestones(adata_2, ["A", "B", "C", "D"])
     scf.pl.trajectory(adata_2, root_milestone="A", milestones=["B"])

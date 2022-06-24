@@ -78,11 +78,12 @@ def milestones(
 
     if "edgecolor" not in kwargs:
         kwargs["edgecolor"] = "none"
+    if "s" not in kwargs:
+        kwargs["s"] = 120000 / adata.shape[0]
     ax.scatter(
         adata[order].obsm[f"X_{basis}"][:, 0],
         adata[order].obsm[f"X_{basis}"][:, 1],
         c=gen_milestones_gradients(adata)[order].values,
-        s=120000 / adata.shape[0] if "s" not in kwargs else kwargs["s"],
         marker=".",
         rasterized=True,
         plotnonfinite=True,

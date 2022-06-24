@@ -1,4 +1,4 @@
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Optional, Iterable
 from typing_extensions import Literal
 import numpy as np
 import pandas as pd
@@ -15,6 +15,8 @@ from anndata import AnnData
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 from .. import logging as logg
+from ..tools.graph_operations import subset_tree
+from .utils import subset_cells
 
 
 def matrix(
@@ -26,6 +28,8 @@ def matrix(
     annot_var: bool = False,
     annot_top: bool = True,
     link_seg: bool = True,
+    root_milestone: Optional[str] = None,
+    milestones: Optional[Iterable] = None,
     feature_style: str = "normal",
     feature_spacing: float = 1,
     cmap: Optional[str] = None,
@@ -58,6 +62,10 @@ def matrix(
         Display milestones gradient for each segment on top of plots.
     link_seg
         Link the segment together to keep track of the the tree progression.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
     feature_style
         Font style of the feature labels.
     feature_spacing
@@ -84,7 +92,11 @@ def matrix(
     If `show==False` an array of :class:`~matplotlib.axes.Axes`
 
     """
+
     adata = adata[:, features].copy()
+
+    if milestones is not None:
+        adata = subset_cells(adata, root_milestone, milestones)
 
     cmap = plt.rcParams["image.cmap"] if cmap is None else cmap
 
@@ -130,38 +142,39 @@ def matrix(
     order = pd.Series(graph["milestones"].keys(), index=graph["milestones"].values())[
         np.array(img.vs["name"])[order].astype(int)
     ]
-    order = pd.Series(
-        range(len(adata.obs.seg.cat.categories)), index=graph["pp_seg"]["to"]
-    )[order.index].values
+    to_mil = graph["pp_seg"].loc[adata.obs.seg.cat.categories.astype(int), "to"]
+    seg_order = pd.Series(range(len(adata.obs.seg.cat.categories)), index=to_mil)[
+        order[order.index.isin(to_mil)].index
+    ].values
 
     vs2mils = pd.Series(dct.keys(), index=dct.values())
 
     cellsel = [
         adata.obs.milestones[adata.obs.seg == s]
-        for s in adata.obs.seg.cat.categories[order]
+        for s in adata.obs.seg.cat.categories[seg_order]
     ]
 
     fig, axs = plt.subplots(
         1,
-        len(order) + 1 * annot_var,
+        len(seg_order) + 1 * annot_var,
         constrained_layout=False,
         sharey=True,
         figsize=(
-            len(order) * 0.85 + 0.85 + annot_var * 1,
+            len(seg_order) * 0.85 + 0.85 + annot_var * 1,
             (len(features)) / (5 - feature_spacing) + 0.4 * annot_top,
         )
         if figsize is None
         else figsize,
     )
 
-    if (len(order) + 1 * annot_var) == 1:
+    if (len(seg_order) + 1 * annot_var) == 1:
         axs = [axs]
 
-    pos = np.arange(len(order), 0, -1)
+    pos = np.arange(len(seg_order), 0, -1)
     caxs = []
     if return_data:
         datas = dict()
-    for i, s in enumerate(order):
+    for i, s in enumerate(seg_order):
         adata_sub = adata[adata.obs.seg == adata.obs.seg.cat.categories[s]].copy()
         adata_sub.obs["split"] = pd.cut(adata_sub.obs.t, bins=nbins)
 
@@ -271,7 +284,7 @@ def matrix(
             cax.axis("off")
 
     if link_seg:
-        caxs_dct = dict(zip([adata.obs.seg.cat.categories[o] for o in order], caxs))
+        caxs_dct = dict(zip([adata.obs.seg.cat.categories[o] for o in seg_order], caxs))
 
         kw = dict(
             arrowprops=dict(
