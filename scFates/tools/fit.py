@@ -107,7 +107,7 @@ def fit(
     for m in tqdm(
         range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
     ):
-        if "t_old" in adata.obs.columns:
+        if ("t_old" in adata.obs.columns) | (n_map == 1):
             df = adata.obs.copy()
         else:
             df = adata.uns["pseudotime_list"][str(m)]

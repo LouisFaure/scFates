@@ -137,9 +137,9 @@ def test_fork(
 
         if n_map == 1:
             logg.info("    single mapping")
-        ## Diff expr between forks
-
-        df = adata.uns["pseudotime_list"][str(m)]
+            df = adata.obs.copy()
+        else:
+            df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
         img.add_vertices(
@@ -521,7 +521,10 @@ def activation(
     allact = []
 
     def activation_map(m):
-        df = adata.uns["pseudotime_list"][str(m)]
+        if n_map == 1:
+            df = adata.obs.copy()
+        else:
+            df = adata.uns["pseudotime_list"][str(m)]
         acti = pd.Series(0, index=stats.index)
 
         for leave in leaves:
@@ -763,7 +766,9 @@ def activation_lm(
 
         if n_map == 1:
             logg.info("    single mapping")
-        df = adata.uns["pseudotime_list"][str(m)]
+            df = adata.obs.copy()
+        else:
+            df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
         img.add_vertices(

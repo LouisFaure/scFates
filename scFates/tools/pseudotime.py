@@ -63,6 +63,8 @@ def pseudotime(
     adata = adata.copy() if copy else adata
 
     graph = adata.uns["graph"]
+    pp_seg = adata.uns["graph"]["pp_seg"]
+    pp_info = adata.uns["graph"]["pp_info"]
 
     reassign, recolor = False, False
     if "milestones" in adata.obs:
@@ -77,9 +79,7 @@ def pseudotime(
 
     from sklearn.metrics import pairwise_distances
 
-    P = pairwise_distances(
-        adata.uns["graph"]["F"].T, metric=adata.uns["graph"]["metrics"]
-    )
+    P = pairwise_distances(graph["F"].T, metric=graph["metrics"])
 
     if n_map == 1:
         df_l = [map_cells(graph, R=adata.obsm["X_R"], P=P, multi=False)]
@@ -139,20 +139,41 @@ def pseudotime(
             .values
         )
 
+        allsegs = pd.concat(
+            [df.seg for df in adata.uns["pseudotime_list"].values()], axis=1
+        )
+        allsegs = allsegs.apply(lambda x: x.value_counts(), axis=1)
+        adata.obs.seg = allsegs.idxmax(axis=1)
+        adata.obs.t = pd.concat(
+            [df.t for df in adata.uns["pseudotime_list"].values()], axis=1
+        ).mean(axis=1)
+
+        # reassign cells below minimum pseudotime of their assigned seg
+        for s in pp_seg.n:
+            df_seg = adata.obs.loc[adata.obs.seg == s, "t"]
+            cells_back = allsegs.loc[
+                df_seg[df_seg < pp_info.time[pp_info.seg == s].min()].index
+            ]
+            cells_back = cells_back.fillna(0).apply(
+                lambda x: x.index[np.argsort(x)][-2:], axis=1
+            )
+            cells_back = cells_back.apply(lambda x: x[x != s][0])
+            adata.obs.loc[cells_back.index, "seg"] = cells_back.values
+
     milestones = pd.Series(index=adata.obs_names, dtype=str)
-    for seg in graph["pp_seg"].n:
+    for seg in pp_seg.n:
         cell_seg = adata.obs.loc[adata.obs["seg"] == seg, "t"]
         if len(cell_seg) > 0:
             milestones[
                 cell_seg.index[
                     (cell_seg - min(cell_seg) - (max(cell_seg - min(cell_seg)) / 2) < 0)
                 ]
-            ] = graph["pp_seg"].loc[int(seg), "from"]
+            ] = pp_seg.loc[int(seg), "from"]
             milestones[
                 cell_seg.index[
                     (cell_seg - min(cell_seg) - (max(cell_seg - min(cell_seg)) / 2) > 0)
                 ]
-            ] = graph["pp_seg"].loc[int(seg), "to"]
+            ] = pp_seg.loc[int(seg), "to"]
     adata.obs["milestones"] = milestones
     adata.obs.milestones = (
         adata.obs.milestones.astype(int).astype("str").astype("category")

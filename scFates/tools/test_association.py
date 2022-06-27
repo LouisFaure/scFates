@@ -146,12 +146,11 @@ def test_association(
     stat_assoc_l = list()
 
     def test_assoc_map(m):
-        data = list(
-            zip(
-                [adata.uns["pseudotime_list"][str(m)].loc[cells, :]] * len(Xgenes),
-                Xgenes,
-            )
-        )
+        if n_map == 1:
+            df = adata.obs.loc[cells, :]
+        else:
+            df = adata.uns["pseudotime_list"][str(m)].loc[cells, :]
+        data = list(zip([df] * len(Xgenes), Xgenes))
 
         stat = ProgressParallel(
             n_jobs=n_jobs if n_map == 1 else 1,

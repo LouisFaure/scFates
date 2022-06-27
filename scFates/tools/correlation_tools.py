@@ -126,7 +126,10 @@ def synchro_path(
         logg.info("    single mapping")
 
     def synchro_map(m):
-        df = adata.uns["pseudotime_list"][str(m)]
+        if n_map == 1:
+            df = adata.obs.copy()
+        else:
+            df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
         img.add_vertices(
@@ -259,7 +262,10 @@ def synchro_path(
 
     adata.obs["inter_cor " + name] = list(map(inter_values, tval))
 
-    df = adata.uns["pseudotime_list"][str(0)]
+    if n_map == 1:
+        df = adata.obs.copy()
+    else:
+        df = adata.uns["pseudotime_list"][str(0)]
     cells = np.concatenate(
         [
             getpath(img, root, graph["tips"], leaves[0], graph, df).index,
@@ -511,7 +517,10 @@ def module_inclusion(
     fork_t = adata.uns["graph"]["pp_info"].loc[common_seg, "time"].max()
 
     def onset_map(m):
-        df = adata.uns["pseudotime_list"][str(m)]
+        if n_map == 1:
+            df = adata.obs.copy()
+        else:
+            df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
         img = igraph.Graph()
         img.add_vertices(
