@@ -137,7 +137,7 @@ def test_fork(
 
         if n_map == 1:
             logg.info("    single mapping")
-            df = adata.obs.copy()
+            df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
@@ -162,7 +162,7 @@ def test_fork(
         else:
             brcells["w"] = matw[gene, :][:, graph["cells_fitted"]]
 
-        brcells.drop(["seg", "edge"], axis=1, inplace=True)
+        brcells.drop(["seg"], axis=1, inplace=True)
 
         if rescale:
             for i in brcells.i.unique():
@@ -220,9 +220,6 @@ def test_fork(
             leaves_stat = leaves_stat + [stat]
 
         upreg_stat = upreg_stat + [pd.concat(leaves_stat).loc[genes]]
-
-    # summarize fork statistics
-    # fork_stat=list(map(lambda x: pd.DataFrame(x,index=genes,columns=["effect","p_val"]),fork_stat))
 
     fdr_l = list(
         map(
@@ -522,7 +519,7 @@ def activation(
 
     def activation_map(m):
         if n_map == 1:
-            df = adata.obs.copy()
+            df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
         acti = pd.Series(0, index=stats.index)
@@ -766,7 +763,7 @@ def activation_lm(
 
         if n_map == 1:
             logg.info("    single mapping")
-            df = adata.obs.copy()
+            df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values

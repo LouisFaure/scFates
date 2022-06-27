@@ -127,7 +127,7 @@ def synchro_path(
 
     def synchro_map(m):
         if n_map == 1:
-            df = adata.obs.copy()
+            df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
@@ -263,7 +263,7 @@ def synchro_path(
     adata.obs["inter_cor " + name] = list(map(inter_values, tval))
 
     if n_map == 1:
-        df = adata.obs.copy()
+        df = adata.obs.loc[:, ["t", "seg"]]
     else:
         df = adata.uns["pseudotime_list"][str(0)]
     cells = np.concatenate(
@@ -518,7 +518,7 @@ def module_inclusion(
 
     def onset_map(m):
         if n_map == 1:
-            df = adata.obs.copy()
+            df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values

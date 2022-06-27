@@ -108,7 +108,7 @@ def fit(
         range(n_map), disable=n_map == 1, file=sys.stdout, desc="    multi mapping "
     ):
         if ("t_old" in adata.obs.columns) | (n_map == 1):
-            df = adata.obs.copy()
+            df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values

@@ -136,10 +136,7 @@ def test_association(
 
         return adata if copy else None
 
-    genes = adata.var_names
-    cells = adata.obs_names
-
-    Xgenes = get_X(adata, cells, genes, layer, togenelist=True)
+    Xgenes = get_X(adata, adata.obs_names, adata.var_names, layer, togenelist=True)
 
     logg.info("test features for association with the trajectory", reset=True, end="\n")
 
@@ -147,9 +144,9 @@ def test_association(
 
     def test_assoc_map(m):
         if n_map == 1:
-            df = adata.obs.loc[cells, :]
+            df = adata.obs.loc[:, ["t", "seg"]]
         else:
-            df = adata.uns["pseudotime_list"][str(m)].loc[cells, :]
+            df = adata.uns["pseudotime_list"][str(m)]
         data = list(zip([df] * len(Xgenes), Xgenes))
 
         stat = ProgressParallel(
@@ -159,7 +156,7 @@ def test_association(
             use_tqdm=n_map == 1,
             desc="    single mapping ",
         )(delayed(test_assoc)(data[d], spline_df) for d in range(len(data)))
-        stat = pd.DataFrame(stat, index=genes, columns=["p_val", "A"])
+        stat = pd.DataFrame(stat, index=adata.var_names, columns=["p_val", "A"])
         stat["fdr"] = multipletests(stat.p_val, method="bonferroni")[1]
         return stat
 
