@@ -93,9 +93,11 @@ def graph(
     emb = adata.obsm[f"X_{basis}"]
 
     if "components" in kwargs:
-        cmp = np.array(kwargs["components"]) - 1
+        cmp = np.array(kwargs["components"])
         emb = emb[:, cmp]
-
+    elif "dimensions" in kwargs:
+        cmp = np.array(kwargs["dimensions"])
+        emb = emb[:, cmp]
     else:
         emb = emb[:, :2]
 
@@ -260,9 +262,11 @@ def trajectory(
     emb = adata.obsm[f"X_{basis}"]
 
     if "components" in kwargs:
-        cmp = np.array(kwargs["components"]) - 1
+        cmp = np.array(kwargs["components"])
         emb = emb[:, cmp]
-
+    elif "dimensions" in kwargs:
+        cmp = np.array(kwargs["dimensions"])
+        emb = emb[:, cmp]
     else:
         emb = emb[:, :2]
 
