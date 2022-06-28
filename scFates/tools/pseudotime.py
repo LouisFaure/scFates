@@ -6,7 +6,7 @@ from joblib import delayed
 from tqdm import tqdm
 import sys
 import igraph
-from typing import Optional
+from typing import Optional, Union
 
 from .utils import ProgressParallel
 
@@ -139,6 +139,11 @@ def pseudotime(
             .values
         )
 
+        # reassign cells to their closest segment
+        root = adata.uns["graph"]["root"]
+        tips = adata.uns["graph"]["tips"]
+        endpoints = tips[tips != root]
+
         allsegs = pd.concat(
             [df.seg for df in adata.uns["pseudotime_list"].values()], axis=1
         )
@@ -148,17 +153,61 @@ def pseudotime(
             [df.t for df in adata.uns["pseudotime_list"].values()], axis=1
         ).mean(axis=1)
 
-        # reassign cells below minimum pseudotime of their assigned seg
         for s in pp_seg.n:
             df_seg = adata.obs.loc[adata.obs.seg == s, "t"]
-            cells_back = allsegs.loc[
-                df_seg[df_seg < pp_info.time[pp_info.seg == s].min()].index
-            ]
-            cells_back = cells_back.fillna(0).apply(
-                lambda x: x.index[np.argsort(x)][-2:], axis=1
-            )
-            cells_back = cells_back.apply(lambda x: x[x != s][0])
-            adata.obs.loc[cells_back.index, "seg"] = cells_back.values
+
+            # reassign cells below minimum pseudotime of their assigned seg
+            if any(int(s) == pp_seg.index[pp_seg["from"] != root]):
+                start_t = pp_info.loc[pp_seg["from"], "time"].iloc[int(s) - 1]
+                cells_back = allsegs.loc[df_seg[df_seg < start_t].index]
+                ncells = cells_back.shape[0]
+                if ncells != 0:
+                    filter_from = pd.concat(
+                        [pp_info.loc[pp_seg["from"], "time"] for i in range(ncells)],
+                        axis=1,
+                    ).T.values
+                    filter_to = pd.concat(
+                        [pp_info.loc[pp_seg["to"], "time"] for i in range(ncells)],
+                        axis=1,
+                    ).T.values
+                    t_cells = adata.obs.loc[cells_back.index, "t"]
+
+                    boo = (filter_from < t_cells.values.reshape((-1, 1))) & (
+                        filter_to > t_cells.values.reshape((-1, 1))
+                    )
+
+                    cells_back = (cells_back.fillna(0) * boo).apply(
+                        lambda x: x.index[np.argsort(x)][::-1], axis=1
+                    )
+                    cells_back = cells_back.apply(lambda x: x[x != s][0])
+                    adata.obs.loc[cells_back.index, "seg"] = cells_back.values
+
+            # reassign cells over maximum pseudotime of their assigned seg
+            if any(int(s) == pp_seg.index[~pp_seg.to.isin(endpoints)]):
+                end_t = pp_info.loc[pp_seg["to"], "time"].iloc[int(s) - 1]
+                cells_front = allsegs.loc[df_seg[df_seg > end_t].index]
+                ncells = cells_front.shape[0]
+                if ncells != 0:
+                    filter_from = pd.concat(
+                        [pp_info.loc[pp_seg["from"], "time"] for i in range(ncells)],
+                        axis=1,
+                    ).T.values
+                    filter_to = pd.concat(
+                        [pp_info.loc[pp_seg["to"], "time"] for i in range(ncells)],
+                        axis=1,
+                    ).T.values
+
+                    t_cells = adata.obs.loc[cells_front.index, "t"]
+
+                    boo = (filter_to > t_cells.values.reshape((-1, 1))) & (
+                        filter_from < t_cells.values.reshape((-1, 1))
+                    )
+
+                    cells_front = (cells_front.fillna(0) * boo).apply(
+                        lambda x: x.index[np.argsort(x)][::-1], axis=1
+                    )
+                    cells_front = cells_front.apply(lambda x: x[x != s][0])
+                    adata.obs.loc[cells_front.index, "seg"] = cells_front.values
 
     milestones = pd.Series(index=adata.obs_names, dtype=str)
     for seg in pp_seg.n:
@@ -186,6 +235,10 @@ def pseudotime(
         )
     )
 
+    # setting consistent color palettes
+    from ..plot import palette_tools
+
+    palette_tools._set_default_colors_for_categorical_obs(adata, "milestones")
     while reassign:
         if "tmp_mil_col" not in locals():
             break
@@ -195,6 +248,12 @@ def pseudotime(
         if recolor:
             adata.uns["milestones_colors"] = tmp_mil_col
         reassign = False
+    adata.uns["seg_colors"] = [
+        np.array(adata.uns["milestones_colors"])[
+            pd.Series(adata.uns["graph"]["milestones"]) == t
+        ][0]
+        for t in adata.uns["graph"]["pp_seg"].to
+    ]
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -282,13 +341,25 @@ def map_cells(graph, R, P, multi=False, map_seed=None):
     return df
 
 
-def rename_milestones(adata, new, copy: bool = False):
+def rename_milestones(adata, new: Union[list, dict], copy: bool = False):
 
     adata = adata.copy() if copy else adata
 
-    adata.uns["graph"]["milestones"] = dict(
-        zip(new, list(adata.uns["graph"]["milestones"].values()))
-    )
+    if isinstance(new, dict):
+        old = pd.Series(
+            adata.uns["graph"]["milestones"].keys(),
+            index=adata.uns["graph"]["milestones"].values(),
+        )
+        dct = pd.Series(new)
+        dct.index = dct.index.astype(int)
+        adata.uns["graph"]["milestones"] = dict(
+            zip(dct.loc[old.index].values, adata.uns["graph"]["milestones"].values())
+        )
+        new = dct.loc[old.index].values
+    else:
+        adata.uns["graph"]["milestones"] = dict(
+            zip(new, list(adata.uns["graph"]["milestones"].values()))
+        )
 
     adata.obs.milestones = adata.obs.milestones.cat.rename_categories(new)
 
