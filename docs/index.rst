@@ -27,8 +27,6 @@ The initial R version included a tree inference approach inspired from SimplePPT
 another method for principal graph learning (`Albergante et al., Entropy, 2020 <https://doi.org/10.3390/e22030296>`_).
 scFates is fully compatible with scanpy_, and contains GPU-accelerated functions for faster and scalable inference.
 
-.. image:: _static/scFates_summary_expanded.svg
-   :width: 900
 
 Analysis key steps
 ^^^^^^^^^^^^^^^^^^
