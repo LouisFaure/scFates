@@ -14,10 +14,10 @@ def cellrank_to_tree(
     time,
     Nodes: int,
     method: Literal["ppt", "epg"] = "ppt",
-    ppt_lambda=20,
+    ppt_lambda: int = 100,
     auto_root: bool = False,
     root_params: dict = {},
-    reassign_pseudotime=True,
+    reassign_pseudotime: bool = False,
     copy=False,
     **kwargs
 ):
@@ -85,6 +85,8 @@ def cellrank_to_tree(
         "Converting CellRank results to a principal tree",
         end=" " if settings.verbosity > 2 else "\n",
     )
+    if reassign_pseudotime:
+        auto_root = True
 
     adata = adata.copy() if copy else adata
 
