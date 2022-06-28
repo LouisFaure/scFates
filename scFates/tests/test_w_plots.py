@@ -141,7 +141,7 @@ def test_pipeline():
         plot_emb=False,
         ordering="quantile",
     )
-    del adata.uns["milestones_colors"]
+
     scf.pl.trends(
         adata,
         features=adata.var_names,
@@ -153,7 +153,7 @@ def test_pipeline():
     )
 
     scf.pl.single_trend(adata, feature=adata.var_names[0], color_exp="k")
-    del adata.uns["seg_colors"]
+
     scf.pl.single_trend(
         adata,
         layer="scaled",

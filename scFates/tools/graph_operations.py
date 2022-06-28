@@ -233,6 +233,8 @@ def subset_tree(
 
     if "milestones_colors" in adata.uns:
         oldmilcol = np.array(adata.uns["milestones_colors"])
+    else:
+        oldmilcol = None
 
     milpath = img.get_all_shortest_paths(
         str(dct[root_milestone]), [str(dct[m]) for m in milestones]
@@ -306,7 +308,7 @@ def subset_tree(
     rename_milestones(adata, newmil)
     milsel = newmil
 
-    if "milestones_colors" in adata.uns:
+    if ("milestones_colors" in adata.uns) & (oldmilcol is not None):
         newcols = [oldmilcol[oldmil == m][0] for m in milsel]
     else:
         newcols = None
