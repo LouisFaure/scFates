@@ -67,8 +67,6 @@ def test_pipeline():
 
     scf.pl.binned_pseudotime_meta(adata, "leiden", show_colorbar=True)
 
-    adata_ext = scf.tl.extend_tips(adata, copy=True)
-
     obs_t = adata.obs.t[:5].values
 
     scf.pl.trajectory(adata, arrows=True)
