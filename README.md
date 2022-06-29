@@ -98,11 +98,3 @@ The latest version of rapids framework is required (at least 0.17) it is recomma
     conda activate scFates-gpu
     pip install git+https://github.com/j-bac/elpigraph-python.git
     pip install scFates
-
-## Docker container
-
-scFates can be run on a [Docker container](https://hub.docker.com/repository/docker/louisfaure/scfates) based on Rapids 0.18 container,
-which provide a gpu enabled environment with Jupyter Lab. Use the following command:
-
-    docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-        louisfaure/scfates:latest

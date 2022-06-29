@@ -43,14 +43,6 @@ The latest version of rapids framework is required (at least 0.17) it is recomma
     pip install git+https://github.com/j-bac/elpigraph-python.git
     pip install scFates
 
-Docker container
-----------------
-
-scFates can be run on a `Docker container`_ based on Rapids container, which provides a gpu enabled environment with Jupyter Lab. Use the following command::
-
-    docker run --rm -it --gpus all -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-        louisfaure/scfates:latest
 
 .. _Miniconda: http://conda.pydata.org/miniconda.html
 .. _Github: https://github.com/LouisFaure/scFates
-.. _`Docker container`: https://hub.docker.com/repository/docker/louisfaure/scfates
