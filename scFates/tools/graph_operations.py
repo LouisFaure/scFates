@@ -672,3 +672,64 @@ def getpath(adata, root_milestone, milestones, include_root=False):
         res = pd.concat([res, df], axis=0)
 
     return res
+
+
+def convert_to_soft(
+    adata, sigma: float, lam: int, n_steps: int = 1, copy: bool = False
+):
+    """\
+    Convert an hard assignment matrix to a soft one, allowing for probabilistic mapping.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    sigma
+        Sigma parameter from SimplePPT.
+    lam
+        Lambda parameter from SimplePPT.
+    n_steps
+        Number of steps to run the solving of R and F
+    copy
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        dataset if `copy=True` it returns or else updated these fields to `adata`:
+
+        `.uns['graph']['R']`
+            converted from hard to soft assignment matrix.
+        `.uns['graph']['F']`
+            solved from newly converted soft assignment matrix.
+
+    """
+
+    logg.info("Converting R into soft assignment matrix", reset=True)
+
+    adata = adata.copy() if copy else adata
+
+    graph = adata.uns["graph"]
+    F = graph["F"]
+    B = graph["B"]
+    X = adata.obsm[graph["use_rep"]][:, : graph["ndims_rep"]]
+
+    for i in range(n_steps):
+        R = pairwise_distances(X, F.T, metric="euclidean")
+        process_R_cpu(R, sigma)
+        Rsum = R.sum(axis=1)
+        norm_R_cpu(R, Rsum)
+        D = (np.identity(B.shape[0])) * np.array(B.sum(axis=0))
+        L = D - B
+        M = L * lam + np.identity(R.shape[1]) * np.array(R.sum(axis=0))
+        F = np.linalg.solve(M.T, (np.dot(X.T, R)).T).T
+
+    adata.obsm["X_R"] = R
+    adata.uns["graph"]["F"] = F
+
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(
+        "updated \n"
+        "    .obsm['X_R'] converted soft assignment of cells to principal points.\n"
+        "    .uns['graph']['F'] coordinates of principal points in representation space."
+    )

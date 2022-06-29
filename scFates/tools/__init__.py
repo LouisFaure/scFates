@@ -3,8 +3,8 @@ from .graph_operations import (
     getpath,
     subset_tree,
     attach_tree,
-    extend_tips,
     simplify,
+    convert_to_soft,
 )
 from .graph_fitting import tree, curve, circle
 from .root import root, roots

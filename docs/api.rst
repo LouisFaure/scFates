@@ -44,8 +44,8 @@ Tree operations
     tl.cleanup
     tl.subset_tree
     tl.attach_tree
-    tl.extend_tips
     tl.simplify
+    tl.convert_to_soft
 
 Pseudotime analysis
 -------------------
@@ -102,6 +102,7 @@ Plot
     pl.trajectory_3d
     pl.dendrogram
     pl.milestones
+    pl.milestones_graph
 
 **Pseudotime features**
 

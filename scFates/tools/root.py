@@ -62,7 +62,7 @@ def root(
         )
 
     graph = adata.uns["graph"]
-    circle = False
+    circle = len(graph["tips"]) == 0
     if type(root) == str:
         if root in adata.obs:
             root_val = adata.obs[root]
@@ -88,10 +88,12 @@ def root(
         else:
             root = np.argmax(avgs)
 
-        if len(graph["tips"]) == 0:
-            B = adata.uns["graph"]["B"]
-            g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-            circle = True
+    if circle:
+        B = graph["B"]
+        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+        P = pairwise_distances(graph["F"].T, metric=graph["metrics"])
+        g.es["weight"] = np.array(P[graph["B"].nonzero()].ravel()).tolist()[0]
+        if type(root) == str:
             if min_val:
                 todel = g.neighbors(root)[
                     np.argmax([avgs[i] for i in g.neighbors(root)])
@@ -100,15 +102,19 @@ def root(
                 todel = g.neighbors(root)[
                     np.argmin([avgs[i] for i in g.neighbors(root)])
                 ]
-            B[root, todel] = 0
-            B[todel, root] = 0
-            g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-            # Add edge weights and node labels.
-            g.es["weight"] = B[B.nonzero()]
-            tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-            forks = np.argwhere(np.array(g.degree()) > 2).flatten()
-            adata.uns["graph"]["B"] = B
-            adata.uns["graph"]["tips"] = tips
+        else:
+            nv = np.array(g.neighborhood(root, order=1))[1:]
+            nvd = g.shortest_paths(root, nv, weights=g.es["weight"])
+            todel = nv[np.argmax(nvd)]
+        B[root, todel] = 0
+        B[todel, root] = 0
+        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+        # Add edge weights and node labels.
+        g.es["weight"] = B[B.nonzero()]
+        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+        forks = np.argwhere(np.array(g.degree()) > 2).flatten()
+        adata.uns["graph"]["B"] = B
+        adata.uns["graph"]["tips"] = tips
 
     d = 1e-6 + pairwise_distances(graph["F"].T, graph["F"].T, metric=graph["metrics"])
 
