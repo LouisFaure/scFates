@@ -52,7 +52,8 @@ def test_adata(plot=False) -> AnnData:
     """\
     10X sequencing from the developping (E15.5) enteric nervous system, it
     includes Schwann Cell precursors and two neuronal population generated
-    via a bifurcation.
+    via a bifurcation. If plot is set to True, processed bone marrow data
+    will be loaded.
 
     Returns
     -------
