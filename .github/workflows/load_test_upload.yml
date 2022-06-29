@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'scFates/**'
+    tags:
+      - v*
 
 jobs:
   install_and_load:
