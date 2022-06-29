@@ -48,7 +48,7 @@ def pancreas() -> AnnData:
     return read(filename, backup_url=url, sparse=True, cache=True)
 
 
-def test_adata() -> AnnData:
+def test_adata(plot=False) -> AnnData:
     """\
     10X sequencing from the developping (E15.5) enteric nervous system, it
     includes Schwann Cell precursors and two neuronal population generated
@@ -58,8 +58,12 @@ def test_adata() -> AnnData:
     -------
     Annotated data matrix.
     """
-
-    filename = HERE / "test.h5ad"
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-        return read(filename)
+    if plot:
+        filename = "data/empty_tree.h5ad"
+        url = f"{url_datadir}data/empty_tree.h5ad"
+        return read(filename, backup_url=url, sparse=True, cache=True)
+    else:
+        filename = HERE / "test.h5ad"
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
+            return read(filename)

@@ -61,6 +61,7 @@ def test_pipeline():
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
     scf.tl.dendrogram(adata)
+    scf.pl.dendrogram(adata, color_milestones=True)
 
     adata_s = scf.tl.simplify(adata, copy=True)
 
@@ -123,9 +124,13 @@ def test_pipeline():
     scf.tl.test_association_covariate(adata, "covariate")
     adata.var["signi"] = True
     scf.tl.test_covariate(adata, "covariate")
+    scf.tl.test_covariate(adata, "covariate", trend_test=True)
+    scf.pl.trend_covariate(
+        adata, adata.var_names[0], group_key="covariate", show_null=True
+    )
 
     scf.pl.matrix(adata, adata.var_names, annot_var=True)
-
+    scf.pl.matrix(adata, adata.var_names, norm="minmax", return_data=True)
     scf.pl.matrix(adata, adata.var_names, root_milestone="88", milestones=["18"])
 
     scf.tl.rename_milestones(adata_2, ["A", "B", "C", "D"])
@@ -189,6 +194,13 @@ def test_pipeline():
     scf.tl.activation(adata, root_milestone="43", milestones=["24", "18"], n_jobs=1)
     activation = adata.uns["43->24<>18"]["fork"].activation.values
 
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"])
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], show_traj=True)
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], module="early")
+    scf.pl.modules(
+        adata, root_milestone="43", milestones=["24", "18"], module="late", show=False
+    )
+
     scf.tl.activation_lm(adata, root_milestone="43", milestones=["24", "18"], n_jobs=1)
     activation_lm = adata.uns["43->24<>18"]["fork"].slope.values
     adata.uns["43->24<>18"]["fork"]["module"] = "early"
@@ -197,9 +209,6 @@ def test_pipeline():
     scf.pl.module_inclusion(
         adata, root_milestone="43", milestones=["24", "18"], bins=12, branch="18"
     )
-
-    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"])
-    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], show_traj=True)
 
     scf.pl.single_trend(
         adata, root_milestone="43", milestones=["24", "18"], module="early", branch="24"
@@ -259,6 +268,24 @@ def test_pipeline():
     )
 
     syncAB = adata.uns["43->24<>18"]["synchro"]["real"]["24"]["corAB"].values[:5]
+
+    adata = scf.datasets.test_adata(plot=True)
+
+    scf.get.slide_cors(
+        adata,
+        root_milestone="Root",
+        milestones=["DC", "Mono"],
+        branch="DC",
+        geneset_branch="DC",
+    )
+
+    scf.pl.trajectory(adata, color_seg="milestones")
+
+    scf.pl.synchro_path(adata, root_milestone="Root", milestones=["DC", "Mono"])
+
+    scf.pl.module_inclusion(
+        adata, root_milestone="Root", milestones=["DC", "Mono"], bins=10, branch="Mono"
+    )
 
     assert np.allclose(
         F_PC1_epgc_cpu,
