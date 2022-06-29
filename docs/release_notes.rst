@@ -5,7 +5,7 @@ Release Notes
 =============
 
 
-Version 0.8.0 :small:`June 28, 2022`
+Version 0.8.0 :small:`June 29, 2022`
 ------------------------------------
 
 Major release:
@@ -16,10 +16,11 @@ Major changes:
 
 - **breaking change!** pseudotime calculation is now deterministic, which differs from the previous implementation derived from crestree package. In the previous implementation, cells were assigned to a random position between a node and its closest neighbor. Now cells are assigned a pseudotime according to their soft assignment value between between the node and its closest neighbor.
 - When calculating pseudotime over several mappings, the mean of all pseudotimes is saved in .obs, instead of taking the first mapping. Cell are assigned to their most assigned segment among all mappings, with corrections for cases were the pseudotime is over or under the limit of the segment.
+
+Other changes:
+
 - :func:`scFates.pl.milestones` has been converted into a embedding plot which colors the cells as a gradient following milestones. This plot will be called in any other plotting functions which as a coloring of cell paramter set to 'milestones'.
-
-Minor changes:
-
+- Added :func:`scFates.tl.convert_to_soft` to convert ElPiGraph hard assignment R matrix output into a soft one, allowing for probabilistic mapping of cells.
 - For plot with embeddings, the basis parameter is now automatically guessed if none is mentionned.
 - Improved flexibility and consistency when plotting sub-trajectories
 - Default parameters for :func:`scFates.tl.module_inclusion` have been modified, to focus more on already identified early genes. Inclusion of single gene can now be plotted.
