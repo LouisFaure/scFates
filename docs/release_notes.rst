@@ -8,9 +8,7 @@ Release Notes
 Version 0.8.0 :small:`June 29, 2022`
 ------------------------------------
 
-Major release:
-
-This release is stable and ready for submission to a journal, it is meant to be ready to use and in line with all methods described in the manuscript.
+This release is stable and ready for journal submission, it is meant to be ready to use and in line with all methods described in the manuscript.
 
 Major changes:
 

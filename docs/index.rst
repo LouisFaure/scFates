@@ -14,8 +14,8 @@
     :target: https://github.com/psf/black
 
 
-scFates - a suite for advanced pseudotime analysis
-==================================================
+scFates - a python package for advanced pseudotime and bifurcation analysis
+===========================================================================
 
 **scFates** is a scalable Python suite for tree inference and advanced pseudotime analysis.
 
