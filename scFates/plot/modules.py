@@ -95,12 +95,12 @@ def modules(
     else:
         adata_c = AnnData(
             X_early.values,
-            obs=adata.obs,
+            obs=adata[cells].obs,
             uns=adata.uns,
             obsm={
                 "X_early": X_early.values,
                 "X_late": X_late.values,
-                "X_R": adata.obsm["X_R"],
+                "X_R": adata[cells].obsm["X_R"],
             },
             obsp=adata.obsp,
         )
@@ -157,6 +157,8 @@ def modules(
         if show_traj:
             if color != "milestones":
                 kwargs["legend_loc"] = "none"
+            if "alpha" in kwargs:
+                kwargs.pop("alpha")
             plot_trajectory(
                 adata_c,
                 basis="early",
