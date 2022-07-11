@@ -19,6 +19,14 @@ scFates - a python package for advanced pseudotime and bifurcation analysis
 
 **scFates** is a scalable Python suite for tree inference and advanced pseudotime analysis.
 
+The related work is available now as a preprint_::
+
+    Louis Faure, Ruslan Soldatov, Peter V. Kharchenko, Igor Adameyko
+    scFates: a scalable python package for advanced pseudotime and bifurcation analysis from single cell data
+    bioRxiv 2022.07.09.498657; doi: https://doi.org/10.1101/2022.07.09.498657
+
+
+
 It initially is a translation from crestree_, a R package developed for the analysis of neural crest fates during
 murine embryonic development (`Soldatov et al., Science, 2019 <https://doi.org/10.1126/science.aas9536>`_), and used
 in another study of neural crest derived sensory neurons (`Faure et al., Nature Communications, 2020 <https://doi.org/10.1038/s41467-020-17929-4>`_).
@@ -60,3 +68,4 @@ Analysis key steps
 .. _scanpy: https://scanpy.readthedocs.io/
 .. _crestree: https://github.com/hms-dbmi/crestree
 .. _ElPiGraph: https://github.com/j-bac/elpigraph-python/
+.. _preprint: https://www.biorxiv.org/content/10.1101/2022.07.09.498657v1

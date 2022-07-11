@@ -11,6 +11,13 @@ Description
 
 This package provides a scalable Python suite for fast tree inference and advanced pseudotime downstream analysis, with a focus on fate biasing. This package is compatible with anndata object format used in scanpy or scvelo pipelines. A complete documentation of this package is available [here](https://scfates.readthedocs.io/en/latest).
 
+The related work is available now as a [preprint](https://www.biorxiv.org/content/10.1101/2022.07.09.498657v1):
+
+    Louis Faure, Ruslan Soldatov, Peter V. Kharchenko, Igor Adameyko
+    scFates: a scalable python package for advanced pseudotime and bifurcation analysis from single cell data
+    bioRxiv 2022.07.09.498657; doi: https://doi.org/10.1101/2022.07.09.498657
+
+
 Tree inference algorithms
 =========================
 
@@ -31,8 +38,8 @@ Mirkes](https://github.com/Mirkes)) is also
 
 A [simple PPT](https://www.acsu.buffalo.edu/~yijunsun/lab/Paper/simplePPT.pdf) inspired approach, translated from the [crestree R package](https://github.com/hms-dbmi/crestree), code has been also adapted to run on GPU for accelerated tree inference.
 
-Citations
-=========
+Other Citations
+============
 
 Code for PPT inference and most of downstream pseudotime analysis was initially written in a [R package](https://github.com/hms-dbmi/crestree) by Ruslan Soldatov for the following paper:
 
