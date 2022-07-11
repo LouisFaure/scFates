@@ -345,22 +345,19 @@ def rename_milestones(adata, new: Union[list, dict], copy: bool = False):
 
     adata = adata.copy() if copy else adata
 
-    if isinstance(new, dict):
-        old = pd.Series(
-            adata.uns["graph"]["milestones"].keys(),
-            index=adata.uns["graph"]["milestones"].values(),
-        )
-        dct = pd.Series(new)
-        dct.index = dct.index.astype(int)
-        adata.uns["graph"]["milestones"] = dict(
-            zip(dct.loc[old.index].values, adata.uns["graph"]["milestones"].values())
-        )
-        new = dct.loc[old.index].values
+    if ~isinstance(new, dict):
+        dct = dict(zip(adata.obs.milestones.cat.categories, new))
     else:
-        adata.uns["graph"]["milestones"] = dict(
-            zip(new, list(adata.uns["graph"]["milestones"].values()))
-        )
+        dct = new.copy()
+        new = [dct[m] for m in adata.obs.milestones.cat.categories]
 
+    old = pd.Series(
+        adata.uns["graph"]["milestones"].keys(),
+        index=adata.uns["graph"]["milestones"].values(),
+    )
+    dct = pd.Series(dct)
+    old.loc[:] = dct[old.values].values
+    adata.uns["graph"]["milestones"] = dict(zip(old.values, old.index))
     adata.obs.milestones = adata.obs.milestones.cat.rename_categories(new)
 
     return adata if copy else None
