@@ -1,4 +1,5 @@
 [![PyPI](https://img.shields.io/pypi/v/scFates.svg)](https://pypi.python.org/pypi/scFates/)
+[![DOI](https://img.shields.io/badge/DOI-10.1101/2022.07.09.498657-blue)](https://doi.org/10.1101/2022.07.09.498657)
 [![Documentation Status](https://readthedocs.org/projects/scfates/badge/?version=latest)](https://scfates.readthedocs.io/en/latest/?badge=latest)
 [![Build and Test](https://github.com/LouisFaure/scFates/actions/workflows/load_test_upload.yml/badge.svg)](https://github.com/LouisFaure/scFates/actions/workflows/load_test_upload.yml)
 [![codecov](https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg)](https://codecov.io/gh/LouisFaure/scFates)
