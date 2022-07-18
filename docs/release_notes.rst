@@ -4,6 +4,14 @@
 Release Notes
 =============
 
+Version 0.8.1 :small:`July 18, 2022`
+------------------------------------
+
+Minor release:
+- `pl.milestones_graph` has been removed, simplifying the dependency requirements
+- :func:`scFates.tl.rename_milestones` now accepts dictionaries
+- minor plot fixes
+
 
 Version 0.8.0 :small:`June 29, 2022`
 ------------------------------------
