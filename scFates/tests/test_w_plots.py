@@ -73,7 +73,6 @@ def test_pipeline():
 
     scf.pl.trajectory(adata, arrows=True)
     scf.pl.milestones(adata, annotate=True)
-    scf.pl.milestones_graph(adata)
     scf.pl.graph(adata_2)
     scf.pl.trajectory(adata_2, color_seg="milestones", arrows=True)
     scf.pl.trajectory(adata_2, color_seg="seg", arrows=True)

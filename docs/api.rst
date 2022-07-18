@@ -102,7 +102,6 @@ Plot
     pl.trajectory_3d
     pl.dendrogram
     pl.milestones
-    pl.milestones_graph
 
 **Pseudotime features**
 
