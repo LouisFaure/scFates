@@ -89,90 +89,120 @@ def root(
             root = np.argmax(avgs)
 
     if circle:
-        B = graph["B"]
-        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-        P = pairwise_distances(graph["F"].T, metric=graph["metrics"])
-        g.es["weight"] = np.array(P[graph["B"].nonzero()].ravel()).tolist()[0]
-        if type(root) == str:
-            if min_val:
-                todel = g.neighbors(root)[
-                    np.argmax([avgs[i] for i in g.neighbors(root)])
-                ]
-            else:
-                todel = g.neighbors(root)[
-                    np.argmin([avgs[i] for i in g.neighbors(root)])
-                ]
-        else:
-            nv = np.array(g.neighborhood(root, order=1))[1:]
-            nvd = g.shortest_paths(root, nv, weights=g.es["weight"])
-            todel = nv[np.argmax(nvd)]
-        B[root, todel] = 0
-        B[todel, root] = 0
-        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-        # Add edge weights and node labels.
-        g.es["weight"] = B[B.nonzero()]
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        forks = np.argwhere(np.array(g.degree()) > 2).flatten()
-        adata.uns["graph"]["B"] = B
-        adata.uns["graph"]["tips"] = tips
+        d = 1e-6 + pairwise_distances(
+            graph["F"].T, graph["F"].T, metric=graph["metrics"]
+        )
+        to_g = graph["B"] * d
+        csr = csr_matrix(to_g)
 
-    d = 1e-6 + pairwise_distances(graph["F"].T, graph["F"].T, metric=graph["metrics"])
+        g = igraph.Graph.Adjacency((to_g > 0).tolist(), mode="undirected")
+        g.es["weight"] = to_g[to_g.nonzero()]
+        root_dist_matrix = shortest_path(csr, directed=False, indices=root)
+        pp_info = pd.DataFrame(
+            {
+                "PP": g.vs.indices,
+                "time": root_dist_matrix,
+                "seg": np.zeros(csr.shape[0]),
+            }
+        )
 
-    to_g = graph["B"] * d
+        furthest = pp_info.time.idxmax()
+        pp_info.loc[
+            g.get_shortest_paths(v=root, to=furthest, weights="weight")[0][:-1], "seg"
+        ] = 1
 
-    csr = csr_matrix(to_g)
+        s = pp_info.seg.copy()
+        s[furthest] = 0
+        g.vs["group"] = s
+        g.vs["label"] = s.index
 
-    g = igraph.Graph.Adjacency((to_g > 0).tolist(), mode="undirected")
-    g.es["weight"] = to_g[to_g.nonzero()]
+        sub_g = g.vs.select(group=0).subgraph()
+        a, b = np.argwhere(np.array(sub_g.degree()) == 1).ravel()
+        dst_0 = sub_g.shortest_paths(a, b, weights="weight")[0][0]
+        a, b = sub_g.vs["label"][a], sub_g.vs["label"][b]
+        dst_1 = g.shortest_paths(root, furthest, weights="weight")[0][0]
+        pp_seg = pd.concat(
+            [
+                pd.Series([0, a, b, dst_0], index=["n", "from", "to", "d"]),
+                pd.Series([1, root, furthest, dst_1], index=["n", "from", "to", "d"]),
+            ],
+            axis=1,
+        ).T
 
-    root_dist_matrix = shortest_path(csr, directed=False, indices=root)
-    pp_info = pd.DataFrame(
-        {"PP": g.vs.indices, "time": root_dist_matrix, "seg": np.zeros(csr.shape[0])}
-    )
+        pp_seg.n = pp_seg.n.astype(int).astype(str)
+        pp_seg["from"] = pp_seg["from"].astype(int)
+        pp_seg.to = pp_seg.to.astype(int)
+        pp_info.seg = pp_info.seg.astype(int).astype(str)
 
-    nodes = np.argwhere(
-        np.apply_along_axis(arr=(csr > 0).todense(), axis=0, func1d=np.sum) != 2
-    ).flatten()
-    nodes = np.unique(np.append(nodes, root))
+        adata.uns["graph"]["root"] = root
+        adata.uns["graph"]["root2"] = pp_seg["from"][0]
+        adata.uns["graph"]["pp_info"] = pp_info
+        adata.uns["graph"]["pp_seg"] = pp_seg
 
-    pp_seg = list()
-    for node1, node2 in itertools.combinations(nodes, 2):
-        paths12 = g.get_shortest_paths(node1, node2)
-        paths12 = np.array([val for sublist in paths12 for val in sublist])
+        adata.uns["graph"]["forks"] = np.array([furthest])
+        adata.uns["graph"]["tips"] = np.array([furthest, root, pp_seg["from"][0]])
 
-        if np.sum(np.isin(nodes, paths12)) == 2:
-            fromto = np.array([node1, node2])
-            path_root = root_dist_matrix[[node1, node2]]
-            fro = fromto[np.argmin(path_root)]
-            to = fromto[np.argmax(path_root)]
-            pp_info.loc[paths12, "seg"] = len(pp_seg) + 1
-            pp_seg.append(
-                pd.DataFrame(
-                    {
-                        "n": len(pp_seg) + 1,
-                        "from": fro,
-                        "to": to,
-                        "d": shortest_path(csr, directed=False, indices=fro)[to],
-                    },
-                    index=[len(pp_seg) + 1],
+    else:
+        d = 1e-6 + pairwise_distances(
+            graph["F"].T, graph["F"].T, metric=graph["metrics"]
+        )
+
+        to_g = graph["B"] * d
+
+        csr = csr_matrix(to_g)
+
+        g = igraph.Graph.Adjacency((to_g > 0).tolist(), mode="undirected")
+        g.es["weight"] = to_g[to_g.nonzero()]
+
+        root_dist_matrix = shortest_path(csr, directed=False, indices=root)
+        pp_info = pd.DataFrame(
+            {
+                "PP": g.vs.indices,
+                "time": root_dist_matrix,
+                "seg": np.zeros(csr.shape[0]),
+            }
+        )
+
+        nodes = np.argwhere(
+            np.apply_along_axis(arr=(csr > 0).todense(), axis=0, func1d=np.sum) != 2
+        ).flatten()
+        nodes = np.unique(np.append(nodes, root))
+
+        pp_seg = list()
+        for node1, node2 in itertools.combinations(nodes, 2):
+            paths12 = g.get_shortest_paths(node1, node2)
+            paths12 = np.array([val for sublist in paths12 for val in sublist])
+
+            if np.sum(np.isin(nodes, paths12)) == 2:
+                fromto = np.array([node1, node2])
+                path_root = root_dist_matrix[[node1, node2]]
+                fro = fromto[np.argmin(path_root)]
+                to = fromto[np.argmax(path_root)]
+                pp_info.loc[paths12, "seg"] = len(pp_seg) + 1
+                pp_seg.append(
+                    pd.DataFrame(
+                        {
+                            "n": len(pp_seg) + 1,
+                            "from": fro,
+                            "to": to,
+                            "d": shortest_path(csr, directed=False, indices=fro)[to],
+                        },
+                        index=[len(pp_seg) + 1],
+                    )
                 )
-            )
 
-    pp_seg = pd.concat(pp_seg, axis=0)
-    pp_seg["n"] = pp_seg["n"].astype(int).astype(str)
-    pp_seg["n"] = pp_seg["n"].astype(int).astype(str)
+        pp_seg = pd.concat(pp_seg, axis=0)
+        pp_seg["n"] = pp_seg["n"].astype(int).astype(str)
 
-    pp_seg["from"] = pp_seg["from"].astype(int)
-    pp_seg["to"] = pp_seg["to"].astype(int)
+        pp_seg["from"] = pp_seg["from"].astype(int)
+        pp_seg["to"] = pp_seg["to"].astype(int)
 
-    pp_info["seg"] = pp_info["seg"].astype(int).astype(str)
-    pp_info["seg"] = pp_info["seg"].astype(int).astype(str)
+        pp_info["seg"] = pp_info["seg"].astype(int).astype(str)
 
-    graph["pp_info"] = pp_info
-    graph["pp_seg"] = pp_seg
-    graph["root"] = root
-
-    adata.uns["graph"] = graph
+        graph["pp_info"] = pp_info
+        graph["pp_seg"] = pp_seg
+        graph["root"] = root
+        adata.uns["graph"] = graph
 
     logg.info(
         "node " + str(root) + " selected as a root",
@@ -185,13 +215,6 @@ def root(
         "    .uns['graph']['pp_info'] for each PP, its distance vs root and segment assignment.\n"
         "    .uns['graph']['pp_seg'] segments network information."
     )
-
-    if circle:
-        logg.hint(
-            "updated\n"
-            "    .uns['graph']['B'] with circle now converted to curved trajectory.\n"
-            "    .uns['graph']['tips'] new tips delimitating the trajectory."
-        )
 
     return adata if copy else None
 

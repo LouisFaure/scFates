@@ -361,3 +361,93 @@ def rename_milestones(adata, new: Union[list, dict], copy: bool = False):
     adata.obs.milestones = adata.obs.milestones.cat.rename_categories(new)
 
     return adata if copy else None
+
+
+def unroll_circle(adata: AnnData, copy: bool = False):
+    """\
+    Unroll circle to get full spectrum of pseudotime values along it.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else update fields to `adata`:
+
+        `.obs['t']`
+            assigned pseudotime value.
+        `.obs['seg']`
+            assigned segment of the tree.
+        `.obs['milestone']`
+            assigned region surrounding forks and tips.
+        `.uns['graph']['pp_seg']`
+            segments network information.
+        `.uns['graph']['pp_info']`
+            for each PP, its distance vs root and segment assignment.
+    """
+    from sklearn.metrics import pairwise_distances
+    from scipy.sparse.csgraph import shortest_path
+
+    adata = adata.copy() if copy else adata
+    pp_seg = adata.uns["graph"]["pp_seg"]
+    adata.obs.t[adata.obs.seg == "0"] = (
+        -adata.obs.t[adata.obs.seg == "0"] + adata.obs.t[adata.obs.seg == "0"].max()
+    )
+
+    adata.obs.t[adata.obs.seg == "0"] = (
+        adata.obs.t[adata.obs.seg == "0"] + adata.obs.t[adata.obs.seg == "0"].max()
+    )
+
+    adata.uns["graph"]["forks"] = np.array([], dtype=int)
+    del adata.uns["graph"]["root2"]
+    a, b = adata.uns["graph"]["root"], pp_seg["from"][0]
+    adata.uns["graph"]["tips"] = np.array([a, b])
+
+    d = 1e-6 + pairwise_distances(
+        adata.uns["graph"]["F"].T,
+        adata.uns["graph"]["F"].T,
+        metric=adata.uns["graph"]["metrics"],
+    )
+
+    to_g = adata.uns["graph"]["B"] * d
+
+    csr = csr_matrix(to_g)
+
+    g = igraph.Graph.Adjacency((to_g > 0).tolist(), mode="undirected")
+    g.es["weight"] = to_g[to_g.nonzero()]
+    root_dist_matrix = shortest_path(csr, directed=False, indices=a)
+    pp_info = pd.DataFrame(
+        {"PP": g.vs.indices, "time": root_dist_matrix, "seg": np.zeros(csr.shape[0])}
+    )
+    pp_info.seg = pp_info.seg.astype(int)
+    pp_seg = pd.DataFrame(
+        {
+            "n": 0,
+            "from": a,
+            "to": b,
+            "d": g.shortest_paths(a, b, weights="weight")[0][0],
+        },
+        index=[0],
+    )
+
+    adata.obs.seg = "0"
+    adata.obs.loc[adata.obs.t <= adata.obs.t.max() / 2, "milestones"] = str(a)
+    adata.obs.loc[adata.obs.t > adata.obs.t.max() / 2, "milestones"] = str(b)
+
+    adata.uns["graph"]["pp_info"] = pp_info
+    adata.uns["graph"]["pp_seg"] = pp_seg
+
+    logg.hint(
+        "updated\n"
+        "    .obs['t'] assigned pseudotime value.\n"
+        "    .obs['seg'] assigned segment of the tree.\n"
+        "    .uns['graph']['root'] selected root.\n"
+        "    .uns['graph']['pp_info'] for each PP, its distance vs root and segment assignment.\n"
+        "    .uns['graph']['pp_seg'] segments network information."
+    )
+
+    return adata if copy else None

@@ -8,7 +8,7 @@ from .graph_operations import (
 )
 from .graph_fitting import tree, curve, circle
 from .root import root, roots
-from .pseudotime import pseudotime, rename_milestones
+from .pseudotime import pseudotime, rename_milestones, unroll_circle
 from .test_association import test_association
 from .fit import fit
 from .cluster import cluster
