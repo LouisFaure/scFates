@@ -64,6 +64,7 @@ Pseudotime analysis
     tl.test_covariate
     tl.linearity_deviation
     tl.get_path
+    tl.unroll_circle
 
 Bifurcation analysis
 --------------------

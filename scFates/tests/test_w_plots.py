@@ -11,12 +11,16 @@ def test_pipeline():
     scf.tl.curve(adata, Nodes=10, use_rep="pca", device="cpu", seed=1)
     F_PC1_epgc_cpu = adata.uns["graph"]["F"][0, :5]
 
-    scf.tl.convert_to_soft(adata, 1, 100)
-
     scf.tl.tree(adata, Nodes=10, use_rep="pca", method="epg", device="cpu", seed=1)
     F_PC1_epgt_cpu = adata.uns["graph"]["F"][0, :5]
 
-    scf.tl.circle(adata, Nodes=10, use_rep="pca", device="cpu", seed=1)
+    adata_circle = scf.tl.circle(
+        adata, Nodes=10, use_rep="pca", device="cpu", seed=1, copy=True
+    )
+    scf.tl.convert_to_soft(adata_circle, 1, 100)
+    scf.tl.root(adata_circle, 2)
+    scf.tl.pseudotime(adata_circle, n_map=3)
+    scf.tl.unroll_circle(adata_circle)
 
     scf.tl.tree(
         adata,
@@ -59,7 +63,6 @@ def test_pipeline():
     scf.tl.root(adata, 43)
     pp_info_time = adata.uns["graph"]["pp_info"]["time"][:5].values
 
-    scf.tl.pseudotime(adata_2, n_map=2)
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
     scf.tl.dendrogram(adata)
