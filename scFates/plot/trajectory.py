@@ -248,8 +248,8 @@ def trajectory(
         settings.verbosity = 1
         adata = subset_tree(
             adata,
-            root_milestone="immature",
-            milestones=["Ic", "II<>rest"],
+            root_milestone=root_milestone,
+            milestones=milestones,
             mode="extract",
             copy=True,
         )
