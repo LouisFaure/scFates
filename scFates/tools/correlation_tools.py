@@ -234,16 +234,19 @@ def synchro_path(
             + [" vs ".join(milestones)[0] + "\ninter-module"],
         )
     )
-
-    fork = list(
-        set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
-            img.get_shortest_paths(str(root), str(leaves[1]))[0]
+    if len(milestones) > 1:
+        fork = list(
+            set(img.get_shortest_paths(str(root), str(leaves[0]))[0]).intersection(
+                img.get_shortest_paths(str(root), str(leaves[1]))[0]
+            )
         )
-    )
-    fork = np.array(img.vs["name"], dtype=int)[fork]
-    fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
-    res = allcor.loc[allcor.t < fork_t, :]
-    res = res[~res.t.duplicated()]
+        fork = np.array(img.vs["name"], dtype=int)[fork]
+        fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
+        res = allcor.loc[allcor.t < fork_t, :]
+        res = res[~res.t.duplicated()]
+    else:
+        res = allcor
+        fork_t = res.t.max()
 
     m = rmgcv.gam(
         Formula("corAB ~ s(t, bs = 'cs',k=%s)" % knots),
@@ -267,10 +270,7 @@ def synchro_path(
     else:
         df = adata.uns["pseudotime_list"][str(0)]
     cells = np.concatenate(
-        [
-            getpath(img, root, graph["tips"], leaves[0], graph, df).index,
-            getpath(img, root, graph["tips"], leaves[1], graph, df).index,
-        ]
+        [getpath(img, root, graph["tips"], l, graph, df).index for l in leaves]
     )
 
     adata.obs.loc[~adata.obs_names.isin(cells), "inter_cor " + name] = np.nan
