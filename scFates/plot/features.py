@@ -210,7 +210,10 @@ def trends(
     for i in range(1, len(allpaths)):
         order = order + np.array(allpaths[i])[~np.isin(allpaths[i], order)].tolist()
 
-    order = np.array(order)[1:]
+    if len(graph["milestones"]) > 3:
+        order = np.array(order)[1:]
+    else:
+        order = allpaths[:, 1].tolist()
 
     order = pd.Series(graph["milestones"].keys(), index=graph["milestones"].values())[
         np.array(img.vs["name"])[order].astype(int)

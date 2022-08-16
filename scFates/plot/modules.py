@@ -134,7 +134,7 @@ def modules(
         color = "old_seg"
 
     if (module == "early") | (module == "all"):
-        if color == "old_milestones":
+        if (color == "old_milestones") | (color == "milestones"):
             milestones_plot(
                 adata_c,
                 basis="early",
@@ -174,7 +174,7 @@ def modules(
         ax_early.set_ylabel("early " + milestones[1])
 
     if (module == "late") | (module == "all"):
-        if color == "old_milestones":
+        if (color == "old_milestones") | (color == "milestones"):
             milestones_plot(
                 adata_c,
                 basis="late",
