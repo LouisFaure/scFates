@@ -84,6 +84,10 @@ def pseudotime(
     if n_map == 1:
         df_l = [map_cells(graph, R=adata.obsm["X_R"], P=P, multi=False)]
     else:
+        if graph["method"] == "epg":
+            raise Exception(
+                "multiple mapping does not function with ElPiGraph method, use either method='ppt' in scf.tl.tree or convert R matrix into soft assignment matrix with scf.tl.convert_to_soft"
+            )
         if seed is not None:
             np.random.seed(seed)
             map_seeds = np.random.randint(999999999, size=n_map)

@@ -726,6 +726,7 @@ def convert_to_soft(
 
     adata.obsm["X_R"] = R
     adata.uns["graph"]["F"] = F
+    adata.uns["graph"]["method"] = "ppt"
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
@@ -733,3 +734,5 @@ def convert_to_soft(
         "    .obsm['X_R'] converted soft assignment of cells to principal points.\n"
         "    .uns['graph']['F'] coordinates of principal points in representation space."
     )
+
+    return adata if copy else None

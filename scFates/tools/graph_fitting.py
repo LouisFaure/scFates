@@ -32,13 +32,13 @@ def curve(
     epg_lambda: Optional[Union[float, int]] = 0.01,
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
-    epg_initnodes: Optional[int] = 2,
     epg_verbose: bool = False,
     device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
     seed: Optional[int] = None,
     copy: bool = False,
+    **kwargs,
 ):
     """\
     Generate a principal curve.
@@ -58,17 +58,12 @@ def curve(
         Choose the space to be learned by the principal tree.
     ndims_rep
         Number of dimensions to use for the inference.
-    init
-        Initialise the point positions.
     epg_lambda
         Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20]_.
     epg_mu
         Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20]_.
     epg_trimmingradius
         Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
-    epg_initnodes
-        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
-        in the initial step
     epg_verbose
         show verbose output of epg algorithm
     device
@@ -81,6 +76,8 @@ def curve(
         A numpy random seed.
     copy
         Return a copy instead of writing to adata.
+    **kwargs
+        Arguments passsed to :func:`elpigraph.computeElasticPrincipalCurve`
     Returns
     -------
     adata : anndata.AnnData
@@ -124,14 +121,13 @@ def curve(
         Nodes,
         use_rep,
         ndims_rep,
-        init,
         epg_lambda,
         epg_mu,
         epg_trimmingradius,
-        epg_initnodes,
         device,
         seed,
         epg_verbose,
+        **kwargs,
     )
 
     if plot:
@@ -164,6 +160,7 @@ def tree(
     basis: Optional[str] = "umap",
     seed: Optional[int] = None,
     copy: bool = False,
+    **kwargs,
 ):
     """\
     Generate a principal tree.
@@ -229,6 +226,8 @@ def tree(
         A numpy random seed.
     copy
         Return a copy instead of writing to adata.
+    **kwargs
+        Arguments passsed to :func:`elpigraph.computeElasticPrincipalTree`
     Returns
     -------
     adata : anndata.AnnData
@@ -255,6 +254,7 @@ def tree(
     adata = adata.copy() if copy else adata
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
+    X = X.values
 
     W = get_data(adata, weight_rep, ndims_rep)[0] if weight_rep is not None else None
 
@@ -292,6 +292,7 @@ def tree(
             "metrics": ppt["metric"],
             "use_rep": use_rep,
             "ndims_rep": ndims_rep,
+            "method": "ppt",
         }
 
         adata.uns["graph"] = graph
@@ -299,24 +300,21 @@ def tree(
         adata.obsm["X_R"] = ppt["R"]
 
     elif method == "epg":
-        graph, epg = tree_epg(
+        graph, R, EPG = tree_epg(
             X,
             Nodes,
-            init,
+            use_rep,
+            ndims_rep,
             epg_lambda,
             epg_mu,
             epg_trimmingradius,
-            epg_initnodes,
             device,
             seed,
             epg_verbose,
         )
-        graph["use_rep"] = use_rep
-        graph["ndims_rep"] = ndims_rep
-        adata.obsm["X_R"] = graph["R"]
-        del graph["R"]
         adata.uns["graph"] = graph
-        adata.uns["epg"] = epg
+        adata.uns["epg"] = EPG
+        adata.obsm["X_R"] = R
 
     if plot:
         plot_graph(adata, basis)
@@ -337,17 +335,16 @@ def circle(
     Nodes: int = None,
     use_rep: str = None,
     ndims_rep: Optional[int] = None,
-    init: Optional[DataFrame] = None,
     epg_lambda: Optional[Union[float, int]] = 0.01,
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
-    epg_initnodes: Optional[int] = 3,
     epg_verbose: bool = False,
     device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
     seed: Optional[int] = None,
     copy: bool = False,
+    **kwargs,
 ):
     """\
     Generate a principal circle.
@@ -367,17 +364,12 @@ def circle(
         Choose the space to be learned by the principal tree.
     ndims_rep
         Number of dimensions to use for the inference.
-    init
-        Initialise the point positions.
     epg_lambda
         Parameter for ElPiGraph, coefficient of ‘stretching’ elasticity [Albergante20]_.
     epg_mu
         Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20]_.
     epg_trimmingradius
         Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
-    epg_initnodes
-        numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
-        in the initial step
     epg_verbose
         show verbose output of epg algorithm
     device
@@ -390,6 +382,8 @@ def circle(
         A numpy random seed.
     copy
         Return a copy instead of writing to adata.
+    **kwargs
+        Arguments passsed to :func:`elpigraph.computeElasticPrincipalCircle`
     Returns
     -------
     adata : anndata.AnnData
@@ -452,14 +446,15 @@ def circle(
 def tree_epg(
     X,
     Nodes: int = None,
-    init: Optional[DataFrame] = None,
+    use_rep: str = None,
+    ndims_rep: Optional[int] = None,
     lam: Optional[Union[float, int]] = 0.01,
     mu: Optional[Union[float, int]] = 0.1,
     trimmingradius: Optional = np.inf,
-    initnodes: int = None,
     device: str = "cpu",
     seed: Optional[int] = None,
     verbose: bool = True,
+    **kwargs,
 ):
 
     import elpigraph
@@ -487,101 +482,23 @@ def tree_epg(
                 "Some of the GPU dependencies are missing, use device='cpu' instead!"
             )
 
-        Tree = elpigraph.computeElasticPrincipalTree(
-            X.values.astype(np.float64),
-            NumNodes=Nodes,
-            Do_PCA=False,
-            InitNodes=initnodes,
-            Lambda=lam,
-            Mu=mu,
-            TrimmingRadius=trimmingradius,
-            GPU=True,
-            verbose=verbose,
-        )
+    EPG = elpigraph.computeElasticPrincipalTree(
+        X,
+        NumNodes=Nodes,
+        Do_PCA=False,
+        Lambda=lam,
+        Mu=mu,
+        TrimmingRadius=trimmingradius,
+        GPU=device == "gpu",
+        verbose=verbose,
+        **kwargs,
+    )[0]
 
-        R = pairwise_distances(
-            cp.asarray(X.values), cp.asarray(Tree[0]["NodePositions"])
-        )
+    graph, R = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device)
 
-        R = cp.asnumpy(R)
-        # Hard assigment
-        R = sparse.csr_matrix(
-            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
-        ).A
+    EPG["Edges"] = list(EPG["Edges"])[0]
 
-    else:
-        from .utils import cor_mat_cpu
-        from sklearn.metrics import pairwise_distances
-
-        Tree = elpigraph.computeElasticPrincipalTree(
-            X.values.astype(np.float64),
-            NumNodes=Nodes,
-            Do_PCA=False,
-            InitNodes=initnodes,
-            Lambda=lam,
-            Mu=mu,
-            TrimmingRadius=trimmingradius,
-            verbose=verbose,
-        )
-
-        R = pairwise_distances(X.values, Tree[0]["NodePositions"])
-        # Hard assigment
-        R = sparse.csr_matrix(
-            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
-        ).A
-
-    g = igraph.Graph(directed=False)
-    g.add_vertices(np.unique(Tree[0]["Edges"][0].flatten().astype(int)))
-    g.add_edges(
-        pd.DataFrame(Tree[0]["Edges"][0]).astype(int).apply(tuple, axis=1).values
-    )
-
-    B = np.asarray(g.get_adjacency().data)
-
-    emptynodes = np.argwhere(R.max(axis=0) == 0).ravel()
-    sel = ~np.isin(np.arange(R.shape[1]), emptynodes)
-    B = B[sel, :][:, sel]
-    R = R[:, sel]
-    F = Tree[0]["NodePositions"].T[:, sel]
-    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-
-    def reconnect():
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        distmat = np.triu(pairwise_distances(F[:, tips].T))
-        distmat = pd.DataFrame(distmat, columns=tips, index=tips)
-        distmat[distmat == 0] = np.inf
-        row, col = np.unravel_index(np.argmin(distmat.values), distmat.shape)
-        i, j = distmat.index[row], distmat.columns[col]
-        B[i, j] = 1
-        B[j, i] = 1
-        return B
-
-    if len(emptynodes) > 0:
-        logg.info("    removed %d non assigned nodes" % (len(emptynodes)))
-
-    recon = len(np.unique(np.array(g.clusters().membership))) > 1
-    while recon:
-        B = reconnect()
-        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        recon = len(np.unique(np.array(g.clusters().membership))) > 1
-
-    forks = np.argwhere(np.array(g.degree()) > 2).flatten()
-
-    graph = {
-        "B": B,
-        "R": R,
-        "F": Tree[0]["NodePositions"].T,
-        "tips": tips,
-        "forks": forks,
-        "cells_fitted": X.index.tolist(),
-        "metrics": "euclidean",
-    }
-
-    Tree[0]["Edges"] = list(Tree[0]["Edges"])[0]
-
-    return graph, Tree[0]
+    return graph, R, EPG
 
 
 def curve_epg(
@@ -589,18 +506,18 @@ def curve_epg(
     Nodes: int = None,
     use_rep: str = None,
     ndims_rep: Optional[int] = None,
-    init: Optional[DataFrame] = None,
     lam: Optional[Union[float, int]] = 0.01,
     mu: Optional[Union[float, int]] = 0.1,
     trimmingradius: Optional = np.inf,
-    initnodes: int = None,
     device: str = "cpu",
     seed: Optional[int] = None,
     verbose: bool = True,
+    **kwargs,
 ):
     import elpigraph
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
+    X = X.values
 
     if seed is not None:
         np.random.seed(seed)
@@ -608,109 +525,31 @@ def curve_epg(
     if device == "gpu":
         try:
             import cupy as cp
-            from .utils import cor_mat_gpu
+            from .utils import cor_mat_gpu, norm_R_cpu
             from cuml.metrics import pairwise_distances
         except ModuleNotFoundError:
             raise Exception(
                 "Some of the GPU dependencies are missing, use device='cpu' instead!"
             )
 
-        Curve = elpigraph.computeElasticPrincipalCurve(
-            X.values.astype(np.float64),
-            NumNodes=Nodes,
-            Do_PCA=False,
-            InitNodes=initnodes,
-            Lambda=lam,
-            Mu=mu,
-            TrimmingRadius=trimmingradius,
-            GPU=True,
-            verbose=verbose,
-        )
+    EPG = elpigraph.computeElasticPrincipalCurve(
+        X,
+        NumNodes=Nodes,
+        Do_PCA=False,
+        Lambda=lam,
+        Mu=mu,
+        TrimmingRadius=trimmingradius,
+        GPU=device == "gpu",
+        verbose=verbose,
+        **kwargs,
+    )[0]
 
-        R = pairwise_distances(
-            cp.asarray(X.values), cp.asarray(Curve[0]["NodePositions"])
-        )
+    graph, R = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device)
 
-        R = cp.asnumpy(R)
-        # Hard assigment
-        R = sparse.csr_matrix(
-            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
-        ).A
-
-    else:
-        from .utils import cor_mat_cpu
-        from sklearn.metrics import pairwise_distances
-
-        Curve = elpigraph.computeElasticPrincipalCurve(
-            X.values.astype(np.float64),
-            NumNodes=Nodes,
-            Do_PCA=False,
-            InitNodes=initnodes,
-            Lambda=lam,
-            Mu=mu,
-            TrimmingRadius=trimmingradius,
-            verbose=verbose,
-        )
-
-        R = pairwise_distances(X.values, Curve[0]["NodePositions"])
-        # Hard assigment
-        R = sparse.csr_matrix(
-            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
-        ).A
-
-    g = igraph.Graph(directed=False)
-    g.add_vertices(np.unique(Curve[0]["Edges"][0].flatten().astype(int)))
-    g.add_edges(
-        pd.DataFrame(Curve[0]["Edges"][0]).astype(int).apply(tuple, axis=1).values
-    )
-
-    B = np.asarray(g.get_adjacency().data)
-
-    emptynodes = np.argwhere(R.max(axis=0) == 0).ravel()
-    sel = ~np.isin(np.arange(R.shape[1]), emptynodes)
-    B = B[sel, :][:, sel]
-    R = R[:, sel]
-    F = Curve[0]["NodePositions"].T[:, sel]
-    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-
-    def reconnect():
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        distmat = np.triu(pairwise_distances(F[:, tips].T))
-        distmat = pd.DataFrame(distmat, columns=tips, index=tips)
-        distmat[distmat == 0] = np.inf
-        row, col = np.unravel_index(np.argmin(distmat.values), distmat.shape)
-        i, j = distmat.index[row], distmat.columns[col]
-        B[i, j] = 1
-        B[j, i] = 1
-        return B
-
-    if len(emptynodes) > 0:
-        logg.info("    removed %d non assigned nodes" % (len(emptynodes)))
-
-    recon = len(np.unique(np.array(g.clusters().membership))) > 1
-    while recon:
-        B = reconnect()
-        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        recon = len(np.unique(np.array(g.clusters().membership))) > 1
-
-    forks = np.argwhere(np.array(g.degree()) > 2).flatten()
-
-    graph = {
-        "B": B,
-        "F": Curve[0]["NodePositions"].T,
-        "tips": tips,
-        "forks": forks,
-        "metrics": "euclidean",
-        "use_rep": use_rep,
-        "ndims_rep": ndims_rep,
-    }
-
-    Curve[0]["Edges"] = list(Curve[0]["Edges"])[0]
+    EPG["Edges"] = list(EPG["Edges"])[0]
 
     adata.uns["graph"] = graph
-    adata.uns["epg"] = Curve[0]
+    adata.uns["epg"] = EPG
     adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
@@ -734,14 +573,15 @@ def circle_epg(
     lam: Optional[Union[float, int]] = 0.01,
     mu: Optional[Union[float, int]] = 0.1,
     trimmingradius: Optional = np.inf,
-    initnodes: int = None,
     device: str = "cpu",
     seed: Optional[int] = None,
     verbose: bool = True,
+    **kwargs,
 ):
     import elpigraph
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
+    X = X.values
 
     if seed is not None:
         np.random.seed(seed)
@@ -756,102 +596,24 @@ def circle_epg(
                 "Some of the GPU dependencies are missing, use device='cpu' instead!"
             )
 
-        Curve = elpigraph.computeElasticPrincipalCircle(
-            X.values.astype(np.float64),
-            NumNodes=Nodes,
-            Do_PCA=False,
-            InitNodes=initnodes,
-            Lambda=lam,
-            Mu=mu,
-            TrimmingRadius=trimmingradius,
-            GPU=True,
-            verbose=verbose,
-        )
-
-        R = pairwise_distances(
-            cp.asarray(X.values), cp.asarray(Curve[0]["NodePositions"])
-        )
-
-        R = cp.asnumpy(R)
-        # Hard assigment
-        R = sparse.csr_matrix(
-            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
-        ).A
-
-    else:
-        from .utils import cor_mat_cpu
-        from sklearn.metrics import pairwise_distances
-
-        Curve = elpigraph.computeElasticPrincipalCircle(
-            X.values.astype(np.float64),
-            NumNodes=Nodes,
-            Do_PCA=False,
-            InitNodes=initnodes,
-            Lambda=lam,
-            Mu=mu,
-            TrimmingRadius=trimmingradius,
-            verbose=verbose,
-        )
-
-        R = pairwise_distances(X.values, Curve[0]["NodePositions"])
-        # Hard assigment
-        R = sparse.csr_matrix(
-            (np.repeat(1, R.shape[0]), (range(R.shape[0]), R.argmin(axis=1))), R.shape
-        ).A
-
-    g = igraph.Graph(directed=False)
-    g.add_vertices(np.unique(Curve[0]["Edges"][0].flatten().astype(int)))
-    g.add_edges(
-        pd.DataFrame(Curve[0]["Edges"][0]).astype(int).apply(tuple, axis=1).values
+    EPG = elpigraph.computeElasticPrincipalCircle(
+        X,
+        NumNodes=Nodes,
+        Do_PCA=False,
+        InitNodes=initnodes,
+        Lambda=lam,
+        Mu=mu,
+        TrimmingRadius=trimmingradius,
+        GPU=device == "gpu",
+        verbose=verbose,
     )
 
-    B = np.asarray(g.get_adjacency().data)
+    graph, R = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device)
 
-    emptynodes = np.argwhere(R.max(axis=0) == 0).ravel()
-    sel = ~np.isin(np.arange(R.shape[1]), emptynodes)
-    B = B[sel, :][:, sel]
-    R = R[:, sel]
-    F = Curve[0]["NodePositions"].T[:, sel]
-    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-
-    def reconnect():
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        distmat = np.triu(pairwise_distances(F[:, tips].T))
-        distmat = pd.DataFrame(distmat, columns=tips, index=tips)
-        distmat[distmat == 0] = np.inf
-        row, col = np.unravel_index(np.argmin(distmat.values), distmat.shape)
-        i, j = distmat.index[row], distmat.columns[col]
-        B[i, j] = 1
-        B[j, i] = 1
-        return B
-
-    if len(emptynodes) > 0:
-        logg.info("    removed %d non assigned nodes" % (len(emptynodes)))
-
-    recon = len(tips) > 0
-    while recon:
-        B = reconnect()
-        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
-        tips = np.argwhere(np.array(g.degree()) == 1).flatten()
-        recon = len(tips) > 0
-
-    forks = np.argwhere(np.array(g.degree()) > 2).flatten()
-
-    graph = {
-        "B": B,
-        "F": F,
-        "tips": tips,
-        "forks": forks,
-        "metrics": "euclidean",
-        "use_rep": use_rep,
-        "ndims_rep": ndims_rep,
-    }
-
-    Curve[0]["Edges"] = list(Curve[0]["Edges"])[0]
+    EPG["Edges"] = list(EPG["Edges"])[0]
 
     adata.uns["graph"] = graph
-    adata.uns["epg"] = Curve[0]
+    adata.uns["epg"] = EPG
     adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
@@ -864,6 +626,62 @@ def circle_epg(
     )
 
     return adata
+
+
+def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device):
+    import elpigraph
+    from .utils import norm_R_cpu
+
+    if device == "gpu":
+        from cuml.metrics import pairwise_distances
+    else:
+        from sklearn.metrics import pairwise_distances
+
+    F = EPG["NodePositions"].T
+
+    # assign to edge and obtain R
+    R = pairwise_distances(X, EPG["NodePositions"])
+    idx_nodes = np.arange(Nodes)
+    elpigraph.utils.getProjection(X, EPG)
+    mask = [
+        np.isin(idx_nodes, EPG["Edges"][0][EPG["projection"]["edge_id"][i]]) * 1
+        for i in range(X.shape[0])
+    ]
+
+    R = R * np.vstack(mask)
+    Rsum = R.sum(axis=1)
+    norm_R_cpu(R, Rsum)
+    R = np.abs(R - 1)
+    R[R == 1] = 0
+
+    # obtain B
+    g = igraph.Graph(directed=False)
+    g.add_vertices(np.unique(EPG["Edges"][0].flatten().astype(int)))
+    g.add_edges(pd.DataFrame(EPG["Edges"][0]).astype(int).apply(tuple, axis=1).values)
+
+    B = np.asarray(g.get_adjacency().data)
+
+    emptynodes = np.argwhere(R.max(axis=0) == 0).ravel()
+
+    if len(emptynodes) > 0:
+        logg.info("    there are %d non assigned nodes" % (len(emptynodes)))
+
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+    forks = np.argwhere(np.array(g.degree()) > 2).flatten()
+
+    graph = {
+        "B": B,
+        "F": F,
+        "tips": tips,
+        "forks": forks,
+        "metrics": "euclidean",
+        "use_rep": use_rep,
+        "ndims_rep": ndims_rep,
+        "method": "epg",
+    }
+
+    return graph, R
 
 
 def get_data(adata, use_rep, ndims_rep):
