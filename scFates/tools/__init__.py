@@ -6,7 +6,7 @@ from .graph_operations import (
     simplify,
     convert_to_soft,
 )
-from .graph_fitting import tree, curve, circle
+from .graph_fitting import tree, curve, circle, explore_sigma
 from .root import root, roots
 from .pseudotime import pseudotime, rename_milestones, unroll_circle
 from .test_association import test_association

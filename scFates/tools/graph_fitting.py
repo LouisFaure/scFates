@@ -684,6 +684,121 @@ def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device):
     return graph, R
 
 
+def explore_sigma(
+    adata,
+    Nodes,
+    use_rep=None,
+    ndims_rep=None,
+    sigmas=[1000, 100, 10, 1, 0.1, 0.01],
+    nsteps=1,
+    metric="euclidean",
+    seed=None,
+    plot=False,
+    second_round=False,
+    **kwargs,
+):
+    import copy
+    from sklearn.metrics import pairwise_distances
+
+    X, use_rep = get_data(adata, use_rep, ndims_rep)
+
+    mindist = list()
+    verb = copy.deepcopy(settings.verbosity)
+    settings.verbosity = 0
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for sigma in sigmas:
+            tree(
+                adata,
+                Nodes=Nodes,
+                use_rep=use_rep,
+                method="ppt",
+                ppt_nsteps=nsteps,
+                ppt_sigma=sigma,
+                ppt_metric=metric,
+                seed=seed,
+                **kwargs,
+            )
+            mindist.append(
+                pairwise_distances(adata.uns["graph"]["F"].T, X, metric=metric)
+                .min(axis=0)
+                .mean()
+            )
+
+    def point_on_line(a, b, p):
+        ap = p - a
+        ab = b - a
+        result = a + np.dot(ap, ab) / np.dot(ab, ab) * ab
+        return result
+
+    a = np.array([0, mindist[0]])
+    b = np.array([len(sigmas) - 1, mindist[len(sigmas) - 1]])
+    projected = list()
+
+    for i in range(len(sigmas)):
+        p = np.array([i, mindist[i]])
+
+        projected.append(point_on_line(a, b, p))
+
+    curve = np.vstack([np.arange(len(sigmas)), mindist]).T
+    proj = np.vstack(projected)
+    dists = np.array(
+        [np.linalg.norm(curve[i, :] - proj[i, :]) for i in range(len(sigmas))]
+    )
+    dists[(proj[:, 0] - curve[:, 0]) < 0] = 0
+    selected = np.argmax(dists)
+
+    if plot:
+        import matplotlib.pyplot as plt
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), constrained_layout=True)
+        ax1.plot(range(len(sigmas)), mindist, color="k")
+        ax1.set_xticks(range(len(sigmas)), sigmas)
+        ax1.scatter(selected, mindist[selected], color="r", zorder=100)
+        ax1.set_xlabel("sigma parameter")
+        ax1.set_ylabel(f"mean minimum {metric} distance")
+        ax1.grid(False)
+        tree(
+            adata,
+            Nodes=Nodes,
+            use_rep=use_rep,
+            method="ppt",
+            ppt_nsteps=3,
+            ppt_sigma=sigmas[selected],
+            ppt_lambda=1,
+            seed=seed,
+        )
+        plot_graph(
+            adata,
+            show=False,
+            size_nodes=0.1,
+            title=f"iteration {nsteps}",
+            ax=ax2,
+            forks=False,
+            tips=False,
+        )
+
+    settings.verbosity = verb
+    sigma = sigmas[selected]
+    if second_round:
+        sigmas = np.arange(sigma / 5, sigma, sigma / 5)[::-1]
+        sigma = explore_sigma(
+            adata,
+            Nodes,
+            use_rep,
+            ndims_rep,
+            sigmas,
+            nsteps,
+            metric,
+            seed,
+            plot,
+            second_round=False,
+            **kwargs,
+        )
+    return sigma
+
+
 def get_data(adata, use_rep, ndims_rep):
 
     if use_rep not in adata.obsm.keys() and f"X_{use_rep}" in adata.obsm.keys():
@@ -694,8 +809,8 @@ def get_data(adata, use_rep, ndims_rep):
         & (use_rep not in adata.obsm.keys())
         & (use_rep != "X")
     ):
-        use_rep = "X" if adata.n_vars < 50 or n_pcs == 0 else "X_pca"
-        n_pcs = None if use_rep == "X" else n_pcs
+        use_rep = "X" if adata.n_vars < 50 or ndims_rep is None else "X_pca"
+        ndims_rep = None if use_rep == "X" else ndims_rep
 
     if use_rep == "X":
         ndims_rep = None
