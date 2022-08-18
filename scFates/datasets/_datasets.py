@@ -30,6 +30,21 @@ def morarach20() -> AnnData:
     return read(filename, backup_url=url, sparse=True, cache=True)
 
 
+def neucrest19() -> AnnData:
+    """\
+    SS2 of neural crest cells at E8.5 from `Soldatov et al. (2019) <https://doi.org/10.1126/science.aas9536>`_.
+    contains a multifucating trajectory.
+
+    Returns
+    -------
+    Annotated data matrix.
+    """
+
+    filename = "data/neucrest.h5ad"
+    url = f"{url_datadir}data/neucrest.h5ad"
+    return read(filename, backup_url=url, sparse=True, cache=True)
+
+
 def pancreas() -> AnnData:
     """\
     Data from `Bastidas-Ponce et al. (2019) <https://doi.org/10.1242/dev.173849>`_.
