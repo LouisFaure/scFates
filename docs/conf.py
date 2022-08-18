@@ -125,6 +125,7 @@ notebooks = [
     "Basic_Curved_trajectory_analysis.ipynb",
     "Tree_Analysis_Bone_marrow_fates.ipynb",
     "Tree_operations.ipynb",
+    "Explore_sigma.ipynb",
     "Conversion_from_CellRank_pipeline.ipynb",
     "Beyond_scRNAseq.ipynb",
 ]

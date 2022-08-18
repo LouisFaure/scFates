@@ -787,21 +787,24 @@ def explore_sigma(
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), constrained_layout=True)
         ax1.plot(range(len(sigmas)), mindist, color="k")
-        ax1.set_xticks(range(len(sigmas)), sigmas)
+        ax1.set_xticks(range(len(sigmas)))
+        ax1.set_xticklabels(sigmas)
         ax1.scatter(selected, mindist[selected], color="r", zorder=100)
         ax1.set_xlabel("sigma parameter")
         ax1.set_ylabel(f"mean minimum {metric} distance")
         ax1.grid(False)
-        tree(
-            adata,
-            Nodes=Nodes,
-            use_rep=use_rep,
-            method="ppt",
-            ppt_nsteps=3,
-            ppt_sigma=sigmas[selected],
-            ppt_lambda=1,
-            seed=seed,
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tree(
+                adata,
+                Nodes=Nodes,
+                use_rep=use_rep,
+                method="ppt",
+                ppt_nsteps=3,
+                ppt_sigma=sigmas[selected],
+                ppt_lambda=1,
+                seed=seed,
+            )
         plot_graph(
             adata,
             show=False,

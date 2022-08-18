@@ -62,6 +62,7 @@ Analysis key steps
    Basic_Curved_trajectory_analysis
    Tree_Analysis_Bone_marrow_fates
    Tree_operations
+   Explore_sigma
    Conversion_from_CellRank_pipeline
    Beyond_scRNAseq
 
