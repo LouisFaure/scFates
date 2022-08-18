@@ -426,11 +426,9 @@ def circle(
         Nodes,
         use_rep,
         ndims_rep,
-        init,
         epg_lambda,
         epg_mu,
         epg_trimmingradius,
-        epg_initnodes,
         device,
         seed,
         epg_verbose,
@@ -568,7 +566,6 @@ def circle_epg(
     Nodes: int = None,
     use_rep: str = None,
     ndims_rep: Optional[int] = None,
-    init: Optional[DataFrame] = None,
     lam: Optional[Union[float, int]] = 0.01,
     mu: Optional[Union[float, int]] = 0.1,
     trimmingradius: Optional = np.inf,
@@ -599,13 +596,12 @@ def circle_epg(
         X,
         NumNodes=Nodes,
         Do_PCA=False,
-        InitNodes=initnodes,
         Lambda=lam,
         Mu=mu,
         TrimmingRadius=trimmingradius,
         GPU=device == "gpu",
         verbose=verbose,
-    )
+    )[0]
 
     graph, R = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device)
 

@@ -138,7 +138,7 @@ def test_pipeline():
     scf.tl.rename_milestones(adata_2, ["A", "B", "C", "D"])
     scf.pl.trajectory(adata_2, root_milestone="A", milestones=["B"])
 
-    scf.tl.cluster(adata, knn=3)
+    scf.tl.cluster(adata, n_neighbors=3, n_pcs=3)
 
     g = scf.pl.trends(adata, features=adata.var_names, return_genes=True)
     scf.pl.trends(
@@ -291,12 +291,12 @@ def test_pipeline():
 
     assert np.allclose(
         F_PC1_epgc_cpu,
-        [9.27506488, -23.41654899, -14.26729458, -5.30612656, -20.13940938],
+        [7.59129535, -13.72206739, -23.63862037, -5.51447004, -13.44846369],
     )
     # assert np.allclose(F_PC1_epgt_cpu, F_PC1_epgt_gpu)
     assert np.allclose(
         F_PC1_epgt_cpu,
-        [-10.81716492, 9.02788641, -14.80570284, -23.39084922, -20.12368624],
+        [1.76866084, -9.214051, -23.6582564, -4.09841959, -15.84657267],
     )
     # assert np.allclose(F_PC1_ppt_cpu, F_PC1_ppt_gpu, rtol=1e-2)
     assert np.allclose(
