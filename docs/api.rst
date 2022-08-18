@@ -34,6 +34,7 @@ Tree inference
     tl.curve
     tl.circle
     tl.cellrank_to_tree
+    tl.explore_sigma
 
 Tree operations
 ---------------
@@ -59,6 +60,7 @@ Pseudotime analysis
     tl.dendrogram
     tl.test_association
     tl.test_association_covariate
+    tl.test_association_monocle3
     tl.fit
     tl.cluster
     tl.test_covariate
