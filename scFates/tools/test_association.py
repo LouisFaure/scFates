@@ -191,6 +191,69 @@ def test_association(
     return adata if copy else None
 
 
+def test_association_monocle3(
+    adata: AnnData, qval_cut: float = 1e-4, n_jobs: bool = 1, **kwargs
+):
+
+    logg.info(
+        "test features for association with the trajectory, monocle3 way",
+        reset=True,
+        end="\n",
+    )
+
+    import scipy.sparse as sp
+    from rpy2.robjects.packages import importr
+    import rpy2.robjects as ro
+    from rpy2.robjects.conversion import py2rpy
+    from scFates.tools.graph_fitting import get_data
+    import anndata2ri
+
+    anndata2ri.activate()
+
+    from . import __path__
+
+    Rfun = os.path.join(__path__[0], "_test_monocle3.R")
+    rsource = ro.r["source"]
+    rsource(Rfun)
+    _test_monocle3 = ro.globalenv["test_monocle3"]
+
+    B = sp.csc_matrix(adata.uns["graph"]["B"]).astype(float)
+    F = pd.DataFrame(adata.uns["graph"]["F"])
+    F.columns = ["Y_" + str(i) for i in np.arange(adata.obsm["X_R"].shape[1]) + 1]
+    pr_graph_cell_proj_closest_vertex = pd.DataFrame(
+        {"1": np.argmax(adata.obsm["X_R"], axis=1) + 1}, index=adata.obs_names
+    )
+    cells = adata.obs_names
+    genes = adata.var_names
+    X = sp.csc_matrix(adata.X)
+    UMAP, use_rep = get_data(
+        adata, adata.uns["graph"]["use_rep"], adata.uns["graph"]["ndims_rep"]
+    )
+    UMAP = UMAP.values
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        pr_graph_test_res = _test_monocle3(
+            X,
+            genes,
+            cells,
+            UMAP,
+            pr_graph_cell_proj_closest_vertex,
+            F,
+            B,
+            n_jobs,
+            **kwargs,
+        )
+    for c in pr_graph_test_res.columns:
+        adata.var[c] = pr_graph_test_res[c]
+
+    adata.var["signi"] = pr_graph_test_res.q_value < qval_cut
+    logg.info(
+        "    found " + str(sum(adata.var["signi"])) + " significant features",
+        time=True,
+        end=" " if settings.verbosity > 2 else "\n",
+    )
+
+
 def test_assoc(data, spline_df):
     sdf = data[0]
     sdf["exp"] = data[1]
@@ -263,10 +326,8 @@ def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut, prefix=""):
     # saving results
     stat_assoc[prefix + "signi"] = stat_assoc[prefix + "st"] > st_cut
 
-    if set(stat_assoc.columns.tolist()).issubset(adata.var.columns):
-        adata.var[stat_assoc.columns] = stat_assoc
-    else:
-        adata.var = pd.concat([adata.var, stat_assoc], axis=1)
+    for c in stat_assoc.columns:
+        adata.var[c] = stat_assoc[c]
 
     names = np.arange(len(stat_assoc_l)).astype(str).tolist()
 

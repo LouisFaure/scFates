@@ -9,7 +9,7 @@ from .graph_operations import (
 from .graph_fitting import tree, curve, circle, explore_sigma
 from .root import root, roots
 from .pseudotime import pseudotime, rename_milestones, unroll_circle
-from .test_association import test_association
+from .test_association import test_association, test_association_monocle3
 from .fit import fit
 from .cluster import cluster
 from .slide_cors import slide_cells, slide_cors
