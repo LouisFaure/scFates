@@ -213,7 +213,7 @@ def bh_adjust(x, log=False):
     return (q.reindex(index=q.index[::-1]).cummin())[x.index]
 
 
-def importeR(task):
+def importeR(task, module="mgcv"):
     try:
         from rpy2.robjects import pandas2ri, Formula
         from rpy2.robjects.packages import PackageNotInstalledError, importr
@@ -251,13 +251,11 @@ def importeR(task):
         )
 
     try:
-        rmgcv = importr("mgcv")
+        rmodule = importr(module)
     except Exception as e:
-        rmgcv = (
-            'R package "mgcv" is necessary for '
-            + task
-            + ". \
-            \nPlease install gam from https://cran.r-project.org/web/packages/gam/ and try again"
+        rmodule = (
+            f'R package "{module}" is necessary for {task}'
+            + "\nPlease install it and try again"
         )
 
-    return Rpy2, R, rstats, rmgcv, Formula
+    return Rpy2, R, rstats, rmodule, Formula

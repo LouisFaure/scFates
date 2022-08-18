@@ -192,14 +192,69 @@ def test_association(
 
 
 def test_association_monocle3(
-    adata: AnnData, qval_cut: float = 1e-4, n_jobs: bool = 1, **kwargs
+    adata: AnnData,
+    qval_cut: float = 1e-4,
+    n_jobs: bool = 1,
+    copy: bool = False,
+    **kwargs,
 ):
+    """\
+    Determine a set of genes significantly associated with the trajectory.
+
+    the function `graph_test` *monocle3* R package is called,
+    using `neighbor_graph = 'principal_graph'` parameter. The statistic tells you
+    whether cells at nearby positions on a trajectory will have similar (or dissimilar)
+    expression levels for the gene being tested.
+
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    qval_cut
+        cutoff on the corrected p-values to consider a feature as significant.
+    n_jobs
+        number of cpu processes used to perform the test.
+    spline_df
+        dimension of the basis used to represent the smooth term.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+        `.var['status']`
+            The feature could be tested.
+        `.var['p_value']`
+            p-values from statistical test.
+        `.var['morans_test_statistic']`
+            Statistics of the Moran test
+        `.var['morans_I']`
+            Moran’s I is a measure of multi-directional and multi-dimensional spatial autocorrelation.
+        `.var['q_value']`
+            corrected values from multiple testing.
+        '.var['signi']`
+            feature has q_value below cutoff.
+
+    """
+
+    Rpy2, R, rstats, monocle3, Formula = importeR(
+        "testing feature association to the tree", "monocle3"
+    )
+    check = [type(imp) == str for imp in [Rpy2, R, rstats, monocle3, Formula]]
+    if any(check):
+        idx = np.argwhere(
+            [type(imp) == str for imp in [Rpy2, R, rstats, monocle3, Formula]]
+        ).min()
+        raise Exception(np.array([Rpy2, R, rstats, monocle3, Formula])[idx])
 
     logg.info(
         "test features for association with the trajectory, monocle3 way",
         reset=True,
         end="\n",
     )
+
+    adata = adata.copy() if copy else adata
 
     import scipy.sparse as sp
     from rpy2.robjects.packages import importr
@@ -217,6 +272,7 @@ def test_association_monocle3(
     rsource(Rfun)
     _test_monocle3 = ro.globalenv["test_monocle3"]
 
+    # prepare data
     B = sp.csc_matrix(adata.uns["graph"]["B"]).astype(float)
     F = pd.DataFrame(adata.uns["graph"]["F"])
     F.columns = ["Y_" + str(i) for i in np.arange(adata.obsm["X_R"].shape[1]) + 1]
@@ -230,6 +286,11 @@ def test_association_monocle3(
         adata, adata.uns["graph"]["use_rep"], adata.uns["graph"]["ndims_rep"]
     )
     UMAP = UMAP.values
+
+    # prevent double log transformation
+    if "log1p" in adata.uns:
+        kwargs["expression_family"] = "uninormal"
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         pr_graph_test_res = _test_monocle3(
@@ -252,6 +313,18 @@ def test_association_monocle3(
         time=True,
         end=" " if settings.verbosity > 2 else "\n",
     )
+
+    logg.hint(
+        "added\n"
+        "    .var['status'] the feature could be tested.\n"
+        "    .var['p_value'] p-values from statistical test.\n"
+        "    .var['morans_test_statistic'] Statistics of the Moran test.\n"
+        "    .var['morans_I'] Moran’s I is a measure of multi-directional and multi-dimensional spatial autocorrelation.\n"
+        "    .var['q_value'] corrected values from multiple testing.\n"
+        "    .var['signi'] feature has q_value below cutoff."
+    )
+
+    return adata if copy else None
 
 
 def test_assoc(data, spline_df):
