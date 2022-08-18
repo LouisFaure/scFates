@@ -4,6 +4,22 @@
 Release Notes
 =============
 
+Version 0.9.0 :small:`August 18, 2022`
+------------------------------------
+
+Major release:
+
+This release has several improvements from 0.8
+
+Major changes:
+
+- As discussed on issue `#7 <https://github.com/LouisFaure/scFates/issues/7>`_, pseudotime calculation has been fixed when using elpigraph. The previous change introduced the issue of cells being assigned the pseudotime of their closest node only. Now the cells are assigned to their closest edge and have a pseudotime value according to their distance between the two nodes composing that edge.
+- Added :func:`scFates.tl.explore_sigma`, a tool for SimplePPT that explore ranges of sigma parameters to avoid the ones which collapse the tree (see the `related notebook <https://scfates.readthedocs.io/en/latest/Explore_sigma.html>`_) for more info).
+- New approach to analyses circles, upon removal of edge linked to the root node,  the graph is considered as two converging segments toward the furthest node. This allow to perform mulitple mapping without having cells being assigned either the lowest or the furthest pseudotime, leading to wrong assignement when taking the mean of all mappings. The circle can be further unrolled with :func:`scFates.tl.unroll_circle` to assign a unique pseudotime value to all cells (for more info see the `related notebook <https://scfates.readthedocs.io/en/latest/Beyond_scRNAseq.html>`_).
+- added :func:`scFates.tl.test_association_monocle3`, to test whether features are significantly changing along the tree, using monocle3 approach (requires the package). This can be handy for large dataset where test_association is too slow (does not generate A parameter).
+- Reworked :func:`scFates.tl.cluster`, now uses scanpy and leiden as backend, leading to faster gene module calculations.
+
+
 Version 0.8.1 :small:`July 18, 2022`
 ------------------------------------
 
