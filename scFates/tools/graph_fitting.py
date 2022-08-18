@@ -245,12 +245,6 @@ def tree(
             coordinates of principal points in representation space
     """
 
-    logg.info(
-        "inferring a principal tree",
-        reset=True,
-        end=" " if settings.verbosity > 2 else "\n",
-    )
-
     adata = adata.copy() if copy else adata
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
@@ -300,6 +294,11 @@ def tree(
         adata.obsm["X_R"] = ppt["R"]
 
     elif method == "epg":
+        logg.info(
+            "inferring a principal tree",
+            reset=True,
+            end=" " if settings.verbosity > 2 else "\n",
+        )
         graph, R, EPG = tree_epg(
             X,
             Nodes,
@@ -697,6 +696,44 @@ def explore_sigma(
     second_round=False,
     **kwargs,
 ):
+    """\
+    Explore varisou sigma parameters for best tree fitting. Given that high sigma tend
+    to collapse the principal points into the middle of the whole data (meaning taking
+    in account all the datapoints regardless their locality), it is possible to explore
+    which sigma is best by detecting at which level the tree stops collapsing.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    Nodes
+        Number of nodes composing the principial tree, use a range of 10 to 100 for
+        ElPiGraph approach and 100 to 2000 for PPT approach.
+    use_rep
+        Choose the space to be learned by the principal tree.
+    ndims_rep
+        Number of dimensions to use for the inference.
+    sigmas
+        Range of sigma parameters to test.
+    device
+        Run method on either `cpu` or on `gpu`.
+    nsteps
+        Number of SimplePPT iteration, usually 1 is enough.
+    metric
+        Distance metric to use.
+    seed
+        A numpy random seed.
+    plot
+        Plot the resulting tree.
+    second_round
+        Perform a second exploration, on a restricted sigma parameters based on the first estimated sigma.
+    **kwargs
+        Arguments passsed to :func:`elpigraph.computeElasticPrincipalCircle`
+    Returns
+    -------
+    sigma : float
+        suggested sigma value
+    """
     import copy
     from sklearn.metrics import pairwise_distances
 
@@ -815,14 +852,18 @@ def get_data(adata, use_rep, ndims_rep):
     if use_rep == "X":
         ndims_rep = None
         if sparse.issparse(adata.X):
-            X = DataFrame(adata.X.A, index=adata.obs_names)
+            X = DataFrame(adata.X.A, index=adata.obs_names, columns=adata.var_names)
         else:
-            X = DataFrame(adata.X, index=adata.obs_names)
+            X = DataFrame(adata.X, index=adata.obs_names, columns=adata.var_names)
     elif use_rep in adata.layers.keys():
         if sparse.issparse(adata.layers[use_rep]):
-            X = DataFrame(adata.layers[use_rep].A, index=adata.obs_names)
+            X = DataFrame(
+                adata.layers[use_rep].A, index=adata.obs_names, columns=adata.var_names
+            )
         else:
-            X = DataFrame(adata.layers[use_rep], index=adata.obs_names)
+            X = DataFrame(
+                adata.layers[use_rep], index=adata.obs_names, columns=adata.var_names
+            )
     elif use_rep in adata.obsm.keys():
         X = DataFrame(adata.obsm[use_rep], index=adata.obs_names)
 
