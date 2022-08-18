@@ -70,13 +70,18 @@ def root(
             root_val = get_X(adata, adata.obs_names, root, layer).ravel()
 
         logg.info("automatic root selection using " + root + " values", time=False)
-        avgs = list(
+        nodes = np.arange(adata.obsm["X_R"].shape[1])
+        avgs = pd.Series(np.nan, index=nodes)
+        # handle empty nodes
+        unassigned = np.array([adata.obsm["X_R"][:, n].sum() for n in nodes]) > 0
+        nodes = nodes[unassigned]
+        avgs_temp = list(
             map(
                 lambda n: np.average(root_val, weights=adata.obsm["X_R"][:, n]),
-                range(adata.obsm["X_R"].shape[1]),
+                nodes,
             )
         )
-        avgs = np.array(avgs)
+        avgs.loc[nodes] = avgs_temp
         if tips_only:
             mask = np.ones(avgs.shape, bool)
             mask[adata.uns["graph"]["tips"]] = False
