@@ -11,6 +11,6 @@ test_monocle3 <- function(X,genes,cells,UMAP,pr_graph_cell_proj_closest_vertex,F
 
     colnames(B)=colnames(cds@principal_graph_aux$UMAP$dp_mst)
     cds@principal_graph[["UMAP"]]=igraph::graph_from_adjacency_matrix(B)
-    pr_graph_test_res <- graph_test(cds, neighbor_graph="principal_graph", cores=n_jobs,...)
+    pr_graph_test_res <- graph_test(cds, cores=n_jobs,...)
     return(pr_graph_test_res)
 }

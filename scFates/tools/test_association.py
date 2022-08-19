@@ -288,8 +288,20 @@ def test_association_monocle3(
     UMAP = UMAP.values
 
     # prevent double log transformation
-    if "log1p" in adata.uns:
+    if ("log1p" in adata.uns) & ("expression_family" not in kwargs):
         kwargs["expression_family"] = "uninormal"
+
+    # Avoiding rBind error for large datasets
+    # see: https://github.com/cole-trapnell-lab/monocle3/issues/509
+    if ("neighbor_graph" not in kwargs) & (adata.shape[0] <= 10000):
+        kwargs["neighbor_graph"] = "principal_graph"
+    elif ("neighbor_graph" not in kwargs) & (adata.shape[0] > 10000):
+        kwargs["neighbor_graph"] = "knn"
+
+    logg.info(
+        f"    neighbor_graph set to {kwargs['neighbor_graph']}",
+        end=" " if settings.verbosity > 2 else "\n",
+    )
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
