@@ -255,7 +255,10 @@ def test_association_covariate(
         gather_stats(adata[adata.obs[group_key] == g], g)
         for g in adata.obs[group_key].cat.categories
     ]
-    adata.var = pd.concat([adata.var] + var, axis=1)
+
+    for v in var:
+        for c in v.columns:
+            adata.var[c] = v[c]
 
     adata.var["signi"] = pd.concat(
         [adata.var[g + "_signi"] for g in adata.obs[group_key].cat.categories], axis=1
