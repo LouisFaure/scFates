@@ -113,12 +113,11 @@ def test_association(
 
     adata = adata.copy() if copy else adata
 
-    if "pseudotime_list" not in adata.uns:
+    if "t" not in adata.obs:
         raise ValueError(
             "You need to run `tl.pseudotime` before testing for association."
+            + "Or add a precomputed pseudotime at adata.obs['t'] for single segment."
         )
-
-    graph = adata.uns["graph"]
 
     if reapply_filters & ("stat_assoc_list" in adata.uns):
         stat_assoc_l = list(adata.uns["stat_assoc_list"].values())
@@ -410,7 +409,6 @@ def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut, prefix=""):
 
     # saving results
     stat_assoc[prefix + "signi"] = stat_assoc[prefix + "st"] > st_cut
-
     for c in stat_assoc.columns:
         adata.var[c] = stat_assoc[c]
 
