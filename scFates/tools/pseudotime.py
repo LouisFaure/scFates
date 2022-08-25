@@ -82,11 +82,16 @@ def pseudotime(
     P = pairwise_distances(graph["F"].T, metric=graph["metrics"])
 
     if n_map == 1:
-        df_l = [map_cells(graph, R=adata.obsm["X_R"], P=P, multi=False)]
+        if graph["method"] == "ppt":
+            df_l = [map_cells(graph, R=adata.obsm["X_R"], P=P, multi=False)]
+        else:
+            df_l = [map_cells_epg(graph, adata)]
     else:
         if graph["method"] == "epg":
             raise Exception(
-                "multiple mapping does not function with ElPiGraph method, use either method='ppt' in scf.tl.tree or convert R matrix into soft assignment matrix with scf.tl.convert_to_soft"
+                "multiple mapping does not function with ElPiGraph method, "
+                + "use either method='ppt' in scf.tl.tree or convert R matrix into soft "
+                + "assignment matrix with scf.tl.convert_to_soft"
             )
         if seed is not None:
             np.random.seed(seed)
@@ -119,12 +124,7 @@ def pseudotime(
     else:
         adata.obs = pd.concat([adata.obs, df_summary], axis=1)
 
-    # list(map(lambda x: x.column))
-
-    # todict=list(map(lambda x: dict(zip(["cells"]+["_"+s for s in x.columns.tolist()],
-    #                                   [x.index.tolist()]+x.to_numpy().T.tolist())),df_l))
     names = np.arange(len(df_l)).astype(str).tolist()
-    # vals = todict
     dictionary = dict(zip(names, df_l))
     adata.uns["pseudotime_list"] = dictionary
 
@@ -341,6 +341,31 @@ def map_cells(graph, R, P, multi=False, map_seed=None):
     df["edge"] = df.apply(lambda x: str(int(x[1])) + "|" + str(int(x[2])), axis=1)
 
     df.drop(["cell", "v0", "v1", "d"], axis=1, inplace=True)
+
+    return df
+
+
+def map_cells_epg(graph, adata):
+    import elpigraph
+    from .graph_fitting import get_data
+
+    EPG = adata.uns["epg"]
+    ndims_rep = None if "ndims_rep" not in graph else graph["ndims_rep"]
+    X, use_rep = get_data(adata, graph["use_rep"], ndims_rep)
+    elpigraph.utils.getPseudotime(X.values, EPG, graph["root"])
+    edges = EPG["Edges"][0]
+    eid = EPG["projection"]["edge_id"]
+
+    df = pd.DataFrame(
+        {
+            "t": EPG["pseudotime"],
+            "seg": graph["pp_info"].loc[EPG["projection"]["node_id"], "seg"].values,
+            "edge": [
+                "|".join(edges[eid, :][i, :].astype(str)) for i in range(len(eid))
+            ],
+        },
+        index=adata.obs_names,
+    )
 
     return df
 

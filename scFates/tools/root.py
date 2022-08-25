@@ -66,9 +66,10 @@ def root(
     if type(root) == str:
         if root in adata.obs:
             root_val = adata.obs[root]
-        if root in adata.var_names:
+        elif root in adata.var_names:
             root_val = get_X(adata, adata.obs_names, root, layer).ravel()
-
+        else:
+            raise ValueError(f"{root} not present in adata.var_names or adata.obs")
         logg.info("automatic root selection using " + root + " values", time=False)
         nodes = np.arange(adata.obsm["X_R"].shape[1])
         avgs = pd.Series(np.nan, index=nodes)
