@@ -69,7 +69,13 @@ def trend_covariate(
                 linewidth=2,
                 linestyle="--",
             )
-            legend1 = ax.get_legend()
+            leg = True
+            if "legend_loc" in kwargs:
+                if kwargs["legend_loc"] == "none":
+                    leg = False
+
+            if leg:
+                legend1 = ax.get_legend()
 
             legend2 = plt.legend(
                 [
@@ -82,7 +88,8 @@ def trend_covariate(
             )
 
             ax.add_artist(legend2)
-            ax.add_artist(legend1)
+            if leg:
+                ax.add_artist(legend1)
 
     savefig_or_show("trend_covariate", show=show, save=save)
 
