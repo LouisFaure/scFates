@@ -33,6 +33,7 @@ def curve(
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
     epg_verbose: bool = False,
+    epg_extend_leaves: bool = False,
     device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
@@ -124,6 +125,7 @@ def curve(
         epg_lambda,
         epg_mu,
         epg_trimmingradius,
+        epg_extend_leaves,
         device,
         seed,
         epg_verbose,
@@ -155,6 +157,7 @@ def tree(
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 2,
     epg_verbose: bool = False,
+    epg_extend_leaves: bool = False,
     device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
@@ -307,6 +310,7 @@ def tree(
             epg_lambda,
             epg_mu,
             epg_trimmingradius,
+            epg_extend_leaves,
             device,
             seed,
             epg_verbose,
@@ -448,6 +452,7 @@ def tree_epg(
     lam: Optional[Union[float, int]] = 0.01,
     mu: Optional[Union[float, int]] = 0.1,
     trimmingradius: Optional = np.inf,
+    extend_leaves: bool = False,
     device: str = "cpu",
     seed: Optional[int] = None,
     verbose: bool = True,
@@ -491,7 +496,11 @@ def tree_epg(
         **kwargs,
     )[0]
 
-    graph, R = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device)
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+
+    graph, R, EPG = epg_to_graph(
+        EPG, X, Nodes, use_rep, ndims_rep, extend_leaves, device
+    )
 
     EPG["Edges"] = list(EPG["Edges"])[0]
 
@@ -506,6 +515,7 @@ def curve_epg(
     lam: Optional[Union[float, int]] = 0.01,
     mu: Optional[Union[float, int]] = 0.1,
     trimmingradius: Optional = np.inf,
+    extend_leaves: bool = False,
     device: str = "cpu",
     seed: Optional[int] = None,
     verbose: bool = True,
@@ -541,9 +551,11 @@ def curve_epg(
         **kwargs,
     )[0]
 
-    graph, R = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device)
+    graph, R, EPG = epg_to_graph(
+        EPG, X, Nodes, use_rep, ndims_rep, extend_leaves, device
+    )
 
-    EPG["Edges"] = list(EPG["Edges"])[0]
+    EPG["Edges"] = list(EPG["Edges"])
 
     adata.uns["graph"] = graph
     adata.uns["epg"] = EPG
@@ -603,7 +615,7 @@ def circle_epg(
         verbose=verbose,
     )[0]
 
-    graph, R = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device)
+    graph, R, EPG = epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, False, device)
 
     EPG["Edges"] = list(EPG["Edges"])[0]
 
@@ -623,7 +635,7 @@ def circle_epg(
     return adata
 
 
-def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device):
+def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, extend_leaves, device):
     import elpigraph
     from .utils import norm_R_cpu
 
@@ -631,6 +643,10 @@ def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device):
         from cuml.metrics import pairwise_distances
     else:
         from sklearn.metrics import pairwise_distances
+
+    if extend_leaves:
+        EPG = elpigraph.ExtendLeaves(X, EPG, Mode="WeightedCentroid")
+        Nodes = EPG["NodePositions"].shape[0]
 
     F = EPG["NodePositions"].T
 
@@ -676,7 +692,7 @@ def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, device):
         "method": "epg",
     }
 
-    return graph, R
+    return graph, R, EPG
 
 
 def explore_sigma(
