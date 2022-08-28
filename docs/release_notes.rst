@@ -4,8 +4,19 @@
 Release Notes
 =============
 
+
+Version 0.9.1 :small:`August 28, 2022`
+-------------------------------------
+
+- Switched to ElPiGraph approach to calculate pseudotime when using that algorithm, leading to more accurate pseudotime measurement.
+- Added parameter `epg_extend_leaves` to call :func:`elpigraph.ExtendLeaves` during graph learning using ElPiGraph.
+- Working function for :func:`scFates.tl.test_association_monocle3` (R file was missing from package).
+- Fixed output from :func:`scFates.tl.test_association_covariate`.
+- Allow no legend for :func:`scFates.pl.covariate`.
+
+
 Version 0.9.0 :small:`August 18, 2022`
-------------------------------------
+--------------------------------------
 
 Major release:
 

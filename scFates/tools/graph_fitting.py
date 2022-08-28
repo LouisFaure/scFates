@@ -32,8 +32,8 @@ def curve(
     epg_lambda: Optional[Union[float, int]] = 0.01,
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
-    epg_verbose: bool = False,
     epg_extend_leaves: bool = False,
+    epg_verbose: bool = False,
     device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
@@ -65,6 +65,8 @@ def curve(
         Parameter for ElPiGraph, coefficient of ‘bending’ elasticity [Albergante20]_.
     epg_trimmingradius
         Parameter for ElPiGraph, trimming radius for MSE-based data approximation term [Albergante20]_.
+    epg_extend_leaves
+        Parameter for ElPiGraph, calls :func:`elpigraph.ExtendLeaves` after graph learning.
     epg_verbose
         show verbose output of epg algorithm
     device
@@ -156,8 +158,8 @@ def tree(
     epg_mu: Optional[Union[float, int]] = 0.1,
     epg_trimmingradius: Optional = np.inf,
     epg_initnodes: Optional[int] = 2,
-    epg_verbose: bool = False,
     epg_extend_leaves: bool = False,
+    epg_verbose: bool = False,
     device: Literal["cpu", "gpu"] = "cpu",
     plot: bool = False,
     basis: Optional[str] = "umap",
@@ -217,6 +219,8 @@ def tree(
     epg_initnodes
         numerical 2D matrix, the k-by-m matrix with k m-dimensional positions of the nodes
         in the initial step
+    epg_extend_leaves
+        Parameter for ElPiGraph, calls :func:`elpigraph.ExtendLeaves` after graph learning.
     epg_verbose
         show verbose output of epg algorithm
     device
