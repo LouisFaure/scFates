@@ -318,6 +318,7 @@ def tree(
             device,
             seed,
             epg_verbose,
+            **kwargs,
         )
         adata.uns["graph"] = graph
         adata.uns["epg"] = EPG
