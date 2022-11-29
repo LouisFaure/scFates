@@ -1,5 +1,5 @@
 [![PyPI](https://img.shields.io/pypi/v/scFates.svg)](https://pypi.python.org/pypi/scFates/)
-[![DOI](https://img.shields.io/badge/DOI-10.1101/2022.07.09.498657-blue)](https://doi.org/10.1101/2022.07.09.498657)
+[![DOI](https://img.shields.io/badge/DOI-10.1093/bioinformatics/btac746-blue)](https://doi.org/10.1093/bioinformatics/btac746)
 [![Documentation Status](https://readthedocs.org/projects/scfates/badge/?version=latest)](https://scfates.readthedocs.io/en/latest/?badge=latest)
 [![Build and Test](https://github.com/LouisFaure/scFates/actions/workflows/load_test_upload.yml/badge.svg)](https://github.com/LouisFaure/scFates/actions/workflows/load_test_upload.yml)
 [![codecov](https://codecov.io/gh/LouisFaure/scFates/branch/master/graph/badge.svg)](https://codecov.io/gh/LouisFaure/scFates)
@@ -12,11 +12,11 @@ Description
 
 This package provides a scalable Python suite for fast tree inference and advanced pseudotime downstream analysis, with a focus on fate biasing. This package is compatible with anndata object format used in scanpy or scvelo pipelines. A complete documentation of this package is available [here](https://scfates.readthedocs.io/en/latest).
 
-The related work is available now as a [preprint](https://www.biorxiv.org/content/10.1101/2022.07.09.498657v1):
+The related work is now available in [Bioinformatics](https://doi.org/10.1093/bioinformatics/btac746):
 
     Louis Faure, Ruslan Soldatov, Peter V. Kharchenko, Igor Adameyko
     scFates: a scalable python package for advanced pseudotime and bifurcation analysis from single cell data
-    bioRxiv 2022.07.09.498657; doi: https://doi.org/10.1101/2022.07.09.498657
+    Bioinformatics, btac746; doi: https://doi.org/10.1093/bioinformatics/btac746
 
 
 Tree inference algorithms
