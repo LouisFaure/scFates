@@ -60,9 +60,6 @@ def trends(
         None, Literal["pearson", "spearman", "quantile", "max"]
     ] = "pearson",
     ord_thre=0.7,
-    filter_complex: bool = False,
-    complex_thre: float = 0.7,
-    complex_z: float = 3,
     figsize: Union[None, tuple] = None,
     axemb=None,
     show: Optional[bool] = None,
@@ -125,12 +122,6 @@ def trends(
         for 'max': proportion of maximum of fitted value to consider to compute the mean pseudotime.
         for 'quantile': quantile to consider to compute the mean pseudotime.
         for 'pearson'/'spearman': proportion of max value to assign starting cell.
-    filter_complex
-        filter out complex features
-    complex_thre
-        quantile to consider for complex filtering
-    complex_z
-        standard deviation threshold on the quantile subsetted feature.
     figsize
         figure size.
     axemb
@@ -185,8 +176,11 @@ def trends(
             sel = df.branch == branch
         features = df.loc[sel, :].index
 
+    if len(features) == 0:
+        raise Exception("No features to plot!")
+
     fitted = pd.DataFrame(
-        adata.layers["fitted"], index=adata.obs_names, columns=adata.var_names
+        adata[:, features].layers["fitted"], index=adata.obs_names, columns=features
     ).T.copy(deep=True)
     g = adata.obs.groupby("seg")
 
@@ -233,30 +227,6 @@ def trends(
     fitted = fitted.loc[:, cell_order]
 
     fitted = fitted.apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=1)
-
-    if filter_complex:
-        # remove complex features using quantiles
-        varia = list(
-            map(
-                lambda x: adata.obs.t[cell_order][
-                    fitted.loc[x, :].values
-                    > np.quantile(fitted.loc[x, :].values, q=complex_thre)
-                ].var(),
-                features,
-            )
-        )
-        z = np.abs(stats.zscore(varia))
-        torem = np.argwhere(z > complex_z).flatten()
-
-        if len(torem) > 0:
-            logg.info("found " + str(len(torem)) + " complex fitted features")
-            logg.hint("added\n" + "    'complex' column in (adata.var)")
-            adata.var["complex"] = False
-            # adata.var.iloc[torem,"complex"]=True
-            adata.var.loc[fitted.index[torem], "complex"] = True
-            features = adata.var_names[~adata.var["complex"]]
-
-    fitted = fitted.loc[features, :]
 
     if ordering == "quantile":
         feature_order = (
