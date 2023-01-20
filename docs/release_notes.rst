@@ -4,6 +4,12 @@
 Release Notes
 =============
 
+Version 1.0.0 :small:`November 29, 2022`
+-------------------------------------
+The tool is now `published <https://doi.org/10.1093/bioinformatics/btac746>`_, it is considered stable enough to be released as v1.0.0
+
+- :func:`scFates.pl.trends` displays an error message if no feature is plotted.
+- :func:`scFates.tl.tree` now accept parameters transfer to elpigraph-python.
 
 Version 0.9.1 :small:`August 28, 2022`
 -------------------------------------
