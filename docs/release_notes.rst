@@ -4,6 +4,12 @@
 Release Notes
 =============
 
+Version 1.0.1 :small:`March 10, 2566/2023`
+------------------------------------------
+Minor fixes to make scFates compatible with the newer versions of matplotlib (3.5+).
+Constrained networkx requirement to avoid error happening in the last version 3.0.
+
+
 Version 1.0.0 :small:`November 29, 2022`
 -------------------------------------
 The tool is now `published <https://doi.org/10.1093/bioinformatics/btac746>`_, it is considered stable enough to be released as v1.0.0
