@@ -202,7 +202,7 @@ def slide_cors(
             cmap=gr,
             rasterized=True,
         )
-        ax_emb.grid(b=None)
+        ax_emb.grid(None)
         ax_emb.set_xticks([])
         ax_emb.set_yticks([])
         ma = np.max(plt.rcParams["figure.figsize"])
@@ -255,7 +255,7 @@ def slide_cors(
             xycoords="axes fraction",
             fontsize=fontsize,
         )
-        ax_scat.grid(b=None)
+        ax_scat.grid(None)
         ax_scat.axvline(0, linestyle="dashed", color="grey", zorder=0)
         ax_scat.axhline(0, linestyle="dashed", color="grey", zorder=0)
         ax_scat.set_xlim([-maxlim, maxlim])
@@ -280,7 +280,7 @@ def slide_cors(
                 rasterized=True,
                 s=point_size * 2,
             )
-        ax_scat.grid(b=None)
+        ax_scat.grid(None)
         ax_scat.axvline(0, linestyle="dashed", color="grey", zorder=0)
         ax_scat.axhline(0, linestyle="dashed", color="grey", zorder=0)
         ax_scat.set_xlim([-maxlim, maxlim])

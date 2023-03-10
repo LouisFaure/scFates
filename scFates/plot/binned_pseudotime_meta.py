@@ -104,7 +104,7 @@ def binned_pseudotime_meta(
             X[:, i], Y[:, i], s=prop.values[i, :] * 200, c=adata.uns[key + "_colors"][i]
         )
 
-    ax.grid(b=None)
+    ax.grid(None)
     ax.set_xticks(range(len(adata.obs[key].cat.categories)))
     ax.set_xticklabels(adata.obs[key].cat.categories, rotation=rotation)
     ax.set_yticks([])

@@ -115,7 +115,7 @@ def module_inclusion(
         dat = matSwitch[branch].loc[feature]
 
         ax.plot(range(bins), [(s > dat).sum() / 100 for s in sg], color="k")
-        plt.grid(b=False)
+        plt.grid(False)
         ax.axhline(0.5, linestyle="--", color="grey")
         ax.axhline(0, linestyle="--", color="grey")
         ax.axhline(1, linestyle="--", color="grey")

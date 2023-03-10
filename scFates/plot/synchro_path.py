@@ -202,7 +202,7 @@ def synchro_path(
                 if i == 3:
                     axs[i].set_title("permuted")
 
-                axs[i].grid(b=None)
+                axs[i].grid(None)
 
             if max_t is not None:
                 axs[i].set_xlim([0, max_t])
