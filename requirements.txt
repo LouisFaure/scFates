@@ -19,6 +19,6 @@ scikit-learn
 scikit-misc
 simpleppt>=1.1.3
 elpigraph-python==0.2.7
-networkx>=2.5
+networkx<3.0
 igraph>=0.9.6
 adjustText>=0.7.3
