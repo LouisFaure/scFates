@@ -24,6 +24,14 @@ With all dependencies
     conda activate scFates
     pip install scFates
 
+to avoid any possible crashes due to rpy2 not finding the R install on conda, run the following import command:
+
+.. code-block:: python
+
+    import os, sys
+    os.environ['R_HOME'] = sys.exec_prefix+"/lib/R/"
+    import scFates
+
 - :func:`scFates.tl.cellrank_to_tree`: Requires cellrank to be installed in order to function::
 
     pip install cellrank
