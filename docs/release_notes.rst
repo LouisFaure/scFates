@@ -4,6 +4,10 @@
 Release Notes
 =============
 
+Version 1.0.2 :small:`April 28, 2566/2023`
+------------------------------------------
+Constrained pandas version requirement (<2.0) to avoid broken functions.
+
 Version 1.0.1 :small:`March 10, 2566/2023`
 ------------------------------------------
 Minor fixes to make scFates compatible with the newer versions of matplotlib (3.5+).
