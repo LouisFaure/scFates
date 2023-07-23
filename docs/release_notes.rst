@@ -4,6 +4,10 @@
 Release Notes
 =============
 
+Version 1.0.3 :small:`July 23, 2566/2023`
+------------------------------------------
+Updated elpigraph version to fix error with networkx, fixed typo.
+
 Version 1.0.2 :small:`April 28, 2566/2023`
 ------------------------------------------
 Constrained pandas version requirement (<2.0) to avoid broken functions.
