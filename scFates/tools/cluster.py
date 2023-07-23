@@ -115,7 +115,7 @@ def cluster(
     else:
         sc.tl.leiden(adata_s, resolution=resolution)
 
-    adata.var["cluters"] = adata_s.obs.leiden
+    adata.var["clusters"] = adata_s.obs.leiden
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint("added \n" "    .var['cluters'] identified modules.")
