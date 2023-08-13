@@ -4,6 +4,14 @@
 Release Notes
 =============
 
+Version 1.0.4 :small:`August 13, 2566/2023`
+------------------------------------------
+- updated notebooks.
+- relaxed mutli-mapping rule when using elpigraph.
+- better handling of milestone renaming.
+- prevent grid on module_inclusion plot
+- correcting messages displayed by functions.
+
 Version 1.0.3 :small:`July 23, 2566/2023`
 ------------------------------------------
 Updated elpigraph version to fix error with networkx, fixed typo.
