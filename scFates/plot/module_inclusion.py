@@ -146,7 +146,7 @@ def module_inclusion(
                 color="k",
                 linestyle="dashed",
             )
-
+        ax.grid(False)
     if show == False:
         return ax
 
