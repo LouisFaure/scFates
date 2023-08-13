@@ -87,12 +87,6 @@ def pseudotime(
         else:
             df_l = [map_cells_epg(graph, adata)]
     else:
-        if graph["method"] == "epg":
-            raise Exception(
-                "multiple mapping does not function with ElPiGraph method, "
-                + "use either method='ppt' in scf.tl.tree or convert R matrix into soft "
-                + "assignment matrix with scf.tl.convert_to_soft"
-            )
         if seed is not None:
             np.random.seed(seed)
             map_seeds = np.random.randint(999999999, size=n_map)
@@ -374,19 +368,18 @@ def rename_milestones(adata, new: Union[list, dict], copy: bool = False):
 
     adata = adata.copy() if copy else adata
 
-    if ~isinstance(new, dict):
-        dct = dict(zip(adata.obs.milestones.cat.categories, new))
-    else:
-        dct = new.copy()
-        new = [dct[m] for m in adata.obs.milestones.cat.categories]
+    if isinstance(new, dict) is False:
+        new = dict(zip(adata.obs.milestones.cat.categories, new))
 
-    old = pd.Series(
+    milestones = pd.Series(
         adata.uns["graph"]["milestones"].keys(),
         index=adata.uns["graph"]["milestones"].values(),
     )
-    dct = pd.Series(dct)
-    old.loc[:] = dct[old.values].values
-    adata.uns["graph"]["milestones"] = dict(zip(old.values, old.index))
+
+    for o, n in new.items():
+        milestones[milestones.values == o] = n
+
+    adata.uns["graph"]["milestones"] = dict(zip(milestones.values, milestones.index))
     adata.obs.milestones = adata.obs.milestones.cat.rename_categories(new)
 
     return adata if copy else None
