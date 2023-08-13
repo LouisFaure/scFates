@@ -118,4 +118,4 @@ def cluster(
     adata.var["clusters"] = adata_s.obs.leiden
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint("added \n" "    .var['cluters'] identified modules.")
+    logg.hint("added \n" "    .var['clusters'] identified modules.")

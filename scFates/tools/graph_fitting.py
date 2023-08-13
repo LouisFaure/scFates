@@ -89,7 +89,7 @@ def curve(
         `.uns['epg']`
             dictionnary containing information from elastic principal curve
         `.obsm['X_R']`
-            hard assignment of cells to principal points
+            soft assignment of cells to principal points
         `.uns['graph']['B']`
             adjacency matrix of the principal points
         `.uns['graph']['F']`
@@ -570,7 +570,7 @@ def curve_epg(
     logg.hint(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic curve generated from elpigraph.\n"
-        "    .obsm['X_R'] hard assignment of cells to principal points.\n"
+        "    .obsm['X_R'] soft assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
@@ -632,7 +632,7 @@ def circle_epg(
     logg.hint(
         "added \n"
         "    .uns['epg'] dictionnary containing inferred elastic circle generated from elpigraph.\n"
-        "    .obsm['X_R'] hard assignment of cells to principal points.\n"
+        "    .obsm['X_R'] soft assignment of cells to principal points.\n"
         "    .uns['graph']['B'] adjacency matrix of the principal points.\n"
         "    .uns['graph']['F'], coordinates of principal points in representation space."
     )
