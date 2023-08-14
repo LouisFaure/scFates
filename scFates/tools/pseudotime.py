@@ -376,8 +376,9 @@ def rename_milestones(adata, new: Union[list, dict], copy: bool = False):
         index=adata.uns["graph"]["milestones"].values(),
     )
 
-    for o, n in new.items():
-        milestones[milestones.values == o] = n
+    replace = pd.Series(new)
+    replace.index = [(milestones == n).idxmax() for n in replace.index]
+    milestones.loc[replace.index] = replace.values
 
     adata.uns["graph"]["milestones"] = dict(zip(milestones.values, milestones.index))
     adata.obs.milestones = adata.obs.milestones.cat.rename_categories(new)
