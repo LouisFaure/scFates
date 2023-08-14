@@ -13,6 +13,11 @@ from anndata import AnnData
 import itertools
 
 a, b, rstat, rmgcv, Formula = importeR("covariate testing")
+import importlib
+
+if importlib.util.find_spec("rpy2") is not None:
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri
 
 
 def test_covariate(
@@ -184,7 +189,10 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
         if return_pred:
             return (rstat.predict(m1), rstat.predict(m0))
         else:
-            pval = rmgcv.anova_gam(m1, m0, test="F").loc["2", ["Pr(>F)"]].values[0]
+            test = rmgcv.anova_gam(m1, m0, test="F")
+            with (ro.default_converter + pandas2ri.converter).context():
+                test_df = ro.conversion.get_conversion().rpy2py(test)
+            pval = test_df.loc["2", ["Pr(>F)"]].values[0]
             return (pval, lfc)
     else:
         m = rmgcv.gam(

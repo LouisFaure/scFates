@@ -45,7 +45,7 @@ jobs:
         sudo apt-get install -y r-base r-cran-mgcv
         pip install wheel
         pip install coverage cmake pytest mock
-        pip install rpy2==3.4.2
+        pip install rpy2
         pip install .
     - name: Test with pytest
       run: |
