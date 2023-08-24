@@ -207,7 +207,7 @@ def trends(
     order = np.array(order)[1:]
 
     order = pd.Series(graph["milestones"].keys(), index=graph["milestones"].values())[
-        np.array(img.vs["name"])[order].astype(int)
+        [np.array(img.vs["name"])[o].astype(int) for o in order]
     ]
     to_mil = graph["pp_seg"].loc[adata.obs.seg.cat.categories.astype(int), "to"]
     seg_order = pd.Series(range(len(adata.obs.seg.cat.categories)), index=to_mil)[
