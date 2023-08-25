@@ -99,6 +99,17 @@ import scFates
     pip install cellrank
 
 
+On Apple Silicon
+----------------
+
+Installing mgcv using conda/mamba on Apple Silicon lead to the package not being able to find some dynamic libraries (BLAS).
+In that case it is recommended to install it separately:
+
+```bash
+mamba create -n scFates -c conda-forge -c bioconda -c defaults python numpy=1.24.4 "libblas=*=*accelerate" rpy2 -y
+mamba activate scFates
+Rscript -e 'install.packages("mgcv",repos = "http://cran.us.r-project.org")'
+```
 
 GPU dependencies (optional)
 ---------------------------
