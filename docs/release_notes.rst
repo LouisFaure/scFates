@@ -4,6 +4,10 @@
 Release Notes
 =============
 
+Version 1.0.5 :small:`August 25, 2566/2033`
+-------------------------------------------
+Fix int and bool check when ordering segments in :func:`scFates.pl.trends`.
+
 Version 1.0.4 :small:`August 13, 2566/2023`
 ------------------------------------------
 - updated notebooks.
