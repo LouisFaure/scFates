@@ -134,7 +134,8 @@ def slide_cells(
             (graph["pp_info"].loc[pps, "time"].values >= pt_cur)
             & graph["pp_info"].loc[pps, "seg"].isin(segs_cur).values
         ]
-
+        if len(pp_next) == 0:
+            raise Exception("win parameter too small, increase number of cells")
         cmsm = np.cumsum(
             pp_probs[pp_next][np.argsort(graph["pp_info"].loc[pp_next, "time"].values)]
         )
@@ -175,6 +176,10 @@ def slide_cells(
 
             freq = freq + [cell_probs]
             pt_cur = graph["pp_info"].loc[pps_region, "time"].max()
+
+            # ignore the last node, to avoid infinite recursion
+            if len(pps_region) == 1:
+                return freq
 
             if nbranch == 1:
                 if (
