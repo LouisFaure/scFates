@@ -13,6 +13,7 @@ from ..tools.utils import getpath
 from .trajectory import trajectory as plot_trajectory
 from .utils import setup_axes
 from ..tools.graph_operations import subset_tree
+from ..tools.fit import fit
 from .milestones import milestones as milestones_plot
 from ..get import modules as get_modules
 from .. import settings
@@ -69,7 +70,7 @@ def modules(
 
     Returns
     -------
-    If `show==False` a tuple of :class:`~matplotlib.axes.Axes`
+    If `show==False` a single or a tuple of :class:`~matplotlib.axes.Axes`
 
     """
 
@@ -206,3 +207,145 @@ def modules(
             return ax_early
         elif module == "late":
             return ax_late
+
+
+def modules_fit(
+    adata: AnnData,
+    root_milestones,
+    milestones,
+    color: str = "milestones",
+    module: Literal["early", "late", "all"] = "all",
+    layer: Optional[str] = None,
+    fitted_linewidth=3,
+    ax_early=None,
+    ax_late=None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
+):
+    """\
+    Plot the GAM fit of mean expression of the early and late modules.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    root_milestone
+        tip defining progenitor branch.
+    milestones
+        tips defining the progenies branches.
+    color
+        color the cells with variable from adata.obs.
+    module
+        whether to show early, late or both modules.
+    layer
+        layer to use to compute mean of module.
+    fitted_linewidth
+        linewidth of GAM fit.
+    ax_early
+        existing axes for early module.
+    ax_late
+        existing axes for late module.
+    show
+        show the plot.
+    save
+        save the plot.
+    kwargs
+        arguments to pass to :func:`scFates.pl.trajectory` if `show_traj=True`, else to :func:`scanpy.pl.embedding`
+
+    Returns
+    -------
+    If `show==False` a single or a list of :class:`~matplotlib.axes.Axes`
+
+    """
+
+    df = get_modules(adata, root_milestones, milestones, layer)
+    adata_s = adata[df.index]
+    adata_s = sc.AnnData(df, obsm=adata_s.obsm, obs=adata_s.obs, uns=adata_s.uns)
+    if settings.verbosity > 2:
+        temp_verb = settings.verbosity
+        settings.verbosity = 1
+        reset = True
+    fit(adata_s, adata_s.var_names, n_jobs=1)
+    if reset:
+        settings.verbosity = temp_verb
+
+    if module == "all":
+        modules = ["early", "late"]
+        if (ax_early is None) & (ax_late is None):
+            axs, _, _, _ = setup_axes(panels=[0, 1])
+            axs = axs
+        else:
+            axs = [ax_early, ax_late]
+    elif module == "early":
+        modules = [module]
+        if ax_early is None:
+            axs, _, _, _ = setup_axes(panels=[0])
+            axs = [axs[0]]
+        else:
+            axs = [ax_early]
+    elif module == "late":
+        modules = [module]
+        if ax_late is None:
+            axs, _, _, _ = setup_axes(panels=[0])
+            axs = [axs[0]]
+        else:
+            axs = [ax_late]
+
+    for module, ax in zip(modules, axs):
+        sc.pl.scatter(
+            adata_s,
+            x=f"{module}_{milestones[0]}",
+            y=f"early_{milestones[1]}",
+            layers="fitted",
+            color="seg",
+            title=f"fitted {module} gene modules",
+            show=False,
+            ax=ax,
+            alpha=0.1,
+            legend_loc="none",
+        )
+        df = pd.DataFrame(
+            adata_s.layers["fitted"], columns=adata_s.var_names, index=adata_s.obs_names
+        )
+        df = pd.concat([adata_s.obs, df], axis=1).sort_values("t")
+        adata_s = adata_s[adata_s.obs.sort_values("t").index]
+        for s in adata.obs.seg.cat.categories:
+            color_exp = adata_s.uns["seg_colors"][adata.obs.seg.cat.categories == s][0]
+            ax.plot(
+                df.loc[df.seg == s, f"{module}_{milestones[0]}"],
+                df.loc[df.seg == s, f"{module}_{milestones[1]}"],
+                c=color_exp,
+                linewidth=fitted_linewidth,
+            )
+            tolink = adata.uns["graph"]["pp_seg"].loc[int(s), "to"]
+            for next_s in adata.uns["graph"]["pp_seg"].n.iloc[
+                np.argwhere(
+                    adata.uns["graph"]["pp_seg"].loc[:, "from"].isin([tolink]).values
+                ).flatten()
+            ]:
+                ax.plot(
+                    [
+                        df.loc[df.seg == s, f"{module}_{milestones[0]}"].iloc[-1],
+                        df.loc[df.seg == next_s, f"{module}_{milestones[0]}"].iloc[0],
+                    ],
+                    [
+                        df.loc[df.seg == s, f"{module}_{milestones[1]}"].iloc[-1],
+                        df.loc[df.seg == next_s, f"{module}_{milestones[1]}"].iloc[0],
+                    ],
+                    c=adata_s.uns["seg_colors"][adata.obs.seg.cat.categories == next_s][
+                        0
+                    ],
+                    linewidth=fitted_linewidth,
+                )
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_xlabel(f"{module} " + milestones[0])
+        ax.set_ylabel(f"{module} " + milestones[1])
+
+    savefig_or_show("modules_fit", show=show, save=save)
+
+    if show == False:
+        if module == "all":
+            return axs
+        else:
+            return axs[0]
