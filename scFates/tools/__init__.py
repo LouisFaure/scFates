@@ -25,4 +25,4 @@ from .conversion import cellrank_to_tree
 from .linearity_deviation import linearity_deviation
 from .dendrogram import dendrogram
 from .covariate import test_covariate, test_association_covariate
-from .onset_stat import onset_stat
+from .onset_stat import onset_stat, co_activation_test

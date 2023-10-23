@@ -481,7 +481,7 @@ def activation(
         `.uns['root_milestone->milestoneA<>milestoneB']['fork']['module']`
             classify feature as 'early' or 'late'.
         `.uns['root_milestone->milestoneA<>milestoneB']['fork']['activation']`
-            pseudotime of activationh.
+            pseudotime of activation.
     """
 
     if any(check):
