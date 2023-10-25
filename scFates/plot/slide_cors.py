@@ -29,6 +29,7 @@ def slide_cors(
     top_focus=4,
     labels: Union[None, tuple] = None,
     fig_height: float = 6,
+    padding: float = 0.05,
     fontsize: int = 16,
     fontsize_focus: int = 18,
     point_size: int = 20,
@@ -71,6 +72,8 @@ def slide_cors(
         labels defining the two modules, named after the milestones if None, or 'A' and 'B' if less than two milestones is used.
     fig_height
         figure height.
+    padding
+        padding to apply between the focus scatter and the rest (in width ratio, focus is equal to 1.9)
     fontsize
         repulsion score font size.
     fontsize_focus
@@ -159,9 +162,9 @@ def slide_cors(
 
     gs0 = gridspec.GridSpec(
         1,
-        1 + focus_true * 1,
+        1 + focus_true * 2,
         figure=fig,
-        width_ratios=[nwin, 2] if focus_true else None,
+        width_ratios=[nwin, padding, 1.9 - padding] if focus_true else None,
         wspace=0.05,
     )
 
@@ -270,7 +273,7 @@ def slide_cors(
                 spine.set_linewidth(spine.get_linewidth() * 2)
 
     if focus_true:
-        ax_scat = fig.add_subplot(gs0[1])
+        ax_scat = fig.add_subplot(gs0[2])
         for j in range(2):
             ax_scat.scatter(
                 corA.loc[groupsB == (j + 1), str(focus)],
@@ -293,9 +296,9 @@ def slide_cors(
         fra = 0.1 / (len(freqs) - focus)
 
         con = ConnectionPatch(
-            xyA=(maxlim * 0.75, -maxlim),
+            xyA=(maxlim * 0.9, -maxlim),
             coordsA="data",
-            xyB=(-maxlim * 0.75, -maxlim),
+            xyB=(-maxlim * 0.9, -maxlim),
             coordsB="data",
             axesA=ax_focus,
             axesB=ax_scat,
