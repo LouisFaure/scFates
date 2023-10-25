@@ -231,7 +231,7 @@ def co_activation_test(
 
     pvals = []
     for m in milestones:
-        result = sm.ols(formula=f"early_{m} ~ t", data=df).fit()
+        result = sm.ols(formula=f"Q('early_{m}') ~ t", data=df).fit()
         pvals.append(result.pvalues["t"])
 
     res = all(np.array(pvals) < coact_p_cutoff)
