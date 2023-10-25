@@ -4,6 +4,7 @@ from anndata import AnnData
 
 import igraph
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from scipy import sparse
 
 from typing import Union, Optional
@@ -14,6 +15,7 @@ from .trajectory import trajectory as plot_trajectory
 from .utils import setup_axes
 from ..tools.graph_operations import subset_tree
 from ..tools.fit import fit
+from ..tools.onset_stat import co_activation_test
 from .milestones import milestones as milestones_plot
 from ..get import modules as get_modules
 from .. import settings
@@ -211,12 +213,15 @@ def modules(
 
 def modules_fit(
     adata: AnnData,
-    root_milestones,
+    root_milestone,
     milestones,
     color: str = "milestones",
     module: Literal["early", "late", "all"] = "all",
+    title=None,
+    show_coact: bool = False,
     layer: Optional[str] = None,
     fitted_linewidth=3,
+    n_jobs: int = 1,
     ax_early=None,
     ax_late=None,
     show: Optional[bool] = None,
@@ -237,10 +242,14 @@ def modules_fit(
         color the cells with variable from adata.obs.
     module
         whether to show early, late or both modules.
+    title
+        automatically set the title to fitted {module} gene modules
     layer
         layer to use to compute mean of module.
     fitted_linewidth
         linewidth of GAM fit.
+    n_jobs
+        number of jobs to fit the modules, maximum 4.
     ax_early
         existing axes for early module.
     ax_late
@@ -258,14 +267,14 @@ def modules_fit(
 
     """
 
-    df = get_modules(adata, root_milestones, milestones, layer)
+    df = get_modules(adata, root_milestone, milestones, layer, module)
     adata_s = adata[df.index]
     adata_s = sc.AnnData(df, obsm=adata_s.obsm, obs=adata_s.obs, uns=adata_s.uns)
     if settings.verbosity > 2:
         temp_verb = settings.verbosity
         settings.verbosity = 1
         reset = True
-    fit(adata_s, adata_s.var_names, n_jobs=1)
+    fit(adata_s, adata_s.var_names, n_jobs=n_jobs)
     if reset:
         settings.verbosity = temp_verb
 
@@ -298,7 +307,7 @@ def modules_fit(
             y=f"early_{milestones[1]}",
             layers="fitted",
             color="seg",
-            title=f"fitted {module} gene modules",
+            title=f"fitted {module} gene modules" if title is None else title,
             show=False,
             ax=ax,
             alpha=0.1,
@@ -341,6 +350,34 @@ def modules_fit(
         ax.set_yticks([])
         ax.set_xlabel(f"{module} " + milestones[0])
         ax.set_ylabel(f"{module} " + milestones[1])
+
+    if show_coact:
+        ax = axs[0] if module == "all" else ax
+        name = f'{root_milestone}->{"<>".join(milestones)}'
+        if "co_activation" not in adata.uns[name]:
+            co_activation_test(adata, root_milestone, milestones)
+        pvals = np.array(adata.uns[name]["co_activation"]["pvals"])
+
+        def get_signi(pval):
+            if pval <= 0.001:
+                txt = "**** "
+            elif pval <= 0.001:
+                txt = "***  "
+            elif pval <= 0.01:
+                txt = "**   "
+            elif pval <= 0.05:
+                txt = "*    "
+            elif pval > 0.05:
+                txt = "ns   "
+            return txt
+
+        s1, s2 = [get_signi(p) for p in pvals]
+        empty_patch1 = mpatches.Patch(color="none", label=s1 + milestones[0])
+        empty_patch2 = mpatches.Patch(color="none", label=s2 + milestones[1])
+        ax.legend(
+            title="co-activation test in\nprogenitor branch",
+            handles=[empty_patch1, empty_patch2],
+        )
 
     savefig_or_show("modules_fit", show=show, save=save)
 
