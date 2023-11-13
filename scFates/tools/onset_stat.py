@@ -19,9 +19,7 @@ from . import getpath
 from ..get import modules as get_modules
 
 
-def onset_stat(
-    adata: AnnData, root_milestone, milestones, pseudotime_offset=0, n_map=None
-):
+def onset_stat(adata: AnnData, root_milestone, milestones, n_map=None):
     """\
     Estimate the onset of biasing over probabilistic mappings. Simply inter-module correlation progression is
     taken in reverse starting from the bifurcation point, onset pseudotime is considered once the inter-module
@@ -35,8 +33,6 @@ def onset_stat(
         tip defining progenitor branch.
     milestones
         tips defining the progenies branches.
-    pseudotime_offset
-        pseudotime offest.
     n_map
         number of mappings to consider.
 
@@ -92,8 +88,14 @@ def onset_stat(
     fork = np.array(img.vs["name"], dtype=int)[fork]
 
     fork_t = adata.uns["graph"]["pp_info"].loc[fork, "time"].max()
-    fork_t = fork_t - pseudotime_offset
     df = df.loc[df.t < fork_t]
+
+    dfns = []
+    for n in range(n_map):
+        dfn = df.loc[df.n_map == n]
+        dfn = dfn.loc[dfn.t < dfn.loc[dfn.corAB.idxmin(), "t"]]
+        dfns.append(dfn)
+    df = pd.concat(dfns)
 
     onsets = []
     dfs = []

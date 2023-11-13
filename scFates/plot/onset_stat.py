@@ -59,8 +59,9 @@ def onset_stat(
     nrows = 2 if plot_logref else 1
     if ax is None:
         fig, ax = plt.subplots(figsize=(5, 2 * nrows), nrows=nrows, sharex=plot_logref)
-        if plot_logref:
-            ax, ax2 = ax
+
+    if plot_logref:
+        ax, ax2 = ax
     for i in range(n_map):
         ax.plot(
             df.loc[df.n_map == i, "t"],
