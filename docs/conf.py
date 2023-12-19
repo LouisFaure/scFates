@@ -33,6 +33,7 @@ MOCK_MODULES = [
     "tqdm",
     "simpleppt",
     "sklearn.metrics",
+    "sklearn.linear_model",
     "networkx",
 ]
 for mod_name in MOCK_MODULES:
