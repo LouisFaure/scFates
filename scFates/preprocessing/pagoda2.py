@@ -10,11 +10,13 @@ from anndata import AnnData
 import pandas as pd
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
-from scipy.stats import t
-import statsmodels.api as sm
+
+
+import scipy.sparse as sp
+import multiprocessing
+import numpy as np
 
 
 from .. import logging as logg
@@ -23,7 +25,13 @@ from ..tools.utils import get_SE, bh_adjust, importeR
 
 
 def filter_cells(
-    adata: AnnData, device="cpu", p_level=None, subset=True, plot=False, copy=False
+    adata: AnnData,
+    p_level=None,
+    min_cell_size=500,
+    max_cell_size=5e4,
+    subset=True,
+    plot=False,
+    copy=False,
 ):
 
     """\
@@ -36,10 +44,12 @@ def filter_cells(
     ----------
     adata
         Annotated data matrix.
-    device
-        Run gene and molecule counting on either `cpu` or on `gpu`.
     p_level
         Statistical confidence level for deviation from the main trend, used for cell filtering (default=min(1e-3,1/adata.shape[0]))
+    min_cell_size
+        Minimum number of transcripts per cells
+    max_cell_size
+        Maximum number of transcripts per cells
     subset
         if False, add a column `outlier` in adata.obs, otherwise subset the adata.
     plot
@@ -59,89 +69,68 @@ def filter_cells(
 
     adata = adata.copy() if copy else adata
 
+    Rpy2, R, rstats, rMASS, Formula = importeR("filter cells", "MASS")
+
     logg.info("Filtering cells", reset=True)
     X = adata.X.copy()
 
     logg.info("    obtaining gene and molecule counts")
-    if device == "cpu":
-        log1p_total_counts = np.log1p(np.array(X.sum(axis=1))).ravel()
-        X.data = np.ones_like(X.data)
-        log1p_n_genes_by_counts = np.log1p(np.array(X.sum(axis=1))).ravel()
-    elif device == "gpu":
-        try:
-            import cupy as cp
-            from cupyx.scipy.sparse import csr_matrix as csr_matrix_gpu
-        except ModuleNotFoundError:
-            raise Exception(
-                "Some of the GPU dependencies are missing, use device='cpu' instead!"
-            )
-
-        X = csr_matrix_gpu(X)
-        log1p_total_counts = cp.log1p(X.sum(axis=1)).get().ravel()
-        X.data = cp.ones_like(X.data)
-        log1p_n_genes_by_counts = cp.log1p(X.sum(axis=1)).get().ravel()
 
     df = pd.DataFrame(
         {
-            "log1p_total_counts": log1p_total_counts,
-            "log1p_n_genes_by_counts": log1p_n_genes_by_counts,
+            "molecules": np.array(adata.X.sum(axis=1)).ravel(),
+            "genes": np.array((adata.X > 0).sum(axis=1)).ravel(),
         },
         index=adata.obs_names,
     )
+
+    df = df.loc[df.molecules >= min_cell_size, :]
+    df = np.log10(df)
 
     logg.info("    fitting RLM")
 
-    rlm_model = sm.RLM.from_formula(
-        "log1p_n_genes_by_counts ~ log1p_total_counts",
-        df,
-    ).fit()
-
+    m = rMASS.rlm(Formula("genes~molecules"), data=df)
     p_level = min(1e-3, 1 / adata.shape[0]) if p_level is None else p_level
 
-    SSE_line = ((df.log1p_n_genes_by_counts - rlm_model.predict()) ** 2).sum()
-    MSE = SSE_line / df.shape[0]
-    z = t.ppf((p_level / 2, 1 - p_level / 2), df.shape[0])
+    pr = rstats.predict(m, interval="prediction", level=1 - p_level, type="response")
+    pr = pd.DataFrame(pr, index=df.index)
 
-    se = np.zeros(df.shape[0])
-    get_SE(MSE, df.log1p_total_counts.values, se)
-    pr = pd.DataFrame(
-        {
-            0: rlm_model.predict(),
-            1: rlm_model.predict() + se * z[0],
-            2: rlm_model.predict() + se * z[1],
-        },
-        index=adata.obs_names,
-    )
+    outlier = (df.genes < pr[1]) | (df.genes > pr[2])
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
 
-    outlier = (df.log1p_n_genes_by_counts < pr[1]) | (
-        df.log1p_n_genes_by_counts > pr[2]
-    )
-
     if plot:
         fig, ax = plt.subplots()
-        idx = df.sort_values("log1p_total_counts").index
+        idx = df.sort_values("molecules").index
         ax.fill_between(
-            df.log1p_total_counts[[idx[0], idx[-1]]],
+            df.molecules[[idx[0], idx[-1]]],
             pr[1][[idx[0], idx[-1]]],
             pr[2][[idx[0], idx[-1]]],
             color="yellow",
             alpha=0.3,
         )
-        df.loc[~outlier].plot.scatter(
-            x="log1p_total_counts", y="log1p_n_genes_by_counts", c="k", ax=ax, s=1
-        )
-        df.loc[outlier].plot.scatter(
-            x="log1p_total_counts", y="log1p_n_genes_by_counts", c="grey", ax=ax, s=1
-        )
 
+        ax.scatter(
+            df.loc[~outlier].molecules, df.loc[~outlier].genes, s=5, alpha=0.2, c="k"
+        )
+        ax.scatter(
+            df.loc[outlier].molecules, df.loc[outlier].genes, s=5, alpha=0.5, c="r"
+        )
+        ax.axvline(x=np.log10(min_cell_size), c="r", linestyle="--")
+        ax.axvline(x=np.log10(max_cell_size), c="r", linestyle="--")
+        ax.set_ylabel("log10(genes)")
+        ax.set_xlabel("log10(molecules)")
+
+    df = df.loc[df.molecules > np.log10(min_cell_size), :]
+    df = df.loc[df.molecules < np.log10(max_cell_size), :]
+    df = df.loc[~outlier]
     if subset:
-        adata._inplace_subset_obs(adata.obs_names[~outlier])
+        adata._inplace_subset_obs(df.index)
         logg.hint("subsetted adata.")
 
     else:
-        adata.obs["outlier"] = outlier
+        adata.obs["outlier"] = True
+        adata.obs[df.index, "outlier"] = False
         logg.hint("added \n" "    .obs['outlier'], boolean column indicating outliers.")
 
     return adata if copy else None
@@ -207,7 +196,7 @@ def batch_correct(
         ).reshape(-1, 1)
         bc = np.exp(tc - np.log(gene_av.astype(np.float64)))
         bc = pd.DataFrame(np.transpose(bc), columns=batches)
-        X = csr_matrix(X.transpose())
+        X = sp.csr_matrix(X.transpose())
 
         batch = adata.obs[batch_key].cat.rename_categories(range(nbatches))
         count_gene = np.repeat(np.arange(X.shape[0]), np.diff(X.indptr))
@@ -255,7 +244,7 @@ def batch_correct(
         X = X.multiply(1.0 / d[None, :].T)
         X = X.get()
 
-    X = csr_matrix(X)
+    X = sp.csr_matrix(X)
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
 
     if inplace:
@@ -269,7 +258,7 @@ def batch_correct(
             )
 
     else:
-        return csr_matrix(X)
+        return sp.csr_matrix(X)
 
 
 def find_overdispersed(
@@ -325,7 +314,7 @@ def find_overdispersed(
             "Cannot find overdispersed features if some are not expressed in any cell!"
         )
 
-    if not issparse(adata.X):
+    if not sp.issparse(adata.X):
         raise Exception("Overdispersion requires sparse matrix!")
 
     logg.info("Finding overdispersed features", reset=True)
@@ -388,3 +377,93 @@ def find_overdispersed(
         ax.set_ylabel("log10(variance)")
 
     return adata if copy else None
+
+
+def neighbors(
+    adata,
+    n_neighbors=50,
+    n_pcs=None,
+    use_rep="X_pca",
+    center=True,
+    metric="angular",
+    n_jobs=-1,
+):
+
+    """\
+    Make the nearest neighbor graph, using N2 algorithm, similar to pagoda2.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    n_neighbors
+        Number of neighbors.
+    n_pcs
+        Number of dimension to use.
+    use_rep
+        Which reduction to use to calculate graph.
+    center
+        Center the reduction before calulating graph.
+    metric
+        metric to use, either 'angular' (cosine) or 'l2' (euclidean)
+    n_jobs
+        Number of cpu cores to use.
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else add fields to `adata`:
+
+         .var['res']
+             residuals of GAM fit.
+         .var['lp']
+             p-value.
+         .var['lpa']
+             BH adjusted p-value.
+         .var['qv']
+             percentile of qui-squared distribution.
+         .var['highly_variable']
+             feature is over-dispersed.
+
+    """
+
+    try:
+        from n2 import HnswIndex
+    except ImportError:
+        raise ImportError("Please install the N2 algorithm: `pip install n2`.")
+
+    logg.info("Generating NN graph", reset=True)
+    if center:
+        x = adata.obsm[use_rep] - adata.obsm[use_rep].mean(axis=1).reshape(-1, 1)
+    else:
+        x = adata.obsm[use_rep]
+    if n_pcs is None:
+        n_pcs = x.shape[1]
+
+    logg.info("    building graph")
+    u = HnswIndex(n_pcs, metric)
+    for i in range(x.shape[0]):
+        u.add_data(x[i, :])
+
+    if n_jobs == -1:
+        n_jobs = multiprocessing.cpu_count() - 1
+
+    u.build(m=n_pcs + 1, n_threads=n_jobs)
+
+    logg.info("    generating adjacency")
+    adj = u.batch_search_by_ids(np.arange(x.shape[0]), n_pcs + 1, num_threads=n_jobs)
+    adj = [a[1:] for a in adj]
+    idx = np.repeat(range(x.shape[0]), n_pcs)
+
+    adj = np.concatenate(adj)
+    adj = sp.coo_matrix((np.ones_like(idx), (idx, adj)), shape=(x.shape[0], x.shape[0]))
+
+    adata.obsp["connectivities"] = sp.csr_matrix(adj)
+
+    adata.uns["neighbors"] = {
+        "connectivities_key": "connectivities",
+        "distances_key": "distances",
+        "params": {"n_neighbors": n_neighbors, "method": "n2", "metric": metric},
+    }
+
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint("added \n" "    .obsp['connectivities'], adjacency matrix.")
