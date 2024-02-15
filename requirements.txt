@@ -11,7 +11,7 @@ pandas<2.0
 statsmodels>=0.11.1
 matplotlib>=3.2.1
 plotly>=4.8.1
-adjustText>=0.7.3
+adjustText==0.7.3
 cycler>=0.10.0
 python_igraph>=0.8.2
 typing_extensions

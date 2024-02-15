@@ -4,11 +4,15 @@
 Release Notes
 =============
 
-Version 1.0.6 :small:`August 26, 2566/2033`
+Version 1.0.7 :small:`February 15, 2566/2024`
+--------------------------------------------
+Fixed adjustedText version to avoid error, changed tests to python 3.11
+
+Version 1.0.6 :small:`August 26, 2566/2023`
 -------------------------------------------
 Fixed exception in :func:`scFates.tl.slide_cells`
 
-Version 1.0.5 :small:`August 25, 2566/2033`
+Version 1.0.5 :small:`August 25, 2566/2023`
 -------------------------------------------
 Fix int and bool check when ordering segments in :func:`scFates.pl.trends`.
 
