@@ -1,7 +1,7 @@
 Installation
 ============
 
-scFates is continuously tested with python 3.7 and 3.8, it is recommended to use a Miniconda_ environment.
+scFates is continuously tested with python 3.11, it is recommended to use a Miniconda_ environment.
 
 PyPI
 ----
@@ -20,7 +20,7 @@ With all dependencies
 
 - :func:`scFates.pp.find_overdispersed`, :func:`scFates.tl.test_association`, :func:`scFates.tl.fit`, :func:`scFates.tl.test_fork`, :func:`scFates.tl.activation`: Require R package mgcv interfaced via python package rpy2::
 
-    conda create -n scFates -c conda-forge -c r python=3.8 r-mgcv rpy2 -y
+    conda create -n scFates -c conda-forge -c r python=3.11 r-mgcv rpy2 -y
     conda activate scFates
     pip install scFates
 

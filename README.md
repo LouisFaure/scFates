@@ -82,7 +82,7 @@ With all dependencies
 
 -`pp.find_overdispersed`, `tl.test_association`, `tl.fit`, `tl.test_fork`, `tl.activation`, `tl.test_association_covariate`, `tl.test_covariate`: Require R package mgcv interfaced via python package rpy2:
 
-    conda create -n scFates -c conda-forge -c r python=3.8 r-mgcv rpy2=3.4.2 -y
+    conda create -n scFates -c conda-forge -c r python=3.11 r-mgcv rpy2=3.4.2 -y
     conda activate scFates
     pip install scFates
 
@@ -118,10 +118,10 @@ If you have a nvidia GPU, scFates can leverage CUDA computations for speedups fo
 
 `pp.filter_cells`, `pp.batch_correct`, `pp.diffusion`, `tl.tree`, `tl.cluster`
 
-The latest version of rapids framework is required (at least 0.17) it is recommanded to create a new conda environment:
+The latest version of rapids framework is required. Create the following  conda environment:
 
-    conda create -n scFates-gpu -c rapidsai -c nvidia -c conda-forge -c defaults \
-        cuml=21.12 cugraph=21.12 python=3.8 cudatoolkit=11.0 -y
+    conda create --solver=libmamba -n scFates-gpu -c rapidsai -c conda-forge -c nvidia  \
+        cuml=23.12 cugraph=23.12 python=3.10 cuda-version=11.2
     conda activate scFates-gpu
     pip install git+https://github.com/j-bac/elpigraph-python.git
     pip install scFates
