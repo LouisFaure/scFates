@@ -11,19 +11,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set up Python 3.11
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: 3.11
     - name: Install package
       run: |
-        pip install wheel
-        pip install .
+        pip install uv && uv venv
+        uv pip install wheel
+        uv pip install "scFates @ ."
     - name: Load package
       run: |
+        source .venv/bin/activate
         python -c "import scFates"
 
   build_and_test:
@@ -43,12 +45,12 @@ jobs:
       run: |
         sudo apt-get clean && sudo apt-get update
         sudo apt-get install -y r-base r-cran-mgcv
-        pip install wheel
-        pip install coverage cmake pytest mock
-        pip install rpy2
-        pip install .
+        pip install uv && uv venv
+        uv pip install wheel
+        uv pip install coverage cmake pytest mock rpy2 "scFates @ ."
     - name: Test with pytest
       run: |
+        source .venv/bin/activate
         coverage run -m pytest scFates/tests/test_w_plots.py
         coverage report -i -m
         coverage xml -i
