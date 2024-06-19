@@ -4,6 +4,11 @@
 Release Notes
 =============
 
+Version 1.0.8 :small:`June 19, 2566/2024`
+--------------------------------------------
+- Compatibility with cellrank2
+- various dependency fixes
+
 Version 1.0.7 :small:`February 15, 2566/2024`
 --------------------------------------------
 Fixed adjustedText version to avoid error, changed tests to python 3.11
