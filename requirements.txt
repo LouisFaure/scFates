@@ -5,7 +5,7 @@ numba>=0.51.2
 scipy>=1.4.1
 scanpy>=1.7.0
 leidenalg>=0.8.1
-numpy>=1.18.1
+numpy<2.0
 joblib>=0.17.0
 pandas<2.0
 statsmodels>=0.11.1
