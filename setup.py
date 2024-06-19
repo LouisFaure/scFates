@@ -30,7 +30,10 @@ def set_version():
 setup(
     name="scFates",
     version_config=set_version(),
-    setup_requires=["setuptools-git-versioning"],
+    setup_requires=["setuptools-git-versioning>=2.0,<3"],
+    setuptools_git_versioning={
+        "enabled": True,
+    },
     description="scanpy compatible python suite for fast tree inference and advanced pseudotime downstream analysis",
     long_description=long_description,
     long_description_content_type="text/markdown",
