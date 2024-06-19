@@ -6,30 +6,9 @@ on:
       - 'scFates/**'
 
 jobs:
-  install_and_load:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.11
-    - name: Install package
-      run: |
-        pip install wheel
-        pip install .
-    - name: Load package
-      run: |
-        python -c "import scFates"
-
   build_and_test:
 
     runs-on: ubuntu-latest
-    needs: install_and_load
 
     steps:
     - uses: actions/checkout@v2
