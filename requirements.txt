@@ -9,7 +9,7 @@ numpy<2.0
 joblib>=0.17.0
 pandas<2.0
 statsmodels>=0.11.1
-matplotlib>=3.2.1
+matplotlib<3.9
 plotly>=4.8.1
 adjustText==0.7.3
 cycler>=0.10.0
