@@ -18,6 +18,7 @@ def cellrank_to_tree(
     auto_root: bool = False,
     root_params: dict = {},
     reassign_pseudotime: bool = False,
+    key_cellrank = "term_states_fwd_memberships",
     copy=False,
     **kwargs
 ):
@@ -48,6 +49,8 @@ def cellrank_to_tree(
         min_val parameter from :func:`scFates.tl.root`
     reassign_pseudotime
         whether use the time key to replace the distances comptued from the tree.
+    key_cellrank
+        where to get the forward terminal fate memberships.
     copy
         Return a copy instead of writing to adata.
     kwargs
@@ -90,18 +93,18 @@ def cellrank_to_tree(
 
     adata = adata.copy() if copy else adata
 
-    n_states = adata.obsm["to_terminal_states"].shape[1]
+    n_states = adata.obsm[key_cellrank].shape[1]
 
     if n_states == 2:
         adata.obsm["X_fates"] = np.vstack(
             [
-                np.array(adata.obsm["to_terminal_states"][:, 0].flatten()),
+                np.array(adata.obsm[key_cellrank][:, 0].flatten()),
                 adata.obs[time],
             ]
         ).T
         logg.hint(
             "with .obsm['X_fates'], created by combining:\n"
-            "    .obsm['to_terminal_states'][:,0] and adata.obs['" + time + "']\n"
+            f"    .obsm[{key_cellrank}][:,0] and adata.obs['{time}']\n"
         )
     else:
         logg.hint(
