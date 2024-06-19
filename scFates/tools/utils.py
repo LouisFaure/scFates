@@ -5,6 +5,7 @@ from joblib import Parallel
 from scipy import sparse
 import numpy as np
 import shutil
+import sys, os
 from .. import logging as logg
 
 
@@ -230,7 +231,9 @@ def importeR(task, module="mgcv"):
         )
         Formula = False
 
-    if not shutil.which("R"):
+    whichR = shutil.which("R")
+
+    if not ((whichR is not None) | (os.path.isfile(sys.exec_prefix+"/lib/R/bin/R"))):
         R = (
             "R installation is necessary for "
             + task
