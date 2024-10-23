@@ -4,6 +4,11 @@
 Release Notes
 =============
 
+Version 1.0.8 :small:`October 23, 2566/2024`
+--------------------------------------------
+- Future proofing scFates by allowing pandas>2.0
+- Fixed most Deprecation warnings.
+
 Version 1.0.8 :small:`June 19, 2566/2024`
 --------------------------------------------
 - Compatibility with cellrank2
