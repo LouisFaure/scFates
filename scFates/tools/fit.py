@@ -198,7 +198,7 @@ def fit(
 def gt_fun(data):
     sdf = data[0]
     sdf["exp"] = data[1]
-    gamma = sdf["gamma"][0]
+    gamma = sdf["gamma"].iloc[0]
 
     global rmgcv
     global rstats

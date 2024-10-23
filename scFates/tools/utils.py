@@ -12,12 +12,12 @@ from .. import logging as logg
 def get_X(adata, cells, genes, layer, togenelist=False):
     if layer is None:
         if sparse.issparse(adata.X):
-            X = adata[cells, genes].X.A
+            X = adata[cells, genes].X.toarray()
         else:
             X = adata[cells, genes].X
     else:
         if sparse.issparse(adata.layers[layer]):
-            X = adata[cells, genes].layers[layer].A
+            X = adata[cells, genes].layers[layer].toarray()
         else:
             X = adata[cells, genes].layers[layer]
 

@@ -42,7 +42,7 @@ def test_fork(
     copy: bool = False,
 ):
 
-    """\
+    """
     Test for branch differential gene expression and differential upregulation from progenitor to terminal state.
 
     First, differential gene expression between two branches is performed. The following model is used:
@@ -154,7 +154,7 @@ def test_fork(
             return ddf
 
         brcells = pd.concat([get_branches(m) for m in milestones])
-        brcells = brcells.loc[brcells.index.drop_duplicates(False)]
+        brcells = brcells.loc[brcells.index.drop_duplicates(keep=False)]
 
         matw = None
         if matw is None:
@@ -324,7 +324,7 @@ def gt_fun(data):
 
     tmin = np.min([sdf.loc[sdf.i == i, "t"].max() for i in sdf.i.unique()])
     sdf = sdf.loc[sdf.t <= tmin]
-    Amps = sdf.groupby("i").apply(lambda x: np.mean(x.exp))
+    Amps = sdf.groupby("i")['exp'].mean()
     res = Amps - Amps.max()
     res["de_p"] = rmgcv.summary_gam(m)[3][1]
 
@@ -351,7 +351,7 @@ def branch_specific(
     copy: bool = False,
 ):
 
-    """\
+    """
     Assign genes differentially expressed between two post-bifurcation branches.
 
     Parameters
@@ -439,7 +439,7 @@ def activation(
     layer=None,
 ):
 
-    """\
+    """
     Identify pseudotime of activation of branch-specififc features.
 
     This aims in classifying the genes according to their their activation timing
@@ -522,7 +522,7 @@ def activation(
             df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
-        acti = pd.Series(0, index=stats.index)
+        acti = pd.Series(0.0, index=stats.index)
 
         for leave in leaves:
             subtree = getpath(img, root, graph["tips"], leave, graph, df).sort_values(
@@ -617,9 +617,9 @@ def get_activation(data):
     subtree = data[0]
     subtree["exp"] = data[1]
     # load parameters
-    deriv_cut = subtree["deriv_cut"][0]
-    nwin = subtree["nwin"][0]
-    steps = subtree["steps"][0]
+    deriv_cut = subtree["deriv_cut"].iloc[0]
+    nwin = subtree["nwin"].iloc[0]
+    steps = subtree["steps"].iloc[0]
 
     wf = warnings.filters.copy()
     warnings.filterwarnings("ignore")
@@ -676,7 +676,7 @@ def activation_lm(
     layer=None,
 ):
 
-    """\
+    """
     A more robust version of `tl.activation`.
 
     This is considered to be a more robust version of :func:`scFates.tl.activation`.

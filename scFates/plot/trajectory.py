@@ -748,7 +748,7 @@ def _get_color_values(
     # when plotting, the color of the dots is determined for each plot
     # the data is either categorical or continuous and the data could be in
     # 'obs' or in 'var'
-    if not is_categorical_dtype(values):
+    if not isinstance(values, pd.CategoricalDtype):
         return values, False
     else:  # is_categorical_dtype(values)
         color_key = f"{value_to_plot}_colors"

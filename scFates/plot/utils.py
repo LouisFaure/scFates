@@ -129,13 +129,11 @@ def make_projection_available(projection):
 
 
 def is_categorical(data, c=None):
-    from pandas.api.types import is_categorical_dtype as cat
-
     if c is None:
-        return cat(data)  # if data is categorical/array
+        return isinstance(data, pd.CategoricalDtype)  # if data is categorical/array
     if not is_view(data):  # if data is anndata view
         strings_to_categoricals(data)
-    return isinstance(c, str) and c in data.obs.keys() and cat(data.obs[c])
+    return isinstance(c, str) and c in data.obs.keys() and isinstance(data.obs[c], pd.CategoricalDtype)
 
 
 def is_view(adata):

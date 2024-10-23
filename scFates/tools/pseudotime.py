@@ -290,7 +290,7 @@ def map_cells(graph, R, P, multi=False, map_seed=None):
 
         if vcells.shape[0] > 0:
             nv = np.array(g.neighborhood(v, order=1))[1:]
-            nvd = g.shortest_paths(v, nv, weights=g.es["weight"])
+            nvd = g.distances(v, nv, weights=g.es["weight"])
 
             ndf = pd.DataFrame(
                 {
@@ -314,7 +314,7 @@ def map_cells(graph, R, P, multi=False, map_seed=None):
                 for i in range(ndf.shape[0])
             ]
 
-            ndf["seg"] = 0
+            ndf["seg"] = '0'
             isinfork = (graph["pp_info"].loc[ndf.v0, "PP"].isin(graph["forks"])).values
             ndf.loc[isinfork, "seg"] = (
                 graph["pp_info"].loc[ndf.loc[isinfork, "v1"], "seg"].values
@@ -332,7 +332,7 @@ def map_cells(graph, R, P, multi=False, map_seed=None):
     df.sort_values("cell", inplace=True)
     # df.index = graph["cells_fitted"]
 
-    df["edge"] = df.apply(lambda x: str(int(x[1])) + "|" + str(int(x[2])), axis=1)
+    df["edge"] = df.apply(lambda x: str(int(x.iloc[1])) + "|" + str(int(x.iloc[2])), axis=1)
 
     df.drop(["cell", "v0", "v1", "d"], axis=1, inplace=True)
 
@@ -417,11 +417,11 @@ def unroll_circle(adata: AnnData, copy: bool = False):
 
     adata = adata.copy() if copy else adata
     pp_seg = adata.uns["graph"]["pp_seg"]
-    adata.obs.t[adata.obs.seg == "0"] = (
+    adata.obs.loc[adata.obs.seg == "0",'t'] = (
         -adata.obs.t[adata.obs.seg == "0"] + adata.obs.t[adata.obs.seg == "0"].max()
     )
 
-    adata.obs.t[adata.obs.seg == "0"] = (
+    adata.obs.loc[adata.obs.seg == "0",'t'] = (
         adata.obs.t[adata.obs.seg == "0"] + adata.obs.t[adata.obs.seg == "0"].max()
     )
 
@@ -452,7 +452,7 @@ def unroll_circle(adata: AnnData, copy: bool = False):
             "n": 0,
             "from": a,
             "to": b,
-            "d": g.shortest_paths(a, b, weights="weight")[0][0],
+            "d": g.distances(a, b, weights="weight")[0][0],
         },
         index=[0],
     )

@@ -238,7 +238,7 @@ def matrix(
 
         if return_data:
             data = pd.DataFrame(
-                0, index=features, columns=adata_sub.obs.split.cat.categories
+                0.0, index=features, columns=adata_sub.obs.split.cat.categories
             )
             allidx = data.stack().index
             for group in data.columns:
@@ -338,7 +338,7 @@ def matrix(
             borderpad=2,
         )
 
-        mappable = cm.ScalarMappable(cmap=cm.get_cmap(cmap))
+        mappable = cm.ScalarMappable(cmap=plt.get_cmap(cmap))
         cbar = fig.colorbar(mappable, cax=position, orientation="horizontal", aspect=50)
         cbar.set_ticks([0, 1])
         cbar.set_ticklabels(

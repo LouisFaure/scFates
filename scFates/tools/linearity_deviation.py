@@ -93,7 +93,7 @@ def linearity_deviation(
 
         t_perc = [cells.t.quantile(p / 100) for p in percentiles]
 
-        df[name + "_lindev_sel"] = np.nan
+        df[name + "_lindev_sel"] = 'none'
         df.loc[
             adata.obs_names.isin(cells.index), name + "_lindev_sel"
         ] = "putative bridge"

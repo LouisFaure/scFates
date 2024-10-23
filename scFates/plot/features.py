@@ -182,7 +182,7 @@ def trends(
     fitted = pd.DataFrame(
         adata[:, features].layers["fitted"], index=adata.obs_names, columns=features
     ).T.copy(deep=True)
-    g = adata.obs.groupby("seg")
+    g = adata.obs.groupby("seg",observed=False )
 
     dct = graph["milestones"]
     keys = np.array(list(dct.keys()))
@@ -476,7 +476,7 @@ def trends(
             gs_emb = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gsubs[0])
             axemb = fig.add_subplot(gs_emb[0])
             axs = axs + [axemb]
-        adata_temp.obs["mean_trajectory"] = 0
+        adata_temp.obs["mean_trajectory"] = 0.0
         adata_temp.obs.loc[
             fitted_sorted.columns, "mean_trajectory"
         ] = fitted_sorted.mean(axis=0).values

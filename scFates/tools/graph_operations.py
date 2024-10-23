@@ -1,6 +1,7 @@
 from typing import Optional, Union, Iterable
 from typing_extensions import Literal
 from anndata import AnnData
+import anndata as ad
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
@@ -433,9 +434,7 @@ def attach_tree(
 
     newcells = np.concatenate([adata.obs_names, adata_branch.obs_names])
 
-    adata = adata.concatenate(
-        adata_branch, batch_key=None, index_unique=None, uns_merge="first", join="outer"
-    )
+    adata = ad.concat([adata,adata_branch],uns_merge="first", join="outer")
 
     logg.info("    tree refitting")
     use_rep = graph["use_rep"]

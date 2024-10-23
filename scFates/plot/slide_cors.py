@@ -198,7 +198,7 @@ def slide_cors(
             emb[np.argsort(freq), 0],
             emb[np.argsort(freq), 1],
             s=10,
-            c=freq[np.argsort(freq)],
+            c=freq.iloc[np.argsort(freq)],
             cmap=gr,
             rasterized=True,
         )
@@ -327,11 +327,11 @@ def slide_cors(
                 pairwise_distances(np.array([0, 0]).reshape(1, -1), fB).argsort()
             )[0][:top_focus]
             texts_A = [
-                ax_scat.text(fA.loc[t][0], fA.loc[t][1], t, **kwargs_text)
+                ax_scat.text(fA.loc[t].iloc[0], fA.loc[t].iloc[1], t, **kwargs_text)
                 for t in fA.index[topA]
             ]
             texts_B = [
-                ax_scat.text(fB.loc[t][0], fB.loc[t][1], t, **kwargs_text)
+                ax_scat.text(fB.loc[t].iloc[0], fB.loc[t].iloc[1], t, **kwargs_text)
                 for t in fB.index[topB]
             ]
             texts = texts_A + texts_B

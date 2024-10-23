@@ -96,7 +96,7 @@ def dendrogram(adata: anndata.AnnData, crowdedness: float = 1, n_jobs: int = 1):
     adata.obsm["X_dendro"] = dend.loc[adata.obs_names].values
 
     # generate segments
-    newseg = newseg[newseg.argsort()]
+    newseg = newseg.iloc[newseg.argsort()]
 
     segments = []
     for i, n in enumerate(newseg.index):
@@ -264,7 +264,7 @@ class _CategoricalPlotter(object):
         """Group a long-form variable by another with correct order."""
 
         # Group the val data
-        grouped_vals = vals.groupby(grouper)
+        grouped_vals = vals.groupby(grouper,observed=False)
         out_data = []
         for g in order:
             try:

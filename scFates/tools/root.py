@@ -124,9 +124,9 @@ def root(
 
         sub_g = g.vs.select(group=0).subgraph()
         a, b = np.argwhere(np.array(sub_g.degree()) == 1).ravel()
-        dst_0 = sub_g.shortest_paths(a, b, weights="weight")[0][0]
+        dst_0 = sub_g.distances(a, b, weights="weight")[0][0]
         a, b = sub_g.vs["label"][a], sub_g.vs["label"][b]
-        dst_1 = g.shortest_paths(root, furthest, weights="weight")[0][0]
+        dst_1 = g.distances(root, furthest, weights="weight")[0][0]
         pp_seg = pd.concat(
             [
                 pd.Series([0, a, b, dst_0], index=["n", "from", "to", "d"]),
@@ -290,7 +290,7 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
     nodes = np.argwhere(
         np.apply_along_axis(arr=(csr > 0).todense(), axis=0, func1d=np.sum) != 2
     ).flatten()
-    pp_seg = pd.DataFrame(columns=["n", "from", "to", "d"])
+    pp_seg = []
     for node1, node2 in itertools.combinations(nodes, 2):
         paths12 = g.get_shortest_paths(node1, node2)
         paths12 = np.array([val for sublist in paths12 for val in sublist])
@@ -300,19 +300,19 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
             path_root = root_dist_matrix[[node1, node2]]
             fro = fromto[np.argmin(path_root)]
             to = fromto[np.argmax(path_root)]
-            pp_info.loc[paths12, "seg"] = pp_seg.shape[0] + 1
-            pp_seg = pp_seg.append(
+            pp_info.loc[paths12, "seg"] = len(pp_seg) + 1
+            pp_seg.append(
                 pd.DataFrame(
                     {
-                        "n": pp_seg.shape[0] + 1,
+                        "n": len(pp_seg) + 1,
                         "from": fro,
                         "to": to,
                         "d": shortest_path(csr, directed=False, indices=fro)[to],
                     },
-                    index=[pp_seg.shape[0] + 1],
+                    index=[len(pp_seg) + 1],
                 )
             )
-
+    pp_seg = pd.concat(pp_seg, axis=0)
     pp_seg["n"] = pp_seg["n"].astype(int).astype(str)
     pp_seg["n"] = pp_seg["n"].astype(int).astype(str)
 

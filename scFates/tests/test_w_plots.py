@@ -2,6 +2,7 @@ import scFates as scf
 import scanpy as sc
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def test_pipeline():
@@ -80,6 +81,8 @@ def test_pipeline():
     scf.pl.trajectory(adata_2, color_seg="milestones", arrows=True)
     scf.pl.trajectory(adata_2, color_seg="seg", arrows=True)
 
+    plt.close()
+
     df = scf.tl.getpath(adata, root_milestone="43", milestones=["18"])
 
     adata.obsm["X_umap3d"] = np.concatenate(
@@ -88,6 +91,8 @@ def test_pipeline():
 
     scf.pl.trajectory_3d(adata)
     scf.pl.trajectory_3d(adata, color="seg")
+
+    plt.close()
 
     adata_s1 = scf.tl.subset_tree(
         adata, root_milestone="88", milestones=["18"], mode="substract", copy=True
@@ -100,7 +105,7 @@ def test_pipeline():
 
     adata_lim = scf.tl.subset_tree(adata, t_max=adata.obs.t.max() / 4 * 3, copy=True)
 
-    scf.tl.test_association(adata, n_jobs=2)
+    scf.tl.test_association(adata, n_jobs=1)
     scf.tl.test_association(adata, A_cut=0.3, reapply_filters=True)
     scf.tl.test_association(adata_2, layer="scaled", A_cut=0.3)
     nsigni = adata.var.signi.sum()
@@ -148,6 +153,7 @@ def test_pipeline():
         plot_emb=False,
         ordering="quantile",
     )
+    plt.close()
 
     scf.pl.trends(
         adata,
@@ -158,6 +164,7 @@ def test_pipeline():
         ordering="pearson",
         show=False,
     )
+    plt.close()
 
     scf.pl.single_trend(adata, feature=adata.var_names[0], color_exp="k")
 
@@ -173,15 +180,15 @@ def test_pipeline():
     )
 
     scf.tl.test_fork(
-        adata, layer="scaled", root_milestone="43", milestones=["24", "18"], n_jobs=2
+        adata, layer="scaled", root_milestone="43", milestones=["24", "18"], n_jobs=1
     )
-    scf.tl.test_fork(adata, root_milestone="43", milestones=["24", "18"], n_jobs=2)
+    scf.tl.test_fork(adata, root_milestone="43", milestones=["24", "18"], n_jobs=1)
     signi_fdr_nonscaled = adata.uns["43->24<>18"]["fork"].signi_fdr.sum()
     adata.uns["43->24<>18"]["fork"]["fdr"] = 0.02
     scf.pl.test_fork(adata, root_milestone="43", milestones=["24", "18"])
 
     scf.tl.test_fork(
-        adata, root_milestone="43", milestones=["24", "18"], n_jobs=2, rescale=True
+        adata, root_milestone="43", milestones=["24", "18"], n_jobs=1, rescale=True
     )
     signi_fdr_rescaled = adata.uns["43->24<>18"]["fork"].signi_fdr.sum()
 
