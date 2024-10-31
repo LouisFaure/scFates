@@ -391,8 +391,11 @@ def branch_specific(
     df = adata.uns[name]["fork"]
 
     df = df[(df.up_A > up_A) & (df.up_p < up_p) & (df.signi_fdr > stf_cut)]
-    df = df[((df.iloc[:, : len(milestones)] + effect) > 0).sum(axis=1) == 1]
+    df = df[((df.iloc[:, : len(milestones)] + effect) >= 0).sum(axis=1) == 1]
     df["branch"] = df.iloc[:, : len(milestones)].idxmax(axis=1)
+
+    if df.shape[0] == 0:
+        raise Exception("The current filtering removed all genes!")
 
     logg.info(
         "    "

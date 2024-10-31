@@ -4,10 +4,11 @@
 Release Notes
 =============
 
-Version 1.0.8 :small:`October 23, 2566/2024`
+Version 1.0.9 :small:`October 31, 2566/2024`
 --------------------------------------------
 - Future proofing scFates by allowing pandas>2.0
 - Fixed most Deprecation warnings.
+- Fix issue with branch_specific, added check when all genes are filtered out
 
 Version 1.0.8 :small:`June 19, 2566/2024`
 --------------------------------------------
