@@ -19,7 +19,6 @@ plot_suffix = ""
 """Global suffix that is appended to figure filenames.
 """
 
-
 def _set_start_time():
     return time()
 
