@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get clean && sudo apt-get update
-        sudo apt-get install -y r-base r-cran-mgcv
+        sudo apt-get install -y r-base r-cran-mgcv libtirpc-dev
         pip install wheel
         pip install coverage cmake pytest mock
         pip install rpy2
