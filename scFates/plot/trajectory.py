@@ -35,6 +35,7 @@ def graph(
     tips: bool = True,
     forks: bool = True,
     nodes: Optional[List] = [],
+    rasterized: bool = True,
     ax=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -66,6 +67,8 @@ def graph(
         display fork ids.
     nodes
         display any node id.
+    rasterized
+        Rasterize the segments and nodes.
     ax
         Add plot to existing ax
     show
@@ -123,12 +126,12 @@ def graph(
     vertices = proj.tolist()
     lines = [[tuple(vertices[j]) for j in i] for i in segs]
     lc = matplotlib.collections.LineCollection(
-        lines, colors="k", linewidths=linewidth, alpha=alpha_seg, rasterized=True
+        lines, colors="k", linewidths=linewidth, alpha=alpha_seg, rasterized=rasterized
     )
     ax.add_collection(lc)
 
     ax.scatter(
-        proj[:, 0], proj[:, 1], s=size_nodes, c="k", alpha=alpha_nodes, rasterized=True
+        proj[:, 0], proj[:, 1], s=size_nodes, c="k", alpha=alpha_nodes, rasterized=rasterized
     )
 
     bbox = dict(facecolor="white", alpha=0.6, edgecolor="white", pad=0.1)
@@ -186,6 +189,7 @@ def trajectory(
     arrows: bool = False,
     arrow_offset: int = 10,
     show_info: bool = True,
+    rasterized: bool = True,
     ax=None,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
@@ -221,6 +225,8 @@ def trajectory(
         arrow offset in number of nodes used to obtain its direction.
     show_info
         display legend/colorbar.
+    rasterized
+        Rasterize the segments and nodes
     ax
         Add plot to existing ax
     show
@@ -452,7 +458,7 @@ def trajectory(
         linewidths=7.5 * scale_path,
         zorder=100,
         path_effects=[path_effects.Stroke(capstyle="round")],
-        rasterized=True,
+        rasterized=rasterized,
     )
     ax.add_collection(lc)
 
@@ -480,7 +486,7 @@ def trajectory(
                 headlength=10 * scale_path,
                 units="dots",
                 zorder=101,
-                rasterized=True,
+                rasterized=rasterized,
             )
             closest = (
                 np.array([e.split("|") for e in adata.obs.edge], dtype=int) == path[mid]
@@ -503,7 +509,7 @@ def trajectory(
                 units="dots",
                 color=c_arrow,
                 zorder=102,
-                rasterized=True,
+                rasterized=rasterized,
             )
 
     lc = matplotlib.collections.LineCollection(
@@ -512,7 +518,7 @@ def trajectory(
         linewidths=5 * scale_path,
         zorder=104,
         path_effects=[path_effects.Stroke(capstyle="round")],
-        rasterized=True,
+        rasterized=rasterized,
     )
 
     ax.scatter(
@@ -521,7 +527,7 @@ def trajectory(
         zorder=103,
         c="k",
         s=200 * scale_path,
-        rasterized=True,
+        rasterized=rasterized,
     )
     ax.add_collection(lc)
 
@@ -531,7 +537,7 @@ def trajectory(
         zorder=105,
         c=color_mils,
         s=140 * scale_path,
-        rasterized=True,
+        rasterized=rasterized,
     )
 
     if show == False:
