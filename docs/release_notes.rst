@@ -4,6 +4,12 @@
 Release Notes
 =============
 
+Version 1.1.0 :small:`March 30, 2567/2025`
+--------------------------------------------
+- Allow to generate vector graphics plots for pl.trajectory and pl.graph
+- Fix github actions
+
+
 Version 1.0.9 :small:`October 31, 2566/2024`
 --------------------------------------------
 - Future proofing scFates by allowing pandas>2.0
