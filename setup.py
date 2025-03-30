@@ -45,5 +45,5 @@ setup(
     install_requires=requirements,
     include_package_data=True,
     package_data={"": ["datasets/*.h5ad", "*.R"]},
-    zip_safe=False,
+    zip_safe=False
 )
