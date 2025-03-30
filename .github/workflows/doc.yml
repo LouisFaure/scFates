@@ -15,15 +15,16 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v2
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
       with:
-        python-version: 3.7
+        python-version: 3.11
     - name: Prepare dependencies
       run: |
         sudo apt update && sudo apt install -y pandoc
         pip install -r docs/requirements.txt
         pip install mock pandoc
+        pip uninstall rpy2 -y
         pip install --no-deps .
     - name: Build documentation
       run: |
