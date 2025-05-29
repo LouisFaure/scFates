@@ -203,11 +203,20 @@ def gt_fun(data):
     global rmgcv
     global rstats
 
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri as p2ri
+    from rpy2.robjects.conversion import localconverter
+    context = localconverter(ro.default_converter + p2ri.converter)
+
+
     def gamfit(b):
+        with context as cv:
+            dat = cv.py2rpy(sdf.loc[sdf["branch"] == b, :])
+
         m = rmgcv.gam(
             Formula("exp~s(t,bs='ts')"),
-            data=sdf.loc[sdf["branch"] == b, :],
-            gamma=gamma,
+            data=dat,
+            gamma= ro.FloatVector([gamma]),
         )
         return pd.Series(
             rmgcv.predict_gam(m), index=sdf.loc[sdf["branch"] == b, :].index

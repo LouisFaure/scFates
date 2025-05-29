@@ -316,10 +316,21 @@ def gt_fun(data):
 
     global rmgcv
 
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri as p2ri
+    from rpy2.robjects.conversion import localconverter
+    context = localconverter(ro.default_converter + p2ri.converter)
+
+
+   
+    with context as cv:
+        dat = cv.py2rpy(sdf)
+        w = cv.py2rpy(sdf["w"])
+
     m = rmgcv.gam(
         Formula("exp ~ s(t)+s(t,by=as.factor(i))+as.factor(i)"),
-        data=sdf,
-        weights=sdf["w"],
+        data=dat,
+        weights=w,
     )
 
     tmin = np.min([sdf.loc[sdf.i == i, "t"].max() for i in sdf.i.unique()])
@@ -627,8 +638,15 @@ def get_activation(data):
     wf = warnings.filters.copy()
     warnings.filterwarnings("ignore")
 
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri as p2ri
+    from rpy2.robjects.conversion import localconverter
+    context = localconverter(ro.default_converter + p2ri.converter)
+    
     def gamfit(sdf):
-        m = rmgcv.gam(Formula("exp ~ s(t)"), data=sdf, gamma=1)
+        with context as cv:
+            dat = cv.py2rpy(sdf)
+        m = rmgcv.gam(Formula("exp ~ s(t)"), data=dat, gamma=1)
         return rmgcv.predict_gam(m)
 
     subtree["fitted"] = gamfit(subtree)

@@ -178,6 +178,15 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
         )
         lfc = np.log2(foldchange)
 
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri as p2ri
+    from rpy2.robjects.conversion import localconverter
+    context = localconverter(ro.default_converter + p2ri.converter)
+
+
+    with context as cv:
+        df = cv.py2rpy(df)
+
     if trend_test:
         m1 = rmgcv.gam(
             Formula(
@@ -187,11 +196,13 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
         )
         m0 = rmgcv.gam(Formula(f"exp ~ s(t,k=5)+as.factor({group})"), data=df)
         if return_pred:
-            return (rstat.predict(m1), rstat.predict(m0))
+            pr1, pr2 = rmgcv.predict_gam(m1), rmgcv.predict_gam(m0)
+            with context as cv:
+                return cv.rpy2py(pr1),cv.rpy2py(pr2)
         else:
             test = rmgcv.anova_gam(m1, m0, test="F")
-            with (ro.default_converter + pandas2ri.converter).context():
-                test_df = ro.conversion.get_conversion().rpy2py(test)
+            with context as cv:
+                test_df = cv.rpy2py(test)
             pval = test_df.loc["2", ["Pr(>F)"]].values[0]
             return (pval, lfc)
     else:
@@ -202,7 +213,8 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
             data=df,
         )
         if return_pred:
-            return (rstat.predict(m), rstat.predict(m))
+            pr1, pr2 = rmgcv.predict_gam(m), rmgcv.predict_gam(m)
+            return cv.rpy2py(pr1),cv.rpy2py(pr2)
         else:
             pval = rmgcv.summary_gam(m)[3][1]
             return (pval, lfc)

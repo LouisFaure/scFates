@@ -170,7 +170,7 @@ def root(
         )
 
         nodes = np.argwhere(
-            np.apply_along_axis(arr=(csr > 0).todense(), axis=0, func1d=np.sum) != 2
+            np.apply_along_axis(arr=(csr > 0).toarray(), axis=0, func1d=np.sum) != 2
         ).flatten()
         nodes = np.unique(np.append(nodes, root))
 
@@ -288,7 +288,7 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
     )
 
     nodes = np.argwhere(
-        np.apply_along_axis(arr=(csr > 0).todense(), axis=0, func1d=np.sum) != 2
+        np.apply_along_axis(arr=(csr > 0).toarray(), axis=0, func1d=np.sum) != 2
     ).flatten()
     pp_seg = []
     for node1, node2 in itertools.combinations(nodes, 2):
@@ -333,7 +333,7 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
     )
 
     toinvert = root2paths.index[(root2paths <= root2paths[meeting])]
-
+    print(toinvert)
     for toinv in toinvert:
         pathtorev = np.array(img.vs[:]["name"])[
             np.array(img.get_shortest_paths(str(root2), str(toinv)))
@@ -358,6 +358,7 @@ def roots(adata: AnnData, roots, meeting, copy: bool = False):
             np.diff(shortest_path(csr, directed=False, indices=roots)[:, meeting])
         )[0]
     )
+
     pp_info.loc[pptoinvert, "time"] = reverted_dist[pptoinvert]
 
     graph["pp_info"] = pp_info

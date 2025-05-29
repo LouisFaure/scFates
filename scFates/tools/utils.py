@@ -220,7 +220,6 @@ def importeR(task, module="mgcv"):
         from rpy2.robjects.packages import PackageNotInstalledError, importr
         import rpy2.rinterface
 
-        pandas2ri.activate()
         Rpy2 = True
     except ModuleNotFoundError as e:
         Rpy2 = (

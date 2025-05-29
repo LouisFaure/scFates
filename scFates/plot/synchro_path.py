@@ -147,11 +147,19 @@ def synchro_path(
                     )
                 else:
                     for mp in nmaps:
+                        import rpy2.robjects as ro
+                        from rpy2.robjects import pandas2ri as p2ri
+                        from rpy2.robjects.conversion import localconverter
+                        context = localconverter(ro.default_converter + p2ri.converter)
+
+                        with context as cv:
+                            dat = cv.py2rpy(res.loc[res.n_map == mp])
                         m = rmgcv.gam(
                             Formula("%s ~ s(t, bs = 'cs',k=%s)" % (cc, knots)),
-                            data=res.loc[res.n_map == mp],
+                            data=dat,
                         )
-                        pred = rmgcv.predict_gam(m)
+                        with context as cv:
+                            pred = cv.rpy2py(rmgcv.predict_gam(m))
                         axs[i].plot(
                             res.loc[res.n_map == mp].t,
                             res.loc[res.n_map == mp][cc],

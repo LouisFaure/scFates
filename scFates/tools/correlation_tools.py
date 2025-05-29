@@ -248,11 +248,20 @@ def synchro_path(
         res = allcor
         fork_t = res.t.max()
 
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri as p2ri
+    from rpy2.robjects.conversion import localconverter
+    context = localconverter(ro.default_converter + p2ri.converter)
+
+    with context as cv:
+        dat = cv.py2rpy(res)
     m = rmgcv.gam(
         Formula("corAB ~ s(t, bs = 'cs',k=%s)" % knots),
-        data=res,
+        data=dat,
     )
     pred = rmgcv.predict_gam(m)
+    with context as cv:
+        pred = cv.rpy2py(pred)
 
     tval = adata.obs.t.copy()
     tval[tval > fork_t] = np.nan

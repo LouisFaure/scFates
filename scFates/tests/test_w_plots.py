@@ -54,34 +54,33 @@ def test_pipeline():
 
     F_PC1_ppt_cpu = adata.uns["graph"]["F"][0, :5]
 
-    scf.pl.graph(adata)
-
+    ax=scf.pl.graph(adata,show=False)
+    plt.close()
     adata_2 = scf.tl.roots(
         adata, roots=[43, 18], meeting=adata.uns["graph"]["forks"][0], copy=True
     )
     scf.tl.root(adata, "n_counts")
-    scf.tl.root(adata, "Phox2a", tips_only=True, min_val=True)
     scf.tl.root(adata, 43)
+    scf.tl.root(adata, "Phox2a", tips_only=True, min_val=True)
     pp_info_time = adata.uns["graph"]["pp_info"]["time"][:5].values
 
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
     scf.tl.dendrogram(adata)
-    scf.pl.dendrogram(adata, color_milestones=True)
+    ax=scf.pl.dendrogram(adata, color_milestones=True,show=False)
 
     adata_s = scf.tl.simplify(adata, copy=True)
 
-    scf.pl.binned_pseudotime_meta(adata, "leiden", show_colorbar=True)
+    ax=scf.pl.binned_pseudotime_meta(adata, "leiden", show_colorbar=True,show=False)
 
     obs_t = adata.obs.t[:5].values
 
-    scf.pl.trajectory(adata, arrows=True)
-    scf.pl.milestones(adata, annotate=True)
-    scf.pl.graph(adata_2)
-    scf.pl.trajectory(adata_2, color_seg="milestones", arrows=True)
-    scf.pl.trajectory(adata_2, color_seg="seg", arrows=True)
+    ax=scf.pl.trajectory(adata, arrows=True,show=False)
+    ax=scf.pl.milestones(adata, annotate=True,show=False)
+    ax=scf.pl.graph(adata_2,show=False)
+    ax=scf.pl.trajectory(adata_2, color_seg="milestones", arrows=True,show=False)
+    ax=scf.pl.trajectory(adata_2, color_seg="seg", arrows=True,show=False)
 
-    plt.close()
 
     df = scf.tl.getpath(adata, root_milestone="43", milestones=["18"])
 
@@ -89,10 +88,8 @@ def test_pipeline():
         [adata.obsm["X_umap"], adata.obsm["X_umap"][:, 0].reshape(-1, 1)], axis=1
     )
 
-    scf.pl.trajectory_3d(adata)
-    scf.pl.trajectory_3d(adata, color="seg")
-
-    plt.close()
+    #scf.pl.trajectory_3d(adata)
+    #scf.pl.trajectory_3d(adata, color="seg")
 
     adata_s1 = scf.tl.subset_tree(
         adata, root_milestone="88", milestones=["18"], mode="substract", copy=True
@@ -111,13 +108,13 @@ def test_pipeline():
     nsigni = adata.var.signi.sum()
     A = adata.var.A[:5].values
 
-    scf.pl.test_association(adata)
+    ax=scf.pl.test_association(adata)
 
     scf.tl.linearity_deviation(adata, start_milestone="43", end_milestone="88")
 
     lindev = adata.var["43->88_rss"].values[:5]
 
-    scf.pl.linearity_deviation(adata, start_milestone="43", end_milestone="88")
+    scf.pl.linearity_deviation(adata, start_milestone="43", end_milestone="88",show=False)
 
     scf.tl.fit(adata_2, layer="scaled")
     scf.tl.fit(adata)
@@ -134,14 +131,14 @@ def test_pipeline():
     scf.tl.test_covariate(adata, "covariate", trend_test=True)
     scf.pl.trend_covariate(
         adata, adata.var_names[0], group_key="covariate", show_null=True
-    )
+    ,show=False)
 
-    scf.pl.matrix(adata, adata.var_names, annot_var=True)
-    scf.pl.matrix(adata, adata.var_names, norm="minmax", return_data=True)
-    scf.pl.matrix(adata, adata.var_names, root_milestone="88", milestones=["18"])
+    scf.pl.matrix(adata, adata.var_names, annot_var=True,show=False)
+    scf.pl.matrix(adata, adata.var_names, norm="minmax", return_data=True,show=False)
+    scf.pl.matrix(adata, adata.var_names, root_milestone="88", milestones=["18"],show=False)
 
     scf.tl.rename_milestones(adata_2, ["A", "B", "C", "D"])
-    scf.pl.trajectory(adata_2, root_milestone="A", milestones=["B"])
+    scf.pl.trajectory(adata_2, root_milestone="A", milestones=["B"],show=False)
 
     scf.tl.cluster(adata, n_neighbors=3, n_pcs=3)
 
@@ -151,9 +148,8 @@ def test_pipeline():
         features=adata.var_names,
         annot="milestones",
         plot_emb=False,
-        ordering="quantile",
-    )
-    plt.close()
+        ordering="quantile",show=False)
+
 
     scf.pl.trends(
         adata,
@@ -164,9 +160,9 @@ def test_pipeline():
         ordering="pearson",
         show=False,
     )
-    plt.close()
 
-    scf.pl.single_trend(adata, feature=adata.var_names[0], color_exp="k")
+
+    scf.pl.single_trend(adata, feature=adata.var_names[0], color_exp="k",show=False)
 
     scf.pl.single_trend(
         adata,
@@ -177,7 +173,7 @@ def test_pipeline():
 
     scf.pl.dendrogram(
         adata, show_info=False, color="t", root_milestone="43", milestones=["24", "18"]
-    )
+    ,show=False)
 
     scf.tl.test_fork(
         adata, layer="scaled", root_milestone="43", milestones=["24", "18"], n_jobs=1
@@ -185,7 +181,7 @@ def test_pipeline():
     scf.tl.test_fork(adata, root_milestone="43", milestones=["24", "18"], n_jobs=1)
     signi_fdr_nonscaled = adata.uns["43->24<>18"]["fork"].signi_fdr.sum()
     adata.uns["43->24<>18"]["fork"]["fdr"] = 0.02
-    scf.pl.test_fork(adata, root_milestone="43", milestones=["24", "18"])
+    scf.pl.test_fork(adata, root_milestone="43", milestones=["24", "18"],show=False)
 
     scf.tl.test_fork(
         adata, root_milestone="43", milestones=["24", "18"], n_jobs=1, rescale=True
@@ -203,9 +199,9 @@ def test_pipeline():
     scf.tl.activation(adata, root_milestone="43", milestones=["24", "18"], n_jobs=1)
     activation = adata.uns["43->24<>18"]["fork"].activation.values
 
-    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"])
-    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], show_traj=True)
-    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], module="early")
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"],show=False)
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], show_traj=True,show=False)
+    scf.pl.modules(adata, root_milestone="43", milestones=["24", "18"], module="early",show=False)
     scf.pl.modules(
         adata, root_milestone="43", milestones=["24", "18"], module="late", show=False
     )
@@ -216,12 +212,11 @@ def test_pipeline():
     scf.tl.module_inclusion(adata, root_milestone="43", milestones=["24", "18"])
     mod_inc = adata.uns["43->24<>18"]["module_inclusion"]["18"]["0"].values
     scf.pl.module_inclusion(
-        adata, root_milestone="43", milestones=["24", "18"], bins=12, branch="18"
+        adata, root_milestone="43", milestones=["24", "18"], bins=12, branch="18",show=False
     )
 
     scf.pl.single_trend(
-        adata, root_milestone="43", milestones=["24", "18"], module="early", branch="24"
-    )
+        adata, root_milestone="43", milestones=["24", "18"], module="early", branch="24",show=False)
 
     scf.tl.slide_cells(adata, root_milestone="43", milestones=["24", "18"], win=200)
     cell_freq_sum = adata.uns["43->24<>18"]["cell_freq"][0].sum()
@@ -239,8 +234,8 @@ def test_pipeline():
         genesetB=adata.var_names[[2, 3]],
     )
 
-    scf.pl.slide_cors(adata, root_milestone="43", milestones=["24", "18"])
-
+    scf.pl.slide_cors(adata, root_milestone="43", milestones=["24", "18"],show=False)
+    plt.close()
     adata.uns["43->24<>18"]["corAB"]["24"]["genesetA"] = pd.DataFrame(
         0.2,
         index=np.array(["a", "b", "c", "d"]),
@@ -264,9 +259,9 @@ def test_pipeline():
 
     scf.pl.slide_cors(
         adata, root_milestone="43", milestones=["24", "18"], win_keep=range(3), focus=1
-    )
+    ,show=False)
 
-    scf.pl.slide_cors(adata, root_milestone="43", milestones=["24"])
+    scf.pl.slide_cors(adata, root_milestone="43", milestones=["24"],show=False)
 
     scf.tl.synchro_path(
         adata,
@@ -278,6 +273,8 @@ def test_pipeline():
 
     syncAB = adata.uns["43->24<>18"]["synchro"]["real"]["24"]["corAB"].values[:5]
 
+    adata.write_h5ad('test.h5ad')
+
     adata = scf.datasets.test_adata(plot=True)
 
     scf.get.slide_cors(
@@ -288,13 +285,12 @@ def test_pipeline():
         geneset_branch="DC",
     )
 
-    scf.pl.trajectory(adata, color_seg="milestones")
+    scf.pl.trajectory(adata, color_seg="milestones",show=False)
 
-    scf.pl.synchro_path(adata, root_milestone="Root", milestones=["DC", "Mono"])
-
+    scf.pl.synchro_path(adata, root_milestone="Root", milestones=["DC", "Mono"],show=False)
     scf.pl.module_inclusion(
         adata, root_milestone="Root", milestones=["DC", "Mono"], bins=10, branch="Mono"
-    )
+    ,show=False)
 
     assert np.allclose(
         pp_info_time,

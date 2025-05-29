@@ -344,10 +344,18 @@ def test_assoc(data, spline_df):
 
     global rmgcv
     global rstats
+    
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri as p2ri
+    from rpy2.robjects.conversion import localconverter
+    context = localconverter(ro.default_converter + p2ri.converter)
+
 
     def gamfit(s):
+        with context as cv:
+            dat = cv.py2rpy(sdf.loc[sdf["seg"] == s, :])
         m = rmgcv.gam(
-            Formula(f"exp~s(t,k={spline_df})"), data=sdf.loc[sdf["seg"] == s, :]
+            Formula(f"exp~s(t,k={spline_df})"), data=dat
         )
         return dict({"d": m[5][0], "df": m[42][0], "p": rmgcv.predict_gam(m)})
 
@@ -356,7 +364,9 @@ def test_assoc(data, spline_df):
     mdf.columns = ["d", "df"]
 
     odf = sum(mdf["df"]) - mdf.shape[0]
-    m0 = rmgcv.gam(Formula("exp~1"), data=sdf)
+    with context as cv:
+        dat = cv.py2rpy(sdf)
+    m0 = rmgcv.gam(Formula("exp~1"), data=dat)
     if sum(mdf["d"]) == 0:
         fstat = 0
     else:
