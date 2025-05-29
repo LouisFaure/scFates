@@ -4,6 +4,13 @@
 Release Notes
 =============
 
+Version 1.1.1 :small:`May 28, 2567/2025`
+--------------------------------------------
+- Switched to stripplot for faster dendrogram generation
+- Disable EPG data saving in uns to allow proper h5ad saving
+- Uses proper context handling for rpy2 interface
+
+
 Version 1.1.0 :small:`March 30, 2567/2025`
 --------------------------------------------
 - Allow to generate vector graphics plots for pl.trajectory and pl.graph

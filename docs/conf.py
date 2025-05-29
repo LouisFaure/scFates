@@ -102,7 +102,7 @@ intersphinx_mapping = dict(
 )
 
 templates_path = ["_templates"]
-source_suffix = [".rst", ".ipynb"]
+source_suffix = [".rst"]
 master_doc = "index"
 
 # General information about the project.
