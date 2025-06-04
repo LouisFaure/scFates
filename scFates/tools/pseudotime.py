@@ -4,6 +4,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 from joblib import delayed
 from tqdm import tqdm
+import warnings
 import sys
 import igraph
 from typing import Optional, Union
@@ -145,19 +146,34 @@ def pseudotime(
         allsegs = pd.concat(
             [df.seg for df in adata.uns["pseudotime_list"].values()], axis=1
         )
-        allsegs = allsegs.apply(lambda x: x.value_counts(), axis=1)
-        adata.obs.seg = allsegs.idxmax(axis=1)
+        allsegs = pd.concat(
+        [df.seg for df in adata.uns["pseudotime_list"].values()], axis=1
+        )
+        allsegs = allsegs.apply(lambda x: x.value_counts(), axis=1).fillna(0)
+        
+        allsegs_complete = pd.DataFrame(np.zeros((adata.shape[0],pp_seg.shape[0])),index=allsegs.index)
+        allsegs_complete.columns = allsegs_complete.columns+1
+        allsegs_complete.columns = allsegs_complete.columns.astype(int).astype(str)
+
+        if allsegs.shape[1]!=allsegs_complete.shape[1]:
+            missing = allsegs_complete.columns[~allsegs_complete.columns.isin(allsegs.columns)]
+            message=f"Some segs have no cell assigned: {missing.tolist()}"
+            warnings.warn(message)
+        
+        for c in allsegs.columns:
+            allsegs_complete.loc[:,c] = allsegs.loc[:,c]
+        
+        adata.obs.seg = allsegs_complete.idxmax(axis=1)
         adata.obs.t = pd.concat(
             [df.t for df in adata.uns["pseudotime_list"].values()], axis=1
         ).mean(axis=1)
-
         for s in pp_seg.n:
             df_seg = adata.obs.loc[adata.obs.seg == s, "t"]
 
             # reassign cells below minimum pseudotime of their assigned seg
             if any(int(s) == pp_seg.index[pp_seg["from"] != root]):
                 start_t = pp_info.loc[pp_seg["from"], "time"].iloc[int(s) - 1]
-                cells_back = allsegs.loc[df_seg[df_seg < start_t].index]
+                cells_back = allsegs_complete.loc[df_seg[df_seg < start_t].index]
                 ncells = cells_back.shape[0]
                 if ncells != 0:
                     filter_from = pd.concat(
@@ -183,7 +199,7 @@ def pseudotime(
             # reassign cells over maximum pseudotime of their assigned seg
             if any(int(s) == pp_seg.index[~pp_seg.to.isin(endpoints)]):
                 end_t = pp_info.loc[pp_seg["to"], "time"].iloc[int(s) - 1]
-                cells_front = allsegs.loc[df_seg[df_seg > end_t].index]
+                cells_front = allsegs_complete.loc[df_seg[df_seg > end_t].index]
                 ncells = cells_front.shape[0]
                 if ncells != 0:
                     filter_from = pd.concat(
@@ -222,9 +238,14 @@ def pseudotime(
                 ]
             ] = pp_seg.loc[int(seg), "to"]
     adata.obs["milestones"] = milestones
-    adata.obs.milestones = (
-        adata.obs.milestones.astype(int).astype("str").astype("category")
-    )
+    non_nan_mask = adata.obs.milestones.notna()
+    milestones_str = adata.obs.milestones.copy()
+    milestones_str[non_nan_mask] = milestones_str[non_nan_mask].astype(str)
+    adata.obs["milestones"] = milestones_str.astype("category")
+
+    if adata.obs["milestones"].isna().sum()>0:
+        message = "Some cells have no milestones assigned. This is likely due to the fact that these uniquely compose a segment."
+        warnings.warn(message)
 
     adata.uns["graph"]["milestones"] = dict(
         zip(
