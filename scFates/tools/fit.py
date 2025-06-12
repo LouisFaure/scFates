@@ -119,7 +119,7 @@ def fit(
         img.add_edges(edges)
 
         subtree = pd.concat(
-            lpaths = list(
+            list(
                 filter(
                     lambda x: x is not None, 
                     map(lambda tip: getpath(img, root, tips, tip, graph, df), tips)
