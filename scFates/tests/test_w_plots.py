@@ -340,3 +340,58 @@ def test_pipeline():
         [-0.31524637, -0.31332134, -0.3392098, -0.33832952, -0.31277207],
         rtol=1e-2,
     )
+
+
+def test_merge_n_simplify():
+    # Create a test AnnData object
+    n_obs, n_vars = 100, 10
+    X = np.random.rand(n_obs, n_vars)
+    adata = sc.AnnData(X)
+
+    # Create a graph with two nodes of degree 3 connected by an edge
+    # 0-1, 1-2, 2-3, 1-4, 1-5, 2-6, 2-7
+    B = np.zeros((8, 8))
+    edges = [(0, 1), (1, 2), (2, 3), (1, 4), (1, 5), (2, 6), (2, 7)]
+    for i, j in edges:
+        B[i, j] = B[j, i] = 1
+
+    F = np.random.rand(n_vars, 8)
+    # Ensure F is positive for geometric mean
+    F = np.abs(F) + 0.1
+
+    R = np.random.rand(n_obs, 8)
+    R = R / R.sum(axis=1)[:, np.newaxis]
+
+    adata.uns["graph"] = {"B": B, "F": F}
+    adata.obsm["X_R"] = R
+
+    # Call the function to be tested
+    scf.tl.merge_n_simplify(adata)
+
+    # Check the results
+    # Number of nodes should be 7 after merging 1 and 2
+    assert adata.uns["graph"]["B"].shape[0] == 7
+    assert adata.uns["graph"]["F"].shape[1] == 7
+    assert adata.obsm["X_R"].shape[1] == 7
+
+    # The new node should have degree 6
+    g = igraph.Graph.Adjacency((adata.uns["graph"]["B"] > 0).tolist(), mode="undirected")
+    degrees = g.degree()
+    assert 6 in degrees
+
+    # Check the new node's features (geometric mean of F for nodes 1 and 2)
+    expected_f = np.sqrt(F[:, 1] * F[:, 2])
+    # The new node is the last one
+    assert np.allclose(adata.uns["graph"]["F"][:, -1], expected_f)
+
+    # Check the new R column (mean of R for nodes 1 and 2)
+    expected_r_col = np.mean(R[:, [1, 2]], axis=1)
+    # The new column in R for the merged node
+    actual_r_col = adata.obsm["X_R"][:, -1]
+    # We need to compare after normalization
+    # The whole R matrix is renormalized, so we can't just compare the column.
+    # Instead, let's check the ratios relative to another column that wasn't changed.
+    # For example, column 0 (which was originally node 0)
+    expected_ratio = expected_r_col / R[:, 0]
+    actual_ratio = actual_r_col / adata.obsm["X_R"][:, 0]
+    assert np.allclose(expected_ratio, actual_ratio, atol=1e-7)

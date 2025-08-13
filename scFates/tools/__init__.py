@@ -5,6 +5,7 @@ from .graph_operations import (
     attach_tree,
     simplify,
     convert_to_soft,
+    merge_n_simplify,
 )
 from .graph_fitting import tree, curve, circle, explore_sigma
 from .root import root, roots

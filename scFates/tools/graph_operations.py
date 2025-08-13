@@ -137,6 +137,104 @@ def cleanup(
     return adata if copy else None
 
 
+def merge_n_simplify(adata: AnnData, copy: bool = False):
+    """\
+    Merge single edges being composed of two nodes with degree three or more each.
+    This should combine the two nodes into one, merging their connections,
+    the new node location should the geometric mean of these.
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    copy
+        Return a copy instead of writing to adata.
+    Returns
+    -------
+    adata : anndata.AnnData
+        Dataset with simplified graph.
+    """
+
+    logg.info("merging and simplifying graph", reset=True)
+
+    adata = adata.copy() if copy else adata
+
+    if "graph" not in adata.uns:
+        raise ValueError(
+            "You need to run `tl.tree` first to compute a princal tree before cleaning it"
+        )
+
+    B = adata.uns["graph"]["B"]
+    F = adata.uns["graph"]["F"]
+    R = adata.obsm["X_R"]
+
+    while True:
+        g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+        degrees = g.degree()
+        high_degree_nodes = [i for i, d in enumerate(degrees) if d >= 3]
+
+        edge_to_merge = None
+        for edge in g.es:
+            u, v = edge.tuple
+            if u in high_degree_nodes and v in high_degree_nodes:
+                edge_to_merge = (u, v)
+                break
+
+        if edge_to_merge is None:
+            break
+
+        u, v = edge_to_merge
+
+        # 1. Create new feature vector
+        f_new = np.sqrt(F[:, u] * F[:, v])
+
+        # 2. Get neighbors
+        neighbors_u = g.neighbors(u)
+        neighbors_v = g.neighbors(v)
+        all_neighbors = set(neighbors_u + neighbors_v) - {u, v}
+
+        # 3. Create new B, F, and R
+        nodes_to_keep_idx = [i for i in range(B.shape[0]) if i not in [u, v]]
+        idx_map = {old_idx: new_idx for new_idx, old_idx in enumerate(nodes_to_keep_idx)}
+        new_node_idx = len(nodes_to_keep_idx)
+
+        # New F
+        F_new = np.hstack((F[:, nodes_to_keep_idx], f_new.reshape(-1, 1)))
+
+        # New R
+        R_kept = R[:, nodes_to_keep_idx]
+        R_merged_col = R[:, [u, v]].mean(axis=1)
+        R_new = np.hstack((R_kept, R_merged_col.reshape(-1, 1)))
+        R_new = R_new / R_new.sum(axis=1).reshape(-1, 1)
+
+        # New B
+        B_new = np.zeros((new_node_idx + 1, new_node_idx + 1))
+        B_kept = B[np.ix_(nodes_to_keep_idx, nodes_to_keep_idx)]
+        B_new[:new_node_idx, :new_node_idx] = B_kept
+
+        for neighbor in all_neighbors:
+            neighbor_new_idx = idx_map[neighbor]
+            B_new[new_node_idx, neighbor_new_idx] = 1
+            B_new[neighbor_new_idx, new_node_idx] = 1
+
+        # Update for next iteration
+        B, F, R = B_new, F_new, R_new
+
+    # Update adata object
+    adata.uns["graph"]["B"] = B
+    adata.uns["graph"]["F"] = F
+    adata.obsm["X_R"] = R
+
+    # Recompute tips and forks
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+    adata.uns["graph"]["tips"] = np.argwhere(np.array(g.degree()) == 1).flatten()
+    adata.uns["graph"]["forks"] = np.argwhere(np.array(g.degree()) > 2).flatten()
+
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\\n")
+    logg.hint("graph merged and simplified")
+
+    return adata if copy else None
+
+
 def subset_tree(
     adata: AnnData,
     root_milestone: Optional[str] = None,
