@@ -166,9 +166,13 @@ def merge_n_simplify(adata: AnnData, copy: bool = False):
     B = adata.uns["graph"]["B"]
     F = adata.uns["graph"]["F"]
     R = adata.obsm["X_R"]
-    milestones = adata.uns["graph"].get("milestones", {})
-    rev_milestones = {v: k for k, v in milestones.items()}
-    old_root_node = adata.uns["graph"]["root"]
+
+    has_pseudotime = "t" in adata.obs
+
+    if has_pseudotime:
+        milestones = adata.uns["graph"].get("milestones", {})
+        rev_milestones = {v: k for k, v in milestones.items()}
+        old_root_node = adata.uns["graph"]["root"]
 
     any_merged = False
     while True:
@@ -189,29 +193,23 @@ def merge_n_simplify(adata: AnnData, copy: bool = False):
         any_merged = True
         u, v = edge_to_merge
 
-        # 1. Create new feature vector
         f_new = np.sqrt(F[:, u] * F[:, v])
 
-        # 2. Get neighbors
         neighbors_u = g.neighbors(u)
         neighbors_v = g.neighbors(v)
         all_neighbors = set(neighbors_u + neighbors_v) - {u, v}
 
-        # 3. Create new B, F, and R
         nodes_to_keep_idx = [i for i in range(B.shape[0]) if i not in [u, v]]
         idx_map = {old_idx: new_idx for new_idx, old_idx in enumerate(nodes_to_keep_idx)}
         new_node_idx = len(nodes_to_keep_idx)
 
-        # New F
         F_new = np.hstack((F[:, nodes_to_keep_idx], f_new.reshape(-1, 1)))
 
-        # New R
         R_kept = R[:, nodes_to_keep_idx]
         R_merged_col = R[:, [u, v]].mean(axis=1)
         R_new = np.hstack((R_kept, R_merged_col.reshape(-1, 1)))
         R_new = R_new / R_new.sum(axis=1).reshape(-1, 1)
 
-        # New B
         B_new = np.zeros((new_node_idx + 1, new_node_idx + 1))
         B_kept = B[np.ix_(nodes_to_keep_idx, nodes_to_keep_idx)]
         B_new[:new_node_idx, :new_node_idx] = B_kept
@@ -221,54 +219,51 @@ def merge_n_simplify(adata: AnnData, copy: bool = False):
             B_new[new_node_idx, neighbor_new_idx] = 1
             B_new[neighbor_new_idx, new_node_idx] = 1
 
-        # Handle milestones and root
-        new_milestones = {}
-        for name, old_idx in milestones.items():
-            if old_idx in nodes_to_keep_idx:
-                new_milestones[name] = idx_map[old_idx]
-            elif old_idx in [u, v]:
-                new_milestones[name] = new_node_idx
+        if has_pseudotime:
+            new_milestones = {}
+            for name, old_idx in milestones.items():
+                if old_idx in nodes_to_keep_idx:
+                    new_milestones[name] = idx_map[old_idx]
+                elif old_idx in [u, v]:
+                    new_milestones[name] = new_node_idx
 
-        if old_root_node in nodes_to_keep_idx:
-            old_root_node = idx_map[old_root_node]
-        elif old_root_node in [u, v]:
-            old_root_node = new_node_idx
+            if old_root_node in nodes_to_keep_idx:
+                old_root_node = idx_map[old_root_node]
+            elif old_root_node in [u, v]:
+                old_root_node = new_node_idx
 
-        # Update for next iteration
+            milestones = new_milestones
+            rev_milestones = {v: k for k, v in milestones.items()}
+
         B, F, R = B_new, F_new, R_new
-        milestones = new_milestones
-        rev_milestones = {v: k for k, v in milestones.items()}
 
 
     if not any_merged:
         logg.info("    no edges to merge", time=True, end=" " if settings.verbosity > 2 else "\n")
         return adata if copy else None
 
-    # Update adata object
     adata.uns["graph"]["B"] = B
     adata.uns["graph"]["F"] = F
     adata.obsm["X_R"] = R
 
-    # Recompute tips and forks and update milestones
     g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
     adata.uns["graph"]["tips"] = np.argwhere(np.array(g.degree()) == 1).flatten()
     adata.uns["graph"]["forks"] = np.argwhere(np.array(g.degree()) > 2).flatten()
 
-    # Update milestones and root, then recalculate pseudotime
-    if "milestones" in adata.uns["graph"]:
-        del adata.uns["graph"]["milestones"]
-    if "milestones" in adata.obs:
-        del adata.obs["milestones"]
-    if "root" in adata.uns["graph"]:
-        del adata.uns["graph"]["root"]
+    if has_pseudotime:
+        if "milestones" in adata.uns["graph"]:
+            del adata.uns["graph"]["milestones"]
+        if "milestones" in adata.obs:
+            del adata.obs["milestones"]
+        if "root" in adata.uns["graph"]:
+            del adata.uns["graph"]["root"]
 
-    root(adata, old_root_node)
-    pseudotime(adata)
+        root(adata, old_root_node)
+        pseudotime(adata)
 
-    # rename milestones to keep original names
-    if len(milestones) > 0:
-        new_mil_names = [rev_milestones[m] for m in adata.obs.milestones.cat.categories.astype(int)]
-        rename_milestones(adata, new_mil_names)
+        if len(milestones) > 0:
+            new_mil_names = [rev_milestones[m] for m in adata.obs.milestones.cat.categories.astype(int)]
+            rename_milestones(adata, new_mil_names)
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint("graph merged and simplified")
