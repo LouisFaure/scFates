@@ -321,6 +321,7 @@ def tree(
             **kwargs,
         )
         adata.uns["graph"] = graph
+        adata.uns["epg"] = EPG
         adata.obsm["X_R"] = R
 
     if plot:
@@ -562,6 +563,7 @@ def curve_epg(
     EPG["Edges"] = list(EPG["Edges"])
 
     adata.uns["graph"] = graph
+    adata.uns["epg"] = EPG
     adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
@@ -623,6 +625,7 @@ def circle_epg(
     EPG["Edges"] = list(EPG["Edges"])[0]
 
     adata.uns["graph"] = graph
+    adata.uns["epg"] = EPG
     adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
