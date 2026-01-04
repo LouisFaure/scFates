@@ -640,6 +640,15 @@ def circle_epg(
     return adata
 
 
+def sanitize_epg(EPG):
+    if isinstance(EPG, dict):
+        return {str(k): sanitize_epg(v) for k, v in EPG.items()}
+    elif isinstance(EPG, list):
+        return [sanitize_epg(v) for v in EPG]
+    else:
+        return EPG
+
+
 def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, extend_leaves, device):
     import elpigraph
     from .utils import norm_R_cpu
@@ -697,7 +706,7 @@ def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, extend_leaves, device):
         "method": "epg",
     }
 
-    return graph, R, EPG
+    return graph, R, sanitize_epg(EPG)
 
 
 def explore_sigma(

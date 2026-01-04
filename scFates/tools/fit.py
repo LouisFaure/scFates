@@ -91,6 +91,10 @@ def fit(
 
         features = adata.var_names[adata.var.signi]
 
+    if len(features) == 0:
+        logg.info("    no features to fit")
+        return adata if copy else None
+
     graph = adata.uns["graph"]
     tips = graph["tips"]
     root = graph["root"]

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+scf.settings.verbosity = 0
 
 def test_pipeline():
     adata = scf.datasets.test_adata()
