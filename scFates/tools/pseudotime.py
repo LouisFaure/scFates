@@ -177,7 +177,9 @@ def pseudotime(
                     cells_back = (cells_back.fillna(0) * boo).apply(
                         lambda x: x.index[np.argsort(x)][::-1], axis=1
                     )
-                    cells_back = cells_back.apply(lambda x: x[x != s][0])
+                    cells_back = cells_back.apply(
+                        lambda x: x[x != s][0] if (len(x[x != s]) > 0) else np.nan
+                    )
                     adata.obs.loc[cells_back.index, "seg"] = cells_back.values
 
             # reassign cells over maximum pseudotime of their assigned seg
@@ -204,7 +206,9 @@ def pseudotime(
                     cells_front = (cells_front.fillna(0) * boo).apply(
                         lambda x: x.index[np.argsort(x)][::-1], axis=1
                     )
-                    cells_front = cells_front.apply(lambda x: x[x != s][0])
+                    cells_front = cells_front.apply(
+                        lambda x: x[x != s][0] if (len(x[x != s]) > 0) else np.nan
+                    )
                     adata.obs.loc[cells_front.index, "seg"] = cells_front.values
 
     milestones = pd.Series(index=adata.obs_names, dtype=str)
@@ -314,14 +318,26 @@ def map_cells(graph, R, P, multi=False, map_seed=None):
                 for i in range(ndf.shape[0])
             ]
 
-            ndf["seg"] = '0'
-            isinfork = (graph["pp_info"].loc[ndf.v0, "PP"].isin(graph["forks"])).values
-            ndf.loc[isinfork, "seg"] = (
-                graph["pp_info"].loc[ndf.loc[isinfork, "v1"], "seg"].values
-            )
-            ndf.loc[~isinfork, "seg"] = (
-                graph["pp_info"].loc[ndf.loc[~isinfork, "v0"], "seg"].values
-            )
+            # initialize seg column as object to allow mixed/scalar assignments
+            ndf["seg"] = None
+            isinfork = (graph["pp_info"].loc[ndf.v0, "PP"].isin(graph["forks"]) ).values
+            # fetch seg values and ensure we assign scalars (not lists/arrays)
+            seg_v1 = graph["pp_info"].loc[ndf.loc[isinfork, "v1"], "seg"].values
+            seg_v1 = [
+                sv[0]
+                if (isinstance(sv, (list, np.ndarray)) and len(sv) > 0)
+                else (np.nan if isinstance(sv, (list, np.ndarray)) else sv)
+                for sv in seg_v1
+            ]
+            ndf.loc[isinfork, "seg"] = seg_v1
+            seg_v0 = graph["pp_info"].loc[ndf.loc[~isinfork, "v0"], "seg"].values
+            seg_v0 = [
+                sv[0]
+                if (isinstance(sv, (list, np.ndarray)) and len(sv) > 0)
+                else (np.nan if isinstance(sv, (list, np.ndarray)) else sv)
+                for sv in seg_v0
+            ]
+            ndf.loc[~isinfork, "seg"] = seg_v0
 
             return ndf
         else:

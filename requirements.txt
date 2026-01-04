@@ -7,7 +7,7 @@ scanpy>=1.7.0
 leidenalg>=0.8.1
 numpy
 joblib>=0.17.0
-pandas<=2.2.3
+pandas>=2.2.3
 statsmodels>=0.11.1
 matplotlib
 plotly>=4.8.1

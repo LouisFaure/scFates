@@ -42,7 +42,7 @@ def test_fork(
     copy: bool = False,
 ):
 
-    """
+    r"""
     Test for branch differential gene expression and differential upregulation from progenitor to terminal state.
 
     First, differential gene expression between two branches is performed. The following model is used:
@@ -697,7 +697,7 @@ def activation_lm(
     layer=None,
 ):
 
-    """
+    r"""
     A more robust version of `tl.activation`.
 
     This is considered to be a more robust version of :func:`scFates.tl.activation`.
