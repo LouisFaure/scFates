@@ -35,6 +35,7 @@ def fit(
     n_map: int = 1,
     n_jobs: int = 1,
     gamma: float = 1.5,
+    knots: int = -1,
     save_raw: bool = True,
     copy: bool = False,
 ):
@@ -59,7 +60,9 @@ def fit(
         number of cpu processes used to perform the test.
     gamma
         stringency of penalty.
-    saveraw
+    knots
+        number of knots for the GAM fit.
+    save_raw
         save the unsubsetted anndata to adata.raw
     copy
         Return a copy instead of writing to adata.
@@ -143,6 +146,7 @@ def fit(
             )
         subtree = subtree[["t", "branch"]]
         subtree["gamma"] = gamma
+        subtree["knots"] = knots
 
         Xgenes = get_X(adata, subtree.index, features, layer, togenelist=True)
 
@@ -203,6 +207,7 @@ def gt_fun(data):
     sdf = data[0]
     sdf["exp"] = data[1]
     gamma = sdf["gamma"].iloc[0]
+    knots = sdf["knots"].iloc[0]
 
     global rmgcv
     global rstats
@@ -218,7 +223,7 @@ def gt_fun(data):
             dat = cv.py2rpy(sdf.loc[sdf["branch"] == b, :])
 
         m = rmgcv.gam(
-            Formula("exp~s(t,bs='ts')"),
+            Formula(f"exp~s(t,bs='ts',k={knots})"),
             data=dat,
             gamma= ro.FloatVector([gamma]),
         )
