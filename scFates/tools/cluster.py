@@ -113,7 +113,7 @@ def cluster(
             categories=natsorted(map(str, np.unique(groups))),
         )
     else:
-        sc.tl.leiden(adata_s, resolution=resolution)
+        sc.tl.leiden(adata_s, resolution=resolution, flavor="igraph", n_iterations=2)
 
     adata.var["clusters"] = adata_s.obs.leiden
 

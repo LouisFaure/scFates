@@ -290,8 +290,8 @@ def subset_tree(
 
     rmil = dct_rev[graph["root"]]
     rmil = root_milestone if ~np.isin(rmil, milsel) else rmil
-    nodes = pd.Series(sub_nodes, index=np.arange(len(sub_nodes)))
-    nodes.loc[nodes] = np.arange(nodes.sum())
+    nodes = pd.Series(sub_nodes, index=np.arange(len(sub_nodes)), dtype=object)
+    nodes.loc[nodes.astype(bool)] = np.arange(nodes.sum())
 
     del adata.uns["graph"]["milestones"]
     del adata.obs["milestones"]
@@ -531,10 +531,9 @@ def simplify(adata: AnnData, n_nodes: int = 10, copy: bool = False):
     miles = {}
     mils = np.array(list(adata.uns["graph"]["milestones"].values()))
     R = adata.obsm["X_R"]
-    pp_info = adata.uns["graph"]["pp_info"]
-    for s in pp_info.seg.unique():
-        pp_info = adata.uns["graph"]["pp_info"]
-        pp_info = pp_info.loc[pp_info.seg == s]
+    pp_info_all = adata.uns["graph"]["pp_info"]
+    for s in pp_info_all.seg.unique():
+        pp_info = pp_info_all.loc[pp_info_all.seg == s].copy()
         pp_info.sort_values("time", inplace=True)
 
         tokeep = pp_info.index[np.isin(pp_info.index, mils)]
@@ -665,7 +664,7 @@ def getpath(adata, root_milestone, milestones, include_root=False):
 
     if include_root:
         sel = df.edge.str.startswith(str(root) + "|") | df.edge.str.contains(
-            "\|" + str(root)
+            r"\|" + str(root)
         )
         df = df.loc[sel]
         res = pd.concat([res, df], axis=0)

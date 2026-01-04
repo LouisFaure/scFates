@@ -74,6 +74,7 @@ def test_fork(
     bounds = bounds + bounds * 0.1
     ax.set_xlim([-bounds, bounds])
     xticks = ax.get_xticks()
+    ax.set_xticks(xticks)
     xticks = [str(int(xt)) if xt.is_integer() else str(xt) for xt in np.abs(xticks)]
     ax.set_xticklabels(xticks)
 

@@ -210,7 +210,7 @@ def slide_cells(
                     res = region_extract(pt_cur, segs_cur, nbranch)
                     return freq + res
 
-                elif ~(
+                elif not (
                     sum(
                         ~graph["pp_info"]
                         .loc[pps_region, :]
@@ -362,11 +362,12 @@ def slide_cors(
 
     def gather_cor(i, geneset):
         freq = freqs[i][adata.obs_names]
-        cormat = pd.DataFrame(
-            DescrStatsW(X_r.values, weights=freq).corrcoef,
-            index=genesets,
-            columns=genesets,
-        )
+        with np.errstate(divide="ignore", invalid="ignore"):
+            cormat = pd.DataFrame(
+                DescrStatsW(X_r.values, weights=freq).corrcoef,
+                index=genesets,
+                columns=genesets,
+            )
         np.fill_diagonal(cormat.values, np.nan)
         return cormat.loc[:, geneset].mean(axis=1)
 

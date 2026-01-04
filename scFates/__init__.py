@@ -5,6 +5,10 @@ except:
 __version__ = version(__name__)
 del version
 
+import matplotlib.pyplot as plt
+
+plt.rcParams["figure.max_open_warning"] = 100
+
 from anndata import AnnData
 
 from . import pp

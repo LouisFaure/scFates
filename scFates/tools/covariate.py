@@ -32,7 +32,7 @@ def test_covariate(
     n_map: int = 1,
     copy: bool = False,
 ):
-    """\
+    r"""
     Test for branch differential gene expression between covariates on the same trajectory path.
 
     **Test of amplitude difference**
@@ -110,7 +110,7 @@ def test_covariate(
     features = adata.var_names if features is None else features
     Xgenes = get_X(adata, segcells, features, layer, togenelist=True)
 
-    if "log1p" in adata.uns_keys() and adata.uns["log1p"]["base"] is not None:
+    if "log1p" in adata.uns and adata.uns["log1p"]["base"] is not None:
         logbase = np.log(adata.uns["log1p"]["base"])
     else:
         logbase = 1

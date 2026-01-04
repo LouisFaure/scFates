@@ -44,12 +44,12 @@ def test_association(
     layer: Optional[str] = None,
 ):
 
-    """\
+    r"""
     Determine a set of genes significantly associated with the trajectory.
 
 
     Feature expression is modeled as a function of pseudotime in a branch-specific manner,
-    using cubic spline regression :math:`g_{i} \\sim\ t_{i}` for each branch independently.
+    using cubic spline regression :math:`g_{i} \sim\ t_{i}` for each branch independently.
     This tree-dependent model is then compared with an unconstrained model :math:`g_{i} \\sim\ 1`
     using F-test.
 
@@ -315,6 +315,8 @@ def test_association_monocle3(
             n_jobs,
             **kwargs,
         )
+    if adata.is_view:
+        adata._init_as_actual()
     for c in pr_graph_test_res.columns:
         adata.var[c] = pr_graph_test_res[c]
 
@@ -421,6 +423,8 @@ def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut, prefix=""):
 
     # saving results
     stat_assoc[prefix + "signi"] = stat_assoc[prefix + "st"] > st_cut
+    if adata.is_view:
+        adata._init_as_actual()
     for c in stat_assoc.columns:
         adata.var[c] = stat_assoc[c]
 

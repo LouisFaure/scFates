@@ -82,4 +82,7 @@ def test_adata(plot=False) -> AnnData:
         filename = HERE / "test.h5ad"
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning, module="anndata")
-            return read(filename)
+            adata = read(filename)
+            if hasattr(adata.X, "toarray"):
+                adata.X = adata.X.toarray()
+            return adata

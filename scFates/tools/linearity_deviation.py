@@ -141,7 +141,9 @@ def linearity_deviation(
         )(delayed(get_resid)(x) for x in X)
 
         rs = np.vstack(rs).T
-        return rs.mean(axis=1) / X_all.std(axis=0)
+        std = X_all.std(axis=0)
+        std[std == 0] = 1
+        return rs.mean(axis=1) / std
 
     n_jobs_map = 1
     if n_map > 1:
@@ -161,7 +163,10 @@ def linearity_deviation(
 
         sc.pl.embedding(adata, basis=basis, color=name + "_lindev_sel")
 
-    adata.var[name + "_rss"] = np.nanmean(np.vstack(rss), axis=0)
+    if len(rss) > 0:
+        adata.var[name + "_rss"] = np.nanmean(np.vstack(rss), axis=0)
+    else:
+        adata.var[name + "_rss"] = np.nan
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(

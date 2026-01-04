@@ -260,4 +260,4 @@ def subset_cells(adata, root_milestone, milestones):
         )
     )
 
-    return adata[cells]
+    return adata[cells].copy()
