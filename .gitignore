@@ -108,6 +108,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.pixi
 
 # Spyder project settings
 .spyderproject
@@ -129,3 +130,6 @@ dmypy.json
 
 _build
 _templates
+# pixi environments
+.pixi/*
+!.pixi/config.toml

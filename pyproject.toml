@@ -17,3 +17,28 @@ exclude = '''
     | dist
   )/
 '''
+
+[tool.pixi.workspace]
+name = "scFates"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+scFates = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+
+[tool.pixi.dependencies]
+python = "3.13.*"
+r-mgcv = ">=1.9_4,<2"
+rpy2 = ">=3.6.4,<4"
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+
+[tool.pixi.feature.test.tasks]
+test = "pytest scFates/tests"
