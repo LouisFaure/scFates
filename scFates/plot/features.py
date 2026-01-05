@@ -319,6 +319,29 @@ def trends(
             wspace=wspace,
         )
         axs = []
+    else:
+        axs = []
+        fig = axemb.get_figure()
+        if plot_heatmap:
+            # adjust figure size to accommodate heatmap
+            curr_size = fig.get_size_inches()
+            fig.set_size_inches(curr_size[0] + 4, curr_size[1])
+            
+            ratio = curr_size[0] / curr_size[1]
+            gsubs = gridspec.GridSpec(
+                1,
+                2,
+                figure=fig,
+                width_ratios=[ratio, 1],
+                wspace=wspace,
+            )
+            if plot_emb:
+                try:
+                    axemb.set_position(gsubs[0].get_position(fig))
+                    axemb.set_subplotspec(gsubs[0])
+                except:
+                    pass
+
     if plot_heatmap:
         gs_ht = gridspec.GridSpecFromSubplotSpec(
             2 + (annot is not None),
@@ -706,17 +729,37 @@ def single_trend(
         )
 
     ratio = plt.rcParams["figure.figsize"][0] / plt.rcParams["figure.figsize"][1]
-    if (ax_emb is None) & (ax_trend is None):
-        if plot_emb:
+    if plot_emb:
+        if (ax_emb is None) and (ax_trend is None):
             fig, (ax_emb, ax_trend) = plt.subplots(
                 1,
                 2,
                 figsize=figsize,
                 gridspec_kw=dict(width_ratios=[1 * ratio, 1], wspace=wspace),
             )
-        else:
+        elif (ax_emb is not None) and (ax_trend is None):
+            fig = ax_emb.get_figure()
+            gs = gridspec.GridSpec(
+                1, 2, figure=fig, width_ratios=[1 * ratio, 1], wspace=wspace
+            )
+            try:
+                ax_emb.set_position(gs[0].get_position(fig))
+            except:
+                pass
+            ax_trend = fig.add_subplot(gs[1])
+        elif (ax_emb is None) and (ax_trend is not None):
+            fig = ax_trend.get_figure()
+            gs = gridspec.GridSpec(
+                1, 2, figure=fig, width_ratios=[1 * ratio, 1], wspace=wspace
+            )
+            try:
+                ax_trend.set_position(gs[1].get_position(fig))
+            except:
+                pass
+            ax_emb = fig.add_subplot(gs[0])
+    else:
+        if ax_trend is None:
             fig, ax_trend = plt.subplots(1, 1, figsize=figsize)
-            # axs = ["empty", axs]
 
     for s in df.seg.unique():
         if color_exp is None:
