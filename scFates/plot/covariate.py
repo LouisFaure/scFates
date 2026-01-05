@@ -51,8 +51,8 @@ def trend_covariate(
     cate = adata.obs[group_key].cat.categories
 
     m1, m0 = group_test(df, "groups", return_pred=True, trend_test=True)
-    dct = dict(zip(adata.obs[group_key].cat.categories, (m1, m1)))
-    dct_null = dict(zip(adata.obs[group_key].cat.categories, (m0, m0)))
+    dct = {g: m1 for g in cate}
+    dct_null = {g: m0 for g in cate}
 
     for g in cate:
         ax.plot(

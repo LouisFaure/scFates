@@ -27,6 +27,7 @@ def test_covariate(
     seg: Optional[str] = None,
     layer: Optional[str] = None,
     trend_test: bool = False,
+    nested: bool = False,
     fdr_cut: float = 0.01,
     n_jobs: int = 1,
     n_map: int = 1,
@@ -55,10 +56,16 @@ def test_covariate(
 
     to the following reduced one:
 
-    :math:`g_{i} \\sim\ s(pseudotime)+s(pseudotime)+Covariate`
+    :math:`g_{i} \\sim\ s(pseudotime)+Covariate`
 
     Comparison is done using ANOVA
 
+
+    **Nested test**
+
+    This performs two tests:
+    1. Shared trend: :math:`g_{i} \\sim\ s(pseudotime)+Covariate` vs :math:`g_{i} \\sim\ Covariate`
+    2. Specific trend: :math:`g_{i} \\sim\ s(pseudotime)+s(pseudotime):Covariate+Covariate` vs :math:`g_{i} \\sim\ s(pseudotime)+Covariate`
 
 
     Parameters
@@ -75,6 +82,8 @@ def test_covariate(
         layer to use for the test
     trend_test
         Whether to perform the trend test instead of amplitude test.
+    nested
+        Whether to perform the nested suite of tests (shared and specific trends).
     n_jobs
         number of cpu processes used to perform the test.
     n_map
@@ -94,10 +103,15 @@ def test_covariate(
             is the feature significant.
         `.var['A->B_lfc']`
             logfoldchange in expression between covariate A and B.
+        `.var['{covariate}_lfc']`
+            logfoldchange in expression between covariate and the rest of the cells.
+        If `nested=True`:
+        `.var['shared_pval']` and `.var['spec_pval']`
+            pvalues for shared and specific trends.
 
     """
 
-    teststr = "trend" if trend_test else "amplitude"
+    teststr = "nested" if nested else ("trend" if trend_test else "amplitude")
     logg.info(f"testing covariates ({teststr})", reset=True)
 
     adata = adata.copy() if copy else adata
@@ -127,56 +141,141 @@ def test_covariate(
         total=len(dfs),
         file=sys.stdout,
         desc="    single mapping ",
-    )(delayed(group_test)(df, "groups", trend_test, logbase) for df in dfs)
+    )(delayed(group_test)(df, "groups", trend_test, logbase, nested=nested) for df in dfs)
 
-    res = "covtrend" if trend_test else "cov"
-    adata.var[f"{res}_pval"] = np.nan
-    adata.var[f"{res}_fdr"] = np.nan
-    adata.var[f"{res}_signi"] = np.nan
+    if nested:
+        adata.var["shared_pval"] = np.nan
+        adata.var["shared_fdr"] = np.nan
+        adata.var["shared_signi"] = np.nan
+        adata.var["shared_A"] = np.nan
+        adata.var["spec_pval"] = np.nan
+        adata.var["spec_fdr"] = np.nan
+        adata.var["spec_signi"] = np.nan
 
-    adata.var.loc[features, f"{res}_pval"] = [s[0] for s in stat]
-    adata.var.loc[features, f"{res}_fdr"] = multipletests(
-        adata.var.loc[features, f"{res}_pval"], method="bonferroni"
-    )[1]
-    adata.var.loc[features, f"{res}_signi"] = (
-        adata.var.loc[features, f"{res}_fdr"] < fdr_cut
-    ) * 1
+        shared_pvals = np.array([s[0] for s in stat])
+        spec_pvals = np.array([s[1] for s in stat])
+        
+        shared_pvals[np.isnan(shared_pvals)] = 1.0
+        spec_pvals[np.isnan(spec_pvals)] = 1.0
+
+        adata.var.loc[features, "shared_pval"] = shared_pvals
+        adata.var.loc[features, "spec_pval"] = spec_pvals
+        adata.var.loc[features, "shared_A"] = [s[2] for s in stat]
+
+        adata.var.loc[features, "shared_fdr"] = multipletests(
+            adata.var.loc[features, "shared_pval"], method="fdr_bh"
+        )[1]
+        adata.var.loc[features, "spec_fdr"] = multipletests(
+            adata.var.loc[features, "spec_pval"], method="fdr_bh"
+        )[1]
+
+        adata.var.loc[features, "shared_signi"] = (
+            adata.var.loc[features, "shared_fdr"] < fdr_cut
+        ) * 1
+        adata.var.loc[features, "spec_signi"] = (
+            adata.var.loc[features, "spec_fdr"] < fdr_cut
+        ) * 1
+
+        logg.info(
+            f"    found {sum(adata.var['shared_signi'])} shared and {sum(adata.var['spec_signi'])} specific features",
+            time=True,
+            end="\n",
+        )
+    else:
+        res = "covtrend" if trend_test else "cov"
+        adata.var[f"{res}_pval"] = np.nan
+        adata.var[f"{res}_fdr"] = np.nan
+        adata.var[f"{res}_signi"] = np.nan
+        adata.var[f"{res}_A"] = np.nan
+
+        pvals = np.array([s[0] for s in stat])
+        pvals[np.isnan(pvals)] = 1.0
+
+        adata.var.loc[features, f"{res}_pval"] = pvals
+        adata.var.loc[features, f"{res}_A"] = [s[1] for s in stat]
+        adata.var.loc[features, f"{res}_fdr"] = multipletests(
+            adata.var.loc[features, f"{res}_pval"], method="bonferroni"
+        )[1]
+        adata.var.loc[features, f"{res}_signi"] = (
+            adata.var.loc[features, f"{res}_fdr"] < fdr_cut
+        ) * 1
+
+        logg.info(
+            "    found " + str(sum(adata.var[f"{res}_signi"])) + " significant features",
+            time=True,
+            end="\n",
+        )
 
     adata.var["->".join(adata.obs[group_key].cat.categories) + "_lfc"] = np.nan
     adata.var.loc[features, "->".join(adata.obs[group_key].cat.categories) + "_lfc"] = [
-        s[1] for s in stat
+        s[-2] for s in stat
     ]
-    covstr = "covtrend" if trend_test else "cov"
-    logg.info(
-        "    found " + str(sum(adata.var[f"{res}_signi"])) + " significant features",
-        time=True,
-        end="\n",
-    )
+
+    for i, g in enumerate(adata.obs[group_key].cat.categories):
+        adata.var[f"{g}_lfc"] = np.nan
+        adata.var.loc[features, f"{g}_lfc"] = [s[-1][i] for s in stat]
+
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
-    logg.hint(
-        "added \n"
-        "    .var['" + covstr + "_pval'], pvalues extracted from tests.\n"
-        "    .var['" + covstr + "_FDR'], FDR extracted from the pvalues.\n"
-        "    .var['" + covstr + "_signi'], is the feature significant.\n"
-        "    .var['" + "->".join(adata.obs[group_key].cat.categories) + "_lfc'],"
-        " logfoldchange in expression between covariate "
-        + " and ".join(adata.obs[group_key].cat.categories)
-        + "."
-    )
+    if nested:
+        logg.hint(
+            "added \n"
+            "    .var['shared_pval'], pvalues for shared trend.\n"
+            "    .var['shared_fdr'], FDR for shared trend.\n"
+            "    .var['shared_signi'], is the shared trend significant.\n"
+            "    .var['shared_A'], amplitude of the shared trend.\n"
+            "    .var['spec_pval'], pvalues for specific trend.\n"
+            "    .var['spec_fdr'], FDR for specific trend.\n"
+            "    .var['spec_signi'], is the specific trend significant.\n"
+            "    .var['{covariate}_lfc'], logfoldchange in expression between covariate and the rest of the cells."
+        )
+    else:
+        covstr = "covtrend" if trend_test else "cov"
+        logg.hint(
+            "added \n"
+            "    .var['" + covstr + "_pval'], pvalues extracted from tests.\n"
+            "    .var['" + covstr + "_fdr'], FDR extracted from the pvalues.\n"
+            "    .var['" + covstr + "_signi'], is the feature significant.\n"
+            "    .var['" + covstr + "_A'], amplitude of the trend.\n"
+            "    .var['" + "->".join(adata.obs[group_key].cat.categories) + "_lfc'],"
+            " logfoldchange in expression between covariate "
+            + " and ".join(adata.obs[group_key].cat.categories)
+            + ".\n"
+            "    .var['{covariate}_lfc'], logfoldchange in expression between covariate and the rest of the cells."
+        )
 
 
-def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
+def group_test(
+    df, group, trend_test=False, logbase=None, return_pred=False, nested=False
+):
 
     global rmgcv
 
     if not return_pred:
-        mean_A, mean_B = [
-            df.exp[df[group] == g].mean() for g in df[group].cat.categories
-        ]
-        foldchange = (np.expm1(mean_A * logbase) + 1e-9) / (
-            np.expm1(mean_B * logbase) + 1e-9
-        )
-        lfc = np.log2(foldchange)
+        categories = df[group].cat.categories
+        means = [df.exp[df[group] == g].mean() for g in categories]
+        
+        # One-vs-rest LFCs
+        ovr_lfcs = []
+        for i, g in enumerate(categories):
+            mean_g = means[i]
+            mean_rest = df.exp[df[group] != g].mean()
+            foldchange = (np.expm1(mean_g * logbase) + 1e-9) / (
+                np.expm1(mean_rest * logbase) + 1e-9
+            )
+            ovr_lfcs.append(np.log2(foldchange))
+
+        if len(means) == 2:
+            foldchange = (np.expm1(means[0] * logbase) + 1e-9) / (
+                np.expm1(means[1] * logbase) + 1e-9
+            )
+            lfc = np.log2(foldchange)
+        else:
+            lfc = np.nan
+
+    # Keep a copy of groups for amplitude calculation
+    groups_py = df[group].values
+    first_group = df[group].cat.categories[0]
+    mask = groups_py == first_group
 
     import rpy2.robjects as ro
     from rpy2.robjects import pandas2ri as p2ri
@@ -186,6 +285,45 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
 
     with context as cv:
         df = cv.py2rpy(df)
+
+    if nested:
+        m_full = rmgcv.gam(
+            Formula(
+                f"exp ~ s(t,k=5)+s(t,by=as.factor({group}),k=5)+as.factor({group})"
+            ),
+            data=df,
+        )
+        m_shared = rmgcv.gam(Formula(f"exp ~ s(t,k=5)+as.factor({group})"), data=df)
+        m_null = rmgcv.gam(Formula(f"exp ~ as.factor({group})"), data=df)
+
+        test_spec = rmgcv.anova_gam(m_shared, m_full, test="F")
+        test_shared = rmgcv.anova_gam(m_null, m_shared, test="F")
+
+        with context as cv:
+            test_spec_df = cv.rpy2py(test_spec)
+            test_shared_df = cv.rpy2py(test_shared)
+
+        try:
+            pval_spec = test_spec_df.loc["2", "Pr(>F)"]
+        except:
+            pval_spec = np.nan
+            
+        try:
+            pval_shared = test_shared_df.loc["2", "Pr(>F)"]
+        except:
+            pval_shared = np.nan
+
+        if pd.isna(pval_spec):
+            pval_spec = 1.0
+        if pd.isna(pval_shared):
+            pval_shared = 1.0
+
+        pr_shared = rmgcv.predict_gam(m_shared)
+        with context as cv:
+            pr_shared = cv.rpy2py(pr_shared)
+        amp_shared = np.max(pr_shared[mask]) - np.min(pr_shared[mask])
+
+        return (pval_shared, pval_spec, amp_shared, lfc, ovr_lfcs)
 
     if trend_test:
         m1 = rmgcv.gam(
@@ -200,11 +338,22 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
             with context as cv:
                 return cv.rpy2py(pr1),cv.rpy2py(pr2)
         else:
-            test = rmgcv.anova_gam(m1, m0, test="F")
+            test = rmgcv.anova_gam(m0, m1, test="F")
             with context as cv:
                 test_df = cv.rpy2py(test)
-            pval = test_df.loc["2", ["Pr(>F)"]].values[0]
-            return (pval, lfc)
+            try:
+                pval = test_df.loc["2", "Pr(>F)"]
+            except:
+                pval = np.nan
+            if pd.isna(pval):
+                pval = 1.0
+            
+            pr_shared = rmgcv.predict_gam(m0)
+            with context as cv:
+                pr_shared = cv.rpy2py(pr_shared)
+            amp_shared = np.max(pr_shared[mask]) - np.min(pr_shared[mask])
+
+            return (pval, amp_shared, lfc, ovr_lfcs)
     else:
         m = rmgcv.gam(
             Formula(
@@ -216,8 +365,21 @@ def group_test(df, group, trend_test=False, logbase=None, return_pred=False):
             pr1, pr2 = rmgcv.predict_gam(m), rmgcv.predict_gam(m)
             return cv.rpy2py(pr1),cv.rpy2py(pr2)
         else:
-            pval = rmgcv.summary_gam(m)[3][1]
-            return (pval, lfc)
+            try:
+                pval = rmgcv.summary_gam(m)[3][1]
+            except:
+                pval = np.nan
+            if pd.isna(pval):
+                pval = 1.0
+            
+            pr_full = rmgcv.predict_gam(m)
+            with context as cv:
+                pr_full = cv.rpy2py(pr_full)
+            # For amplitude test, we take the max amplitude among groups
+            amps = [np.max(pr_full[groups_py == g]) - np.min(pr_full[groups_py == g]) for g in df[group].cat.categories]
+            amp = np.max(amps)
+
+            return (pval, amp, lfc, ovr_lfcs)
 
 
 def test_association_covariate(
