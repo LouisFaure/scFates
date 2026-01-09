@@ -126,7 +126,11 @@ def fit(
         img.add_edges(edges)
 
         subtree = pd.concat(
-            list(map(lambda tip: getpath(img, root, tips, tip, graph, df), tips)),
+            list(
+                filter(
+                    lambda x: x is not None, 
+                    map(lambda tip: getpath(img, root, tips, tip, graph, df), tips)
+                    )),
             axis=0,
         )
         if root2 is not None:
