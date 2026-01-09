@@ -376,7 +376,8 @@ def group_test(
             with context as cv:
                 pr_full = cv.rpy2py(pr_full)
             # For amplitude test, we take the max amplitude among groups
-            amps = [np.max(pr_full[groups_py == g]) - np.min(pr_full[groups_py == g]) for g in df[group].cat.categories]
+            # Use categories saved before R conversion
+            amps = [np.max(pr_full[groups_py == g]) - np.min(pr_full[groups_py == g]) for g in categories]
             amp = np.max(amps)
 
             return (pval, amp, lfc, ovr_lfcs)
