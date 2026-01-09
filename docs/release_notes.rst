@@ -4,6 +4,33 @@
 Release Notes
 =============
 
+Version 1.2 :small:`January 9, 2569/2026`
+--------------------------------------------
+
+.. rubric:: New Features
+
+- :func:`scFates.tl.test_covariate` now supports more than 2 covariates and nested trend tests via the refactored group_test function.
+- :func:`scFates.tl.fit` now accepts a ``knots`` parameter for GAM model configuration.
+
+.. rubric:: Improvements
+
+- Enhanced subplot handling and figure sizing for :func:`scFates.pl.trends` and :func:`scFates.pl.single_trend`.
+- More robust GAM fit variable management and sanitization of EPG results while saving data.
+- Improved pseudotime segment assignment and milestone handling, including better handling of cells outside expected pseudotime ranges.
+- Updated networkx dependency requirement.
+- Added pixi environment setup.
+- Various warning cleanups throughout the codebase.
+
+.. rubric:: Bug Fixes
+
+- Fixed EPG elastic curve not being added to `adata.uns`, which caused errors during pseudotime calculation (PR #51).
+- Fixed handling of segments with no cells assigned during segment majority voting.
+- Fixed milestone conversion to string category type with proper NaN handling.
+- Fixed issue where subsetting would fail when a segment does not have any cells.
+- Added missing logging import to palette_tools.
+- Fixed typos in documentation and code.
+
+
 Version 1.1.1 :small:`May 28, 2567/2025`
 --------------------------------------------
 - Switched to stripplot for faster dendrogram generation
