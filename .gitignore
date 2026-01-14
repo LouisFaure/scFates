@@ -137,4 +137,6 @@ _build
 _templates
 # pixi environments
 .pixi/*
+.venv*
 !.pixi/config.toml
+scFates.*.rst

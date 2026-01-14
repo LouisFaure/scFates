@@ -8,17 +8,18 @@ version: 2
 build:
   os: ubuntu-24.04
   tools:
-    python: "3.11"
-
-# Build documentation in the docs/ directory with Sphinx
-sphinx:
-  configuration: docs/conf.py
+    python: "latest"
+  jobs:
+    create_environment:
+      - asdf plugin add pixi
+      - asdf install pixi latest
+      - asdf global pixi latest
+    install:
+      # Install the docs environment
+      - pixi install -e docs
+    build:
+      html:
+        - pixi run -e docs sphinx-build -T -b html docs $READTHEDOCS_OUTPUT/html
 
 formats:
   - pdf
-
-python:
-  install:
-  - method: pip
-    path: .
-  - requirements: docs/requirements.txt

@@ -27,10 +27,12 @@ platforms = ["linux-64"]
 scFates = { path = ".", editable = true }
 
 [tool.pixi.tasks]
+docs = "cd docs && make html"
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
 test = { features = ["test"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "docs", no-default-feature = true }
 
 [tool.pixi.dependencies]
 python = "3.13.*"
@@ -42,3 +44,32 @@ pytest = "*"
 
 [tool.pixi.feature.test.tasks]
 test = "pytest scFates/tests"
+
+[tool.pixi.feature.docs.dependencies]
+python = "3.9.*"
+sphinx = ">=4.5.0"
+sphinx-rtd-theme = "*"
+sphinx-book-theme = "*"
+sphinxext-opengraph = "*"
+sphinx-copybutton = "*"
+matplotlib = "*"
+nbsphinx = "*"
+ipython = "*"
+anndata = "*"
+numpy = "*"
+pandas = "*"
+cycler = "*"
+docutils = "*"
+typing_extensions = "*"
+importlib_metadata = "*"
+mock = "*"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+scFates = { path = ".", editable = true }
+scanpydoc = { version = ">=0.7.4", extras = ["typehints"] }
+readthedocs-sphinx-ext = "*"
+Jinja2 = ">=3.1.6"
+
+[tool.pixi.feature.docs.tasks]
+docs = "cd docs && make html"
+docs-build = "sphinx-build -T -b html docs"
