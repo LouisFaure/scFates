@@ -77,6 +77,19 @@ or the latest development version can be installed from GitHub:
 
     pip install git+https://github.com/LouisFaure/scFates
 
+Development
+-----------
+
+For development, it is recommended to use [pixi](https://pixi.sh) to manage the environment and dependencies.
+
+To install the environment:
+
+    pixi install
+
+To run tests:
+
+    pixi run test
+
 With all dependencies
 ---------------------
 
