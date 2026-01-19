@@ -87,9 +87,13 @@ rpy2 = ">=3.6.4,<4"
 
 [tool.pixi.feature.test.dependencies]
 pytest = "*"
+coverage = "*"
+mock = "*"
+cmake = "*"
 
 [tool.pixi.feature.test.tasks]
 test = "pytest scFates/tests"
+test-cov = "coverage run -m pytest scFates/tests/test_w_plots.py && coverage report -i -m && coverage xml -i"
 
 [tool.pixi.feature.docs.dependencies]
 python = "3.9.*"

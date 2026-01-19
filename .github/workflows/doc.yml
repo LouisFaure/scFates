@@ -5,6 +5,7 @@ on:
     paths:
       - 'scFates/**'
       - 'docs/**'
+      - '.github/workflows/doc.yml'
 
 jobs:
   doc_build:
@@ -19,7 +20,7 @@ jobs:
       uses: prefix-dev/setup-pixi@v0.8.1
       with:
         pixi-version: latest
-        cache: true
+        cache: false
     - name: Build documentation
       run: |
         pixi run -e docs docs
