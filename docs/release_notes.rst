@@ -4,7 +4,7 @@
 Release Notes
 =============
 
-Version 1.2.1 :small:`TBD`
+Version 1.2.1 :small:`January 21, 2569/2026`
 --------------------------------------------
 - Refactored project configuration to use `pyproject.toml` exclusively, replacing `setup.py` and `requirements.txt`.
 - Removed duplicate `adjustText` dependency.
