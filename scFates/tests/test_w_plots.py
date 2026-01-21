@@ -13,6 +13,8 @@ def test_pipeline():
     scf.tl.curve(adata, Nodes=10, use_rep="pca", device="cpu", seed=1)
     F_PC1_epgc_cpu = adata.uns["graph"]["F"][0, :5]
 
+    scf.tl.explore_sigma(adata, Nodes=10, use_rep="pca", plot=True)
+
     scf.tl.tree(adata, Nodes=10, use_rep="pca", method="epg", device="cpu", seed=1)
     F_PC1_epgt_cpu = adata.uns["graph"]["F"][0, :5]
 
@@ -130,6 +132,7 @@ def test_pipeline():
     adata.var["signi"] = True
     scf.tl.test_covariate(adata, "covariate")
     scf.tl.test_covariate(adata, "covariate", trend_test=True)
+    scf.tl.test_covariate(adata, "covariate", nested=True)
     scf.pl.trend_covariate(
         adata, adata.var_names[0], group_key="covariate", show_null=True
     ,show=False)
