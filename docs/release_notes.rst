@@ -63,7 +63,7 @@ Version 1.0.8 :small:`June 19, 2566/2024`
 - various dependency fixes
 
 Version 1.0.7 :small:`February 15, 2566/2024`
---------------------------------------------
+---------------------------------------------
 Fixed adjustedText version to avoid error, changed tests to python 3.11
 
 Version 1.0.6 :small:`August 26, 2566/2023`
@@ -75,7 +75,7 @@ Version 1.0.5 :small:`August 25, 2566/2023`
 Fix int and bool check when ordering segments in :func:`scFates.pl.trends`.
 
 Version 1.0.4 :small:`August 13, 2566/2023`
-------------------------------------------
+-------------------------------------------
 - updated notebooks.
 - relaxed mutli-mapping rule when using elpigraph.
 - better handling of milestone renaming.
@@ -97,14 +97,14 @@ Constrained networkx requirement to avoid error happening in the last version 3.
 
 
 Version 1.0.0 :small:`November 29, 2022`
--------------------------------------
+----------------------------------------
 The tool is now `published <https://doi.org/10.1093/bioinformatics/btac746>`_, it is considered stable enough to be released as v1.0.0
 
 - :func:`scFates.pl.trends` displays an error message if no feature is plotted.
 - :func:`scFates.tl.tree` now accept parameters transfer to elpigraph-python.
 
 Version 0.9.1 :small:`August 28, 2022`
--------------------------------------
+--------------------------------------
 
 - Switched to ElPiGraph approach to calculate pseudotime when using that algorithm, leading to more accurate pseudotime measurement.
 - Added parameter `epg_extend_leaves` to call :func:`elpigraph.ExtendLeaves` during graph learning using ElPiGraph.
@@ -248,7 +248,7 @@ Version 0.3 :small:`November 11, 2021`
 - Better handling of R dependencies related errors.
 
 Version 0.2.7 :small:`September 23, 2021`
--------------------------------------
+--------------------------------------------
 
 .. rubric:: Additions
 
@@ -277,7 +277,7 @@ Version 0.2.7 :small:`September 23, 2021`
 - :func:`scFates.pl.linearity_deviation` has a font parameter, with a default value.
 
 Version 0.2.6 :small:`August 29, 2021`
--------------------------------------
+--------------------------------------------
 
 .. rubric:: Additions
 
