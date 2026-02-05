@@ -157,7 +157,8 @@ def pseudotime(
 
         if allsegs.shape[1]!=allsegs_complete.shape[1]:
             missing = allsegs_complete.columns[~allsegs_complete.columns.isin(allsegs.columns)]
-            message=f"Some segs have no cell assigned: {missing.tolist()}"
+            message=f"Some segs have no cell assigned: {missing.tolist()}. " \
+                    "This may cause downstream failures. Consider running `scf.tl.merge_small_segments(adata)`."
             warnings.warn(message)
         
         for c in allsegs.columns:
@@ -248,7 +249,8 @@ def pseudotime(
     adata.obs["milestones"] = milestones_str.astype("category")
 
     if adata.obs["milestones"].isna().sum()>0:
-        message = "Some cells have no milestones assigned. This is likely due to the fact that these uniquely compose a segment."
+        message = "Some cells have no milestones assigned. This is likely due to the fact that these uniquely compose a segment. " \
+                  "Consider running `scf.tl.merge_small_segments(adata)`."
         warnings.warn(message)
 
     adata.uns["graph"]["milestones"] = dict(

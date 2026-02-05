@@ -589,6 +589,157 @@ def simplify(adata: AnnData, n_nodes: int = 10, copy: bool = False):
     return adata if copy else None
 
 
+def merge_small_segments(adata: AnnData, copy: bool = False):
+    """\
+    Merge segments that have no cells assigned into their neighboring nodes.
+
+    Small segments (typically between two high-degree nodes like forks) can end up
+    with no cells assigned during pseudotime calculation. This function merges
+    such segments by collapsing intermediate nodes into the earlier milestone,
+    resolving downstream analysis failures.
+
+    This function should be called after pseudotime calculation if warnings about
+    segments having no cells assigned are encountered.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix with computed pseudotime.
+    copy
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    adata : anndata.AnnData
+        if `copy=True` it returns or else updates fields in `adata`:
+
+        `.uns['graph']['B']`
+            updated adjacency matrix with merged nodes.
+        `.uns['graph']['F']`
+            updated coordinates with merged nodes.
+        `.obsm['X_R']`
+            updated soft assignment matrix with merged nodes.
+        `.uns['graph']['pp_seg']`
+            updated segment definitions.
+        `.uns['graph']['pp_info']`
+            updated node information.
+    """
+
+    logg.info("merging small segments without cells", reset=True)
+
+    adata = adata.copy() if copy else adata
+
+    if "t" not in adata.obs:
+        raise ValueError(
+            "You need to run `tl.pseudotime` before merging small segments."
+        )
+
+    graph = adata.uns["graph"]
+    pp_seg = graph["pp_seg"].copy()
+    pp_info = graph["pp_info"].copy()
+    B = graph["B"].copy()
+    F = graph["F"].copy()
+    R = adata.obsm["X_R"].copy()
+
+    # Identify segments with no cells assigned
+    cell_segs = adata.obs.seg.value_counts()
+    all_segs = pp_seg.n.values
+    empty_segs = [s for s in all_segs if s not in cell_segs.index]
+
+    if len(empty_segs) == 0:
+        logg.info("    no empty segments found", time=False)
+        return adata if copy else None
+
+    logg.info(f"    found {len(empty_segs)} empty segment(s): {empty_segs}", time=False)
+
+    # Build graph for path finding
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+
+    # Track nodes to remove
+    nodes_to_remove = set()
+
+    for seg_id in empty_segs:
+        seg_row = pp_seg.loc[pp_seg.n == seg_id].iloc[0]
+        from_node = int(seg_row["from"])
+        to_node = int(seg_row["to"])
+
+        # Get all nodes in this segment
+        seg_nodes = pp_info.index[pp_info.seg == seg_id].tolist()
+
+        # Identify intermediate nodes (not the from/to milestones)
+        intermediate_nodes = [n for n in seg_nodes if n != from_node and n != to_node]
+
+        # The from_node is earlier in pseudotime, we keep it
+        # Merge intermediate nodes and to_node into from_node
+
+        # Combine soft assignments: add R columns of removed nodes to from_node
+        for node in intermediate_nodes + [to_node]:
+            if node < R.shape[1]:
+                R[:, from_node] = R[:, from_node] + R[:, node]
+                nodes_to_remove.add(node)
+
+        # Update adjacency: connect from_node to to_node's neighbors
+        if to_node < B.shape[0]:
+            to_neighbors = np.where(B[to_node, :] > 0)[0]
+            for neighbor in to_neighbors:
+                if neighbor != from_node and neighbor not in nodes_to_remove:
+                    B[from_node, neighbor] = 1
+                    B[neighbor, from_node] = 1
+
+    if len(nodes_to_remove) == 0:
+        logg.info("    no nodes to merge", time=False)
+        return adata if copy else None
+
+    # Remove nodes from matrices
+    nodes_to_keep = [i for i in range(B.shape[0]) if i not in nodes_to_remove]
+    nodes_to_keep = np.array(nodes_to_keep)
+
+    B = B[np.ix_(nodes_to_keep, nodes_to_keep)]
+    F = F[:, nodes_to_keep]
+    R = R[:, nodes_to_keep]
+
+    # Normalize R
+    Rsum = R.sum(axis=1)
+    Rsum[Rsum == 0] = 1  # Avoid division by zero
+    R = R / Rsum.reshape(-1, 1)
+
+    # Update graph structures
+    g = igraph.Graph.Adjacency((B > 0).tolist(), mode="undirected")
+    tips = np.argwhere(np.array(g.degree()) == 1).flatten()
+    forks = np.argwhere(np.array(g.degree()) > 2).flatten()
+
+    # Update adata
+    adata.uns["graph"]["B"] = B
+    adata.uns["graph"]["F"] = F
+    adata.uns["graph"]["tips"] = tips
+    adata.uns["graph"]["forks"] = forks
+    adata.obsm["X_R"] = R
+
+    # Create mapping from old to new indices
+    old_to_new = {old: new for new, old in enumerate(nodes_to_keep)}
+
+    # Update milestones
+    if "milestones" in graph:
+        new_milestones = {}
+        for name, old_idx in graph["milestones"].items():
+            if old_idx in old_to_new:
+                new_milestones[name] = old_to_new[old_idx]
+        adata.uns["graph"]["milestones"] = new_milestones
+
+    # Update root
+    if "root" in graph and graph["root"] in old_to_new:
+        adata.uns["graph"]["root"] = old_to_new[graph["root"]]
+
+    # Recalculate pseudotime with new graph structure
+    root(adata, adata.uns["graph"]["root"])
+    pseudotime(adata)
+
+    n_removed = len(nodes_to_remove)
+    logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
+    logg.hint(f"merged {n_removed} nodes from {len(empty_segs)} empty segment(s)")
+
+    return adata if copy else None
+
 def getpath(adata, root_milestone, milestones, include_root=False):
     """\
     Obtain dataframe of cell of a given path.
