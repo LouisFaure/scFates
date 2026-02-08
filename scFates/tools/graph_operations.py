@@ -137,11 +137,11 @@ def cleanup(
     return adata if copy else None
 
 
-def merge_n_simplify(adata: AnnData, copy: bool = False):
+def merge_empty_segments(adata: AnnData, copy: bool = False):
     """\
     Merge single edges being composed of two nodes with degree three or more each.
     This should combine the two nodes into one, merging their connections,
-    the new node location should the geometric mean of these.
+    the new node location should the arithmetic mean of these.
     Parameters
     ----------
     adata
@@ -193,7 +193,7 @@ def merge_n_simplify(adata: AnnData, copy: bool = False):
         any_merged = True
         u, v = edge_to_merge
 
-        f_new = np.sqrt(F[:, u] * F[:, v])
+        f_new = (F[:, u] + F[:, v]) / 2
 
         neighbors_u = g.neighbors(u)
         neighbors_v = g.neighbors(v)
