@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# data
+*.h5ad
+
 # Distribution / packaging
 .Python
 build/
@@ -69,6 +72,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+*.ipynb
 
 # PyBuilder
 target/
@@ -108,6 +112,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.pixi
+pixi.lock
 
 # Spyder project settings
 .spyderproject
@@ -129,3 +135,8 @@ dmypy.json
 
 _build
 _templates
+# pixi environments
+.pixi/*
+.venv*
+!.pixi/config.toml
+scFates.*.rst

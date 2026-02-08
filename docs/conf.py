@@ -140,14 +140,10 @@ for nb in notebooks:
 
 html_theme = "scanpydoc"
 html_theme_options = {
-    "titles_only": True,
-    "logo_only": True,
-    # Toc options
+    "repository_url": "https://github.com/LouisFaure/scFates",
+    "use_repository_button": True,
     "collapse_navigation": True,
-    "sticky_navigation": False,
     "navigation_depth": 4,
-    "includehidden": True,
-    "titles_only": False,
 }
 
 html_context = dict(
@@ -161,7 +157,7 @@ html_context = dict(
 html_show_sphinx = False
 html_logo = "_static/scFates_Logo.svg"
 html_static_path = ["_static"]
-html_extra_path = ["_extra"]
+# html_extra_path = ["_extra"]
 
 
 def setup(app):

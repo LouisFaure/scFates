@@ -321,6 +321,7 @@ def tree(
             **kwargs,
         )
         adata.uns["graph"] = graph
+        adata.uns["epg"] = EPG
         adata.obsm["X_R"] = R
 
     if plot:
@@ -562,6 +563,7 @@ def curve_epg(
     EPG["Edges"] = list(EPG["Edges"])
 
     adata.uns["graph"] = graph
+    adata.uns["epg"] = EPG
     adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
@@ -623,6 +625,7 @@ def circle_epg(
     EPG["Edges"] = list(EPG["Edges"])[0]
 
     adata.uns["graph"] = graph
+    adata.uns["epg"] = EPG
     adata.obsm["X_R"] = R
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
@@ -635,6 +638,15 @@ def circle_epg(
     )
 
     return adata
+
+
+def sanitize_epg(EPG):
+    if isinstance(EPG, dict):
+        return {str(k): sanitize_epg(v) for k, v in EPG.items()}
+    elif isinstance(EPG, list):
+        return [sanitize_epg(v) for v in EPG]
+    else:
+        return EPG
 
 
 def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, extend_leaves, device):
@@ -694,7 +706,7 @@ def epg_to_graph(EPG, X, Nodes, use_rep, ndims_rep, extend_leaves, device):
         "method": "epg",
     }
 
-    return graph, R, EPG
+    return graph, R, sanitize_epg(EPG)
 
 
 def explore_sigma(

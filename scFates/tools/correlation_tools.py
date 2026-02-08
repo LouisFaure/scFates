@@ -664,9 +664,10 @@ def module_inclusion(
                 logList = logList + [logW]
 
                 if i > 0:
-                    autocor = np.corrcoef(
-                        logList[i - 1].idxmax(axis=1), logList[i].idxmax(axis=1)
-                    )[1][0]
+                    with np.errstate(divide="ignore", invalid="ignore"):
+                        autocor = np.corrcoef(
+                            logList[i - 1].idxmax(axis=1), logList[i].idxmax(axis=1)
+                        )[1][0]
 
                 i = i + 1
 

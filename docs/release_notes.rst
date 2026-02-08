@@ -4,6 +4,40 @@
 Release Notes
 =============
 
+Version 1.2.1 :small:`January 21, 2569/2026`
+--------------------------------------------
+- Refactored project configuration to use `pyproject.toml` exclusively, replacing `setup.py` and `requirements.txt`.
+- Removed duplicate `adjustText` dependency.
+- Introduced `pixi` for development environment management.
+
+
+Version 1.2 :small:`January 9, 2569/2026`
+--------------------------------------------
+
+.. rubric:: New Features
+
+- :func:`scFates.tl.test_covariate` now supports more than 2 covariates and nested trend tests via the refactored group_test function.
+- :func:`scFates.tl.fit` now accepts a ``knots`` parameter for GAM model configuration.
+
+.. rubric:: Improvements
+
+- Enhanced subplot handling and figure sizing for :func:`scFates.pl.trends` and :func:`scFates.pl.single_trend`.
+- More robust GAM fit variable management and sanitization of EPG results while saving data.
+- Improved pseudotime segment assignment and milestone handling, including better handling of cells outside expected pseudotime ranges.
+- Updated networkx dependency requirement.
+- Added pixi environment setup.
+- Various warning cleanups throughout the codebase.
+
+.. rubric:: Bug Fixes
+
+- Fixed EPG elastic curve not being added to `adata.uns`, which caused errors during pseudotime calculation (PR #51).
+- Fixed handling of segments with no cells assigned during segment majority voting.
+- Fixed milestone conversion to string category type with proper NaN handling.
+- Fixed issue where subsetting would fail when a segment does not have any cells.
+- Added missing logging import to palette_tools.
+- Fixed typos in documentation and code.
+
+
 Version 1.1.1 :small:`May 28, 2567/2025`
 --------------------------------------------
 - Switched to stripplot for faster dendrogram generation
@@ -29,7 +63,7 @@ Version 1.0.8 :small:`June 19, 2566/2024`
 - various dependency fixes
 
 Version 1.0.7 :small:`February 15, 2566/2024`
---------------------------------------------
+---------------------------------------------
 Fixed adjustedText version to avoid error, changed tests to python 3.11
 
 Version 1.0.6 :small:`August 26, 2566/2023`
@@ -41,7 +75,7 @@ Version 1.0.5 :small:`August 25, 2566/2023`
 Fix int and bool check when ordering segments in :func:`scFates.pl.trends`.
 
 Version 1.0.4 :small:`August 13, 2566/2023`
-------------------------------------------
+-------------------------------------------
 - updated notebooks.
 - relaxed mutli-mapping rule when using elpigraph.
 - better handling of milestone renaming.
@@ -63,14 +97,14 @@ Constrained networkx requirement to avoid error happening in the last version 3.
 
 
 Version 1.0.0 :small:`November 29, 2022`
--------------------------------------
+----------------------------------------
 The tool is now `published <https://doi.org/10.1093/bioinformatics/btac746>`_, it is considered stable enough to be released as v1.0.0
 
 - :func:`scFates.pl.trends` displays an error message if no feature is plotted.
 - :func:`scFates.tl.tree` now accept parameters transfer to elpigraph-python.
 
 Version 0.9.1 :small:`August 28, 2022`
--------------------------------------
+--------------------------------------
 
 - Switched to ElPiGraph approach to calculate pseudotime when using that algorithm, leading to more accurate pseudotime measurement.
 - Added parameter `epg_extend_leaves` to call :func:`elpigraph.ExtendLeaves` during graph learning using ElPiGraph.
@@ -214,7 +248,7 @@ Version 0.3 :small:`November 11, 2021`
 - Better handling of R dependencies related errors.
 
 Version 0.2.7 :small:`September 23, 2021`
--------------------------------------
+--------------------------------------------
 
 .. rubric:: Additions
 
@@ -243,7 +277,7 @@ Version 0.2.7 :small:`September 23, 2021`
 - :func:`scFates.pl.linearity_deviation` has a font parameter, with a default value.
 
 Version 0.2.6 :small:`August 29, 2021`
--------------------------------------
+--------------------------------------------
 
 .. rubric:: Additions
 

@@ -44,12 +44,12 @@ def test_association(
     layer: Optional[str] = None,
 ):
 
-    """\
+    r"""
     Determine a set of genes significantly associated with the trajectory.
 
 
     Feature expression is modeled as a function of pseudotime in a branch-specific manner,
-    using cubic spline regression :math:`g_{i} \\sim\ t_{i}` for each branch independently.
+    using cubic spline regression :math:`g_{i} \sim\ t_{i}` for each branch independently.
     This tree-dependent model is then compared with an unconstrained model :math:`g_{i} \\sim\ 1`
     using F-test.
 
@@ -315,6 +315,8 @@ def test_association_monocle3(
             n_jobs,
             **kwargs,
         )
+    if adata.is_view:
+        adata._init_as_actual()
     for c in pr_graph_test_res.columns:
         adata.var[c] = pr_graph_test_res[c]
 
@@ -354,10 +356,10 @@ def test_assoc(data, spline_df):
     def gamfit(s):
         with context as cv:
             dat = cv.py2rpy(sdf.loc[sdf["seg"] == s, :])
-        m = rmgcv.gam(
-            Formula(f"exp~s(t,k={spline_df})"), data=dat
+        m = rmgcv.gam(Formula(f"exp~s(t,k={spline_df})"), data=dat)
+        return dict(
+            {"d": m.rx2("deviance")[0], "df": m.rx2("df.residual")[0], "p": rmgcv.predict_gam(m)}
         )
-        return dict({"d": m[5][0], "df": m[42][0], "p": rmgcv.predict_gam(m)})
 
     mdl = list(map(gamfit, sdf.seg.unique()))
     mdf = pd.concat(list(map(lambda x: pd.DataFrame([x["d"], x["df"]]), mdl)), axis=1).T
@@ -370,9 +372,11 @@ def test_assoc(data, spline_df):
     if sum(mdf["d"]) == 0:
         fstat = 0
     else:
-        fstat = (m0[5][0] - sum(mdf["d"])) / (m0[42][0] - odf) / (sum(mdf["d"]) / odf)
+        fstat = (m0.rx2("deviance")[0] - sum(mdf["d"])) / (
+            m0.rx2("df.residual")[0] - odf
+        ) / (sum(mdf["d"]) / odf)
 
-    df_res0 = m0[42][0]
+    df_res0 = m0.rx2("df.residual")[0]
     df_res_odf = df_res0 - odf
     pval = rstats.pf(fstat, df_res_odf, odf, lower_tail=False)[0]
     pr = np.concatenate(list(map(lambda x: x["p"], mdl)))
@@ -419,6 +423,8 @@ def apply_filters(adata, stat_assoc_l, fdr_cut, A_cut, st_cut, prefix=""):
 
     # saving results
     stat_assoc[prefix + "signi"] = stat_assoc[prefix + "st"] > st_cut
+    if adata.is_view:
+        adata._init_as_actual()
     for c in stat_assoc.columns:
         adata.var[c] = stat_assoc[c]
 
