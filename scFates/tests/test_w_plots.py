@@ -54,6 +54,22 @@ def test_pipeline():
     )
 
     scf.tl.cleanup(adata)
+    scf.tl.merge_empty_segments(adata)
+
+    # test merge_empty_segments with synthetic merge
+    adata_m = adata.copy()
+    B = np.zeros((6, 6))
+    B[0, [1, 2, 3]] = 1
+    B[1, [0, 4, 5]] = 1
+    B[2, 0] = 1
+    B[3, 0] = 1
+    B[4, 1] = 1
+    B[5, 1] = 1
+    adata_m.uns["graph"]["B"] = B
+    adata_m.uns["graph"]["F"] = np.zeros((adata.obsm["X_pca"].shape[1], 6))
+    adata_m.obsm["X_R"] = np.ones((adata_m.shape[0], 6)) / 6
+    scf.tl.merge_empty_segments(adata_m)
+    assert adata_m.uns["graph"]["B"].shape[0] == 5
 
     F_PC1_ppt_cpu = adata.uns["graph"]["F"][0, :5]
 
