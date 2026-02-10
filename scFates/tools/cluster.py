@@ -91,7 +91,7 @@ def cluster(
         sources, targets = adjacency.nonzero()
         weights = adjacency[sources, targets]
         if isinstance(weights, np.matrix):
-            weights = weights.A1
+            weights = np.asarray(weights).flatten()
         weights = cudf.Series(weights)
 
         g = cugraph.Graph()

@@ -881,13 +881,13 @@ def get_data(adata, use_rep, ndims_rep):
     if use_rep == "X":
         ndims_rep = None
         if sparse.issparse(adata.X):
-            X = DataFrame(adata.X.A, index=adata.obs_names, columns=adata.var_names)
+            X = DataFrame(adata.X.toarray(), index=adata.obs_names, columns=adata.var_names)
         else:
             X = DataFrame(adata.X, index=adata.obs_names, columns=adata.var_names)
     elif use_rep in adata.layers.keys():
         if sparse.issparse(adata.layers[use_rep]):
             X = DataFrame(
-                adata.layers[use_rep].A, index=adata.obs_names, columns=adata.var_names
+                adata.layers[use_rep].toarray(), index=adata.obs_names, columns=adata.var_names
             )
         else:
             X = DataFrame(
