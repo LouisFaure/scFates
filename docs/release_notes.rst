@@ -4,6 +4,26 @@
 Release Notes
 =============
 
+Version 1.2.2 :small:`February 10, 2569/2026`
+--------------------------------------------
+
+.. rubric:: New Features
+
+- :func:`scFates.tl.merge_empty_segments`: New tool to simplify the principal graph by merging edges between high-degree nodes.
+
+.. rubric:: Improvements
+
+- Removed Arial font requirement from :func:`scFates.settings.set_figure_pubready` for better cross-platform compatibility.
+- Updated sparse matrix handling: replaced deprecated `.A` and `.A1` calls with `.toarray()` for future-proofing with newer NumPy/SciPy versions.
+- Added support for `osx-arm64` platform in Pixi environment configuration.
+- Added code coverage reporting in development instructions.
+
+.. rubric:: Bug Fixes
+
+- Fixed NaN issues occurring during specific graph operation sequences in :func:`scFates.tl.merge_empty_segments`.
+- Improved permissions for automated PyPI uploads via GitHub Actions.
+
+
 Version 1.2.1 :small:`January 21, 2569/2026`
 --------------------------------------------
 - Refactored project configuration to use `pyproject.toml` exclusively, replacing `setup.py` and `requirements.txt`.
