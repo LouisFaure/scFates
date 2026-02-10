@@ -36,6 +36,5 @@ _previous_memory_usage = -1
 def set_figure_pubready():
     plt.rcParams["svg.fonttype"] = "none"
     plt.rcParams["font.family"] = ["sans-serif"]
-    plt.rcParams["font.sans-serif"] = ["Arial"]
     plt.rcParams["pdf.fonttype"] = 42
     plt.rcParams["savefig.bbox"] = "tight"
