@@ -82,12 +82,17 @@ def dendrogram(adata: anndata.AnnData, crowdedness: float = 1):
     df["seg_pos"] = df.seg.astype(str)
     df["t"] = -df.t
 
-    for i, x in enumerate(newseg):
-        df.loc[df.seg == newseg.index[i], "seg_pos"] = x
-
-    df.seg_pos = df.seg_pos.astype("category").cat.rename_categories(
-        range(len(df.seg_pos.unique()))
-    )
+    # Sort newseg BEFORE assigning positions to cells
+    # This ensures the categorical mapping matches the dendrogram segment order
+    newseg_sorted = newseg.iloc[newseg.argsort()]
+    
+    # Create mapping from segment ID to sorted position index
+    seg_to_pos = {seg_id: i for i, seg_id in enumerate(newseg_sorted.index)}
+    
+    # Assign positions to cells based on sorted order
+    for seg_id, pos_idx in seg_to_pos.items():
+        df.loc[df.seg == seg_id, "seg_pos"] = pos_idx
+    
     df.seg_pos = df.seg_pos.astype(int).astype("category")
 
     dend = stripplot(
