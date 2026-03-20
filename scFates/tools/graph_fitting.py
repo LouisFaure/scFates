@@ -23,6 +23,132 @@ from .. import settings
 from .utils import get_X
 
 
+def _patch_elpigraph_grammar():
+    """Monkey-patch elpigraph's AddNode2Node to fix numpy 2.x scalar assignment.
+
+    In elpigraph 0.3.2, ``ineighbour`` is a 1-element array but is used as a
+    scalar index, causing ``ValueError: setting an array element with a sequence``
+    on numpy ≥ 2.0 (Linux x86 build) because:
+      - ``Mus[ineighbour]`` returns shape ``(1,)`` assigned to a scalar slot
+      - ``NodePositions[ineighbour,]`` returns shape ``(1, ndims)`` instead of ``(ndims,)``
+    """
+    try:
+        import elpigraph.src.grammar_operations as _go
+    except ImportError:
+        return
+
+    _orig = _go.AddNode2Node
+
+    def _patched_AddNode2Node(
+        X,
+        NodePositions,
+        ElasticMatrix,
+        partition,
+        AdjustVect,
+        FixNodesAtPoints,
+        Max_K=float("inf"),
+        MaxNumberOfGraphCandidates=float("inf"),
+        PointWeights=None,
+    ):
+        import numpy as _np
+
+        nNodes = NodePositions.shape[0]
+        Mus = ElasticMatrix.diagonal()
+        Lambda = ElasticMatrix.copy()
+        _np.fill_diagonal(Lambda, 0)
+        indL = Lambda > 0
+        Connectivities = indL.sum(axis=0)
+
+        if PointWeights is not None:
+            assoc = _np.bincount(
+                partition[partition > -1].ravel(),
+                weights=PointWeights[partition > -1].ravel(),
+                minlength=nNodes,
+            )
+        else:
+            assoc = _np.bincount(
+                partition[partition > -1].ravel(), minlength=nNodes
+            )
+
+        npProt = _np.vstack(
+            (NodePositions, _np.zeros((1, NodePositions.shape[1])))
+        )
+        emProt = _np.vstack(
+            (
+                _np.hstack((Lambda, _np.zeros((nNodes, 1)))),
+                _np.zeros((1, nNodes + 1)),
+            )
+        )
+        niProt = _np.arange(nNodes + 1, dtype=int)
+        MuProt = _np.zeros(nNodes + 1)
+        MuProt[:-1] = Mus
+
+        if not _np.isinf(Max_K):
+            Degree = _np.sum(ElasticMatrix > 0, axis=1)
+            Degree[Degree > 1] = Degree[Degree > 1] - 1
+            if _np.sum(Degree <= Max_K) > 1:
+                idx_nodes = _np.where(Degree <= Max_K)[0]
+            else:
+                raise ValueError(
+                    "AddNode2Node impossible with the current parameters!"
+                )
+        else:
+            idx_nodes = _np.array(range(nNodes))
+
+        if MaxNumberOfGraphCandidates < len(idx_nodes) and _np.isinf(Max_K):
+            idx_nodes = _np.argsort(assoc)[::-1][:MaxNumberOfGraphCandidates]
+        elif MaxNumberOfGraphCandidates < len(idx_nodes) and not (
+            _np.isinf(Max_K)
+        ):
+            nGraphs = [
+                i
+                for i in _np.argsort(assoc)[::-1]
+                if i in idx_nodes
+            ]
+            idx_nodes = _np.array(nGraphs)[:MaxNumberOfGraphCandidates]
+
+        if FixNodesAtPoints != []:
+            idx_nodes = idx_nodes[
+                ~_np.isin(idx_nodes, _np.arange(len(FixNodesAtPoints)))
+            ]
+
+        NodePositionsArray = [npProt.copy() for i in range(len(idx_nodes))]
+        ElasticMatrices = [emProt.copy() for i in range(len(idx_nodes))]
+        NodeIndicesArray = _np.repeat(
+            niProt[:, _np.newaxis], len(idx_nodes), axis=1
+        )
+        AdjustVectArray = [AdjustVect + [False] for i in range(len(idx_nodes))]
+
+        for j, i in enumerate(idx_nodes):
+            MuProt[-1] = 0
+            meanL = Lambda[i, indL[i,]].mean(axis=0)
+            ElasticMatrices[j][nNodes, i] = ElasticMatrices[j][i, nNodes] = meanL
+
+            if Connectivities[i] == 1:
+                ineighbour = _np.nonzero(indL[i,])[0][0]  # scalar, not array
+                NewNodePosition = (
+                    2 * NodePositions[i,] - NodePositions[ineighbour,]
+                )
+                MuProt[i] = Mus[ineighbour]  # scalar assignment
+            else:
+                if assoc[i] == 0:
+                    NewNodePosition = NodePositions[indL[:, i]].mean(axis=0)
+                else:
+                    NewNodePosition = X[(partition == i).ravel()].mean(axis=0)
+
+            NodePositionsArray[j][nNodes, :] = NewNodePosition
+            _np.fill_diagonal(ElasticMatrices[j], MuProt)
+
+        return (
+            NodePositionsArray,
+            ElasticMatrices,
+            AdjustVectArray,
+            NodeIndicesArray,
+        )
+
+    _go.AddNode2Node = _patched_AddNode2Node
+
+
 def curve(
     adata: AnnData,
     Nodes: int = None,
@@ -466,6 +592,8 @@ def tree_epg(
 
     import elpigraph
 
+    _patch_elpigraph_grammar()
+
     logg.hint(
         "parameters used \n"
         "    "
@@ -527,6 +655,8 @@ def curve_epg(
     **kwargs,
 ):
     import elpigraph
+
+    _patch_elpigraph_grammar()
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
     X = X.values
@@ -592,6 +722,8 @@ def circle_epg(
     **kwargs,
 ):
     import elpigraph
+
+    _patch_elpigraph_grammar()
 
     X, use_rep = get_data(adata, use_rep, ndims_rep)
     X = X.values
