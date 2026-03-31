@@ -4,6 +4,15 @@
 Release Notes
 =============
 
+Version 1.2.4 :small:`March 31, 2026`
+------------------------------------
+
+.. rubric:: Improvements
+
+- Updated elpigraph dependency constraint to `>=0.3.4` for better compatibility.
+
+
+
 Version 1.2.2 :small:`February 10, 2569/2026`
 --------------------------------------------
 
