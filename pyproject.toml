@@ -31,7 +31,7 @@ dependencies = [
     "scikit-learn",
     "scikit-misc",
     "simpleppt>=1.1.3",
-    "elpigraph-python==0.3.2",
+    "elpigraph-python>=0.3.4",
     "networkx>3.0",
     "igraph>=0.9.6",
     "adjustText>=0.7.3",
