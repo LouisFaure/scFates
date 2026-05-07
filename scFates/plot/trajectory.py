@@ -484,7 +484,7 @@ def trajectory(
                 headwidth=15 * scale_path,
                 headaxislength=10 * scale_path,
                 headlength=10 * scale_path,
-                units="dots",
+                units="width",
                 zorder=101,
                 rasterized=rasterized,
             )
@@ -506,7 +506,7 @@ def trajectory(
                 headwidth=12 * scale_path,
                 headaxislength=10 * scale_path,
                 headlength=10 * scale_path,
-                units="dots",
+                units="width",
                 color=c_arrow,
                 zorder=102,
                 rasterized=rasterized,
