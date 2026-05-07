@@ -135,6 +135,9 @@ dmypy.json
 
 _build
 _templates
+# macOS
+.DS_Store
+
 # pixi environments
 .pixi/*
 .venv*
