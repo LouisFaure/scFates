@@ -158,9 +158,12 @@ def slide_cells(
                 freq = freq + [cell_probs]
             return freq
         else:
+            # if the first index is 0, the very first principal point already
+            # exceeds the window; keep it so the slice is not empty (see #60)
+            end = inds[0] + 1 if inds[0] == 0 else inds[0]
             pps_region = pp_next[
                 np.argsort(graph["pp_info"].loc[pp_next, "time"].values)
-            ][: inds[0]]
+            ][:end]
             if mapping:
                 cell_probs = adata.obsm["X_R"][:, pps_region].sum(axis=1)
             else:
@@ -238,9 +241,17 @@ def slide_cells(
                         .max()
                     )
                     segs_cur2 = seg_branch2
-                    res1 = region_extract(pt_cur1, segs_cur1, nbranch)
-                    res2 = region_extract(pt_cur2, segs_cur2, nbranch)
-                    return freq + res1 + res2
+                    # a branch may have no remaining cells for the current
+                    # pseudotime, yielding a NaN pt_cur; only recurse into
+                    # branches that still have cells to extract (see #60)
+                    res_final = freq
+                    if not np.isnan(pt_cur1):
+                        res1 = region_extract(pt_cur1, segs_cur1, nbranch)
+                        res_final = res_final + res1
+                    if not np.isnan(pt_cur2):
+                        res2 = region_extract(pt_cur2, segs_cur2, nbranch)
+                        res_final = res_final + res2
+                    return res_final
 
     pt_cur = graph["pp_info"].loc[pps, "time"].min()
 
@@ -363,12 +374,9 @@ def slide_cors(
     def gather_cor(i, geneset):
         freq = freqs[i][adata.obs_names]
         with np.errstate(divide="ignore", invalid="ignore"):
-            cormat = pd.DataFrame(
-                DescrStatsW(X_r.values, weights=freq).corrcoef,
-                index=genesets,
-                columns=genesets,
-            )
-        np.fill_diagonal(cormat.values, np.nan)
+            cormat_arr = np.array(DescrStatsW(X_r.values, weights=freq).corrcoef)
+        np.fill_diagonal(cormat_arr, np.nan)
+        cormat = pd.DataFrame(cormat_arr, index=genesets, columns=genesets)
         return cormat.loc[:, geneset].mean(axis=1)
 
     gather = partial(gather_cor, geneset=genesetA)
