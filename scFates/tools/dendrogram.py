@@ -91,7 +91,7 @@ def dendrogram(adata: anndata.AnnData, crowdedness: float = 1):
     
     # Assign positions to cells based on sorted order
     for seg_id, pos_idx in seg_to_pos.items():
-        df.loc[df.seg == seg_id, "seg_pos"] = pos_idx
+        df.loc[df.seg == seg_id, "seg_pos"] = str(pos_idx)
     
     df.seg_pos = df.seg_pos.astype(int).astype("category")
 
