@@ -4,6 +4,18 @@
 Release Notes
 =============
 
+Version 1.2.5 :small:`July 9, 2026`
+------------------------------------
+
+.. rubric:: Improvements
+
+- Compatibility with pandas 3.0 and recent anndata releases: avoid the new strict ``str`` dtype when building milestone/segment assignments, drop the removed ``dtype`` argument from ``AnnData()`` in :func:`scFates.pl.milestones`, replace positional Series indexing in :func:`scFates.tl.activation`, and copy read-only ``DataFrame.values`` before mutating them in :func:`scFates.tl.slide_cors`.
+
+.. rubric:: Bug Fixes
+
+- Fixed arrow sizes in :func:`scFates.pl.trajectory` being linked to figure DPI by switching from ``units="dots"`` to ``units="width"`` (:issue:`57`).
+- Fixed two edge cases in :func:`scFates.tl.slide_cells` ``region_extract``: keep at least the first principal point when it already exceeds the window, and only recurse into branches that still have cells to extract (:issue:`60`).
+
 Version 1.2.4 :small:`March 31, 2026`
 ------------------------------------
 
