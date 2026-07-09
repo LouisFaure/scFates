@@ -100,7 +100,6 @@ def milestones(
         X = proj[list(adata.uns["graph"]["milestones"].values()), :]
         adata_m = sc.AnnData(
             X,
-            dtype=X.dtype,
             obs=dict(mil=list(adata.uns["graph"]["milestones"].keys())),
             obsm={basis: X},
         )

@@ -374,12 +374,9 @@ def slide_cors(
     def gather_cor(i, geneset):
         freq = freqs[i][adata.obs_names]
         with np.errstate(divide="ignore", invalid="ignore"):
-            cormat = pd.DataFrame(
-                DescrStatsW(X_r.values, weights=freq).corrcoef,
-                index=genesets,
-                columns=genesets,
-            )
-        np.fill_diagonal(cormat.values, np.nan)
+            cormat_arr = np.array(DescrStatsW(X_r.values, weights=freq).corrcoef)
+        np.fill_diagonal(cormat_arr, np.nan)
+        cormat = pd.DataFrame(cormat_arr, index=genesets, columns=genesets)
         return cormat.loc[:, geneset].mean(axis=1)
 
     gather = partial(gather_cor, geneset=genesetA)

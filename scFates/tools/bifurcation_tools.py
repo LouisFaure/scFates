@@ -671,7 +671,9 @@ def get_activation(data):
     fitted = (fitted - fitted.min()) / (fitted.max() - fitted.min())
     fitted = fitted[df_t.index]
     changes = wins.apply(
-        lambda x: (fitted.loc[df_t[(df_t > x[0]) & (df_t < x[1])].index]).diff().sum(),
+        lambda x: (fitted.loc[df_t[(df_t > x["start"]) & (df_t < x["end"])].index])
+        .diff()
+        .sum(),
         axis=1,
     )
 
