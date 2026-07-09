@@ -227,7 +227,7 @@ def pseudotime(
                     )
                     adata.obs.loc[cells_front.index, "seg"] = cells_front.values
 
-    milestones = pd.Series(index=adata.obs_names, dtype=str)
+    milestones = pd.Series(index=adata.obs_names, dtype=object)
     for seg in pp_seg.n:
         cell_seg = adata.obs.loc[adata.obs["seg"] == seg, "t"]
         if len(cell_seg) > 0:
