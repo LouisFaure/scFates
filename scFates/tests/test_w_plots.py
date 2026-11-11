@@ -204,6 +204,14 @@ def test_pipeline():
     scf.pl.trajectory(adata_2, root_milestone="A", milestones=["B"],show=False)
 
     scf.tl.cluster(adata, n_neighbors=3, n_pcs=3)
+    # the requested layer is used, not .X: replacing .X by noise changes nothing
+    adata_n = adata.copy()
+    adata_n.X = np.random.default_rng(0).normal(size=adata.shape)
+    adata_n = scf.tl.cluster(adata_n, n_neighbors=3, n_pcs=3, copy=True)
+    adata_x = adata.copy()
+    adata_x.X = adata_x.layers["fitted"]
+    scf.tl.cluster(adata_x, layer="X", n_neighbors=3, n_pcs=3)
+    assert (adata_n.var.clusters.values == adata_x.var.clusters.values).all()
 
     g = scf.pl.trends(adata, features=adata.var_names, return_genes=True)
     scf.pl.trends(
@@ -403,3 +411,43 @@ def test_pipeline():
         [-0.31524637, -0.31332134, -0.3392098, -0.33832952, -0.31277207],
         rtol=1e-2,
     )
+
+
+def test_preprocessing(monkeypatch):
+    import sys
+    import types
+    import anndata as ad
+    from scipy.sparse import csr_matrix
+
+    rng = np.random.default_rng(0)
+    counts = rng.poisson(rng.gamma(0.5, 2, size=(1, 300)), size=(400, 300))
+    adata = ad.AnnData(csr_matrix(counts.astype(np.float32)))
+    adata.obs["batch"] = ["a"] * 200 + ["b"] * 200
+
+    scf.pp.filter_cells(adata, subset=False)
+    assert "outlier" in adata.obs
+
+    X_bc = scf.pp.batch_correct(adata, "batch", inplace=False)
+    assert X_bc.shape == adata.shape
+
+    # stand-in for palantir (not a test dependency) to check copy behaviour
+    utils = types.ModuleType("palantir.utils")
+
+    def run_diffusion_maps(data_df, n_components, knn, alpha):
+        ev = rng.normal(size=(data_df.shape[0], n_components))
+        return {
+            "EigenVectors": pd.DataFrame(ev, index=data_df.index),
+            "EigenValues": pd.Series(np.linspace(1, 0.1, n_components)),
+        }
+
+    utils.run_diffusion_maps = run_diffusion_maps
+    palantir = types.ModuleType("palantir")
+    palantir.utils = utils
+    monkeypatch.setitem(sys.modules, "palantir", palantir)
+    monkeypatch.setitem(sys.modules, "palantir.utils", utils)
+
+    adata = scf.datasets.test_adata()
+    del adata.obsm["X_diffusion"]
+    adata_d = scf.pp.diffusion(adata, n_components=5, multiscale=False, copy=True)
+    assert adata_d.obsm["X_diffusion"].shape == (adata.n_obs, 4)
+    assert "X_diffusion" not in adata.obsm

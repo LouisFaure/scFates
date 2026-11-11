@@ -200,7 +200,9 @@ def batch_correct(
         gene_av = (np.array(X.sum(axis=0)).ravel() + len(batches)) / (
             depth.sum() + len(batches)
         )
-        tc = np.vstack([X[adata.obs[batch_key] == b, :].sum(axis=0) for b in batches])
+        tc = np.vstack(
+            [X[(adata.obs[batch_key] == b).values, :].sum(axis=0) for b in batches]
+        )
         tc = np.log(tc + 1) - np.log(
             np.array([depth[adata.obs[batch_key].values == b].sum() for b in batches])
             + 1
@@ -211,7 +213,7 @@ def batch_correct(
 
         batch = adata.obs[batch_key].cat.rename_categories(range(nbatches))
         count_gene = np.repeat(np.arange(X.shape[0]), np.diff(X.indptr))
-        acc = np.transpose(np.vstack([count_gene, batch[X.indices].values]))
+        acc = np.transpose(np.vstack([count_gene, batch.cat.codes.values[X.indices]]))
         X.data = X.data / bc.values[acc[:, 0], acc[:, 1]]
         logg.info("    depth scaling")
         X = X.transpose()
