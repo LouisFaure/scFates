@@ -546,7 +546,7 @@ def trajectory(
     savefig_or_show("trajectory", show=show, save=save)
 
 
-@njit()
+@njit(cache=True)
 def cdist_numba(coords, out):
     for i in range(0, coords.shape[0] - 1):
         out[i] = math.sqrt(
