@@ -4,6 +4,22 @@
 Release Notes
 =============
 
+Version 1.2.8 :small:`November 11, 2026`
+----------------------------------------
+
+.. rubric:: Improvements
+
+- Updated the GPU installation instructions: GPU support now relies on `rapids-singlecell <https://rapids-singlecell.readthedocs.io>`_, which installs CuPy and the RAPIDS libraries at matching versions (:issue:`52`).
+
+.. rubric:: Bug Fixes
+
+- :func:`scFates.tl.root` with ``tips_only=True`` could select a non-tip node when the feature values were negative.
+- :func:`scFates.tl.test_covariate` with ``seg`` now restricts pseudotime and groups to the cells of that segment, and raises an informative error when fewer than two groups remain.
+- :func:`scFates.tl.cluster` now uses the requested ``layer`` (default ``"fitted"``) instead of ``.X``. Results obtained with default arguments will change when ``.X`` differs from the fitted layer.
+- :func:`scFates.tl.cluster` with ``device="gpu"`` was broken with current scanpy and cuML; it now uses rapids-singlecell for PCA, neighbors and Leiden.
+- :func:`scFates.pp.diffusion` and :func:`scFates.tl.cluster` now honor ``copy=True`` instead of modifying the input and returning ``None``.
+- :func:`scFates.pp.batch_correct` failed on CPU with pandas 3 (``AttributeError`` or ``KeyError``).
+
 Version 1.2.7 :small:`November 11, 2026`
 ----------------------------------------
 
