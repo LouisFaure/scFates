@@ -71,6 +71,9 @@ platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.pypi-dependencies]
 scFates = { path = ".", editable = true }
+# umap-learn 0.6.0 requires C-contiguous knn_dists, which scanpy's brute-force
+# kNN path (small inputs, e.g. cosine metric in tl.cluster) does not provide.
+umap-learn = "<0.6"
 
 [tool.pixi.tasks]
 docs = "cd docs && make html"

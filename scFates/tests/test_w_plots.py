@@ -1,3 +1,4 @@
+import pytest
 import scFates as scf
 import scanpy as sc
 import numpy as np
@@ -132,6 +133,17 @@ def test_pipeline():
     scf.tl.linearity_deviation(adata, start_milestone="43", end_milestone="88")
 
     lindev = adata.var["43->88_rss"].values[:5]
+
+    # end milestone upstream of start milestone: no path along the tree direction
+    with pytest.raises(ValueError, match="No path found"):
+        scf.tl.linearity_deviation(adata, start_milestone="88", end_milestone="43")
+    # percentiles leaving the progenitor group empty
+    with pytest.raises(ValueError, match="putative progenitors"):
+        scf.tl.linearity_deviation(
+            adata, start_milestone="43", end_milestone="88", percentiles=[0, 80]
+        )
+    with pytest.raises(ValueError, match="not a milestone"):
+        scf.tl.linearity_deviation(adata, start_milestone="43", end_milestone="999")
 
     scf.pl.linearity_deviation(adata, start_milestone="43", end_milestone="88",show=False)
 

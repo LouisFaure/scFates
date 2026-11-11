@@ -73,6 +73,16 @@ def linearity_deviation(
 
     graph = adata.uns["graph"]
 
+    for label, ms in (
+        ("start_milestone", start_milestone),
+        ("end_milestone", end_milestone),
+    ):
+        if ms not in graph["milestones"]:
+            raise ValueError(
+                f"{label} '{ms}' is not a milestone of the tree, available milestones are: "
+                + ", ".join(map(str, graph["milestones"].keys()))
+            )
+
     def lindev_map(m):
         df = adata.uns["pseudotime_list"][str(m)].copy()
         edges = graph["pp_seg"][["from", "to"]].astype(str).apply(tuple, axis=1).values
@@ -90,6 +100,18 @@ def linearity_deviation(
             graph,
             df,
         )
+
+        if cells is None:
+            root_ms = [
+                k for k, v in graph["milestones"].items() if v == graph["root"]
+            ]
+            root_ms = root_ms[0] if len(root_ms) > 0 else graph["root"]
+            raise ValueError(
+                f"No path found from start_milestone '{start_milestone}' to end_milestone "
+                f"'{end_milestone}' following the direction of the tree (root: '{root_ms}'). "
+                "end_milestone must be downstream of start_milestone: try swapping them, "
+                "or re-root the tree with scf.tl.root and scf.tl.pseudotime."
+            )
 
         t_perc = [cells.t.quantile(p / 100) for p in percentiles]
 
@@ -114,6 +136,23 @@ def linearity_deviation(
         ]
         progenies = adata.obs_names[df[name + "_lindev_sel"] == "putative progenies"]
         bridge = adata.obs_names[df[name + "_lindev_sel"] == "putative bridge"]
+
+        empty = [
+            f"{grp} (t {cond})"
+            for grp, cells_grp, cond in (
+                ("putative progenitors", progenitors, f"< {t_perc[0]:.3g}"),
+                ("putative bridge", bridge, f"between {t_perc[0]:.3g} and {t_perc[1]:.3g}"),
+                ("putative progenies", progenies, f"> {t_perc[1]:.3g}"),
+            )
+            if len(cells_grp) == 0
+        ]
+        if len(empty) > 0:
+            raise ValueError(
+                f"No cells found in: {', '.join(empty)}, among the {len(cells)} cells on the "
+                f"path {name} with percentiles={list(percentiles)}. This can happen when many "
+                "cells share the same pseudotime value (e.g. at the start or end of the path); "
+                "try adjusting the percentiles."
+            )
 
         X_all = get_X(adata, cells.index, adata.var_names, layer=None)
         X_progenitors = get_X(adata, progenitors, adata.var_names, layer=None)
