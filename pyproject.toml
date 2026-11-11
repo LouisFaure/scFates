@@ -18,6 +18,9 @@ dependencies = [
     "numba>=0.51.2",
     "scipy>=1.4.1",
     "scanpy>=1.7.0",
+    # umap-learn 0.6 needs C-contiguous kNN arrays, not provided by scanpy <=1.12.5
+    # (fixed upstream in scverse/scanpy#4480); drop once a scanpy release ships it.
+    "umap-learn<0.6",
     "leidenalg>=0.8.1",
     "numpy",
     "joblib>=0.17.0",
@@ -71,9 +74,6 @@ platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.pypi-dependencies]
 scFates = { path = ".", editable = true }
-# umap-learn 0.6.0 requires C-contiguous knn_dists, which scanpy's brute-force
-# kNN path (small inputs, e.g. cosine metric in tl.cluster) does not provide.
-umap-learn = "<0.6"
 
 [tool.pixi.tasks]
 docs = "cd docs && make html"

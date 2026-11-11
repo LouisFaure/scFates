@@ -4,6 +4,18 @@
 Release Notes
 =============
 
+Version 1.2.6 :small:`November 11, 2026`
+----------------------------------------
+
+.. rubric:: Improvements
+
+- :func:`scFates.tl.linearity_deviation` now raises informative errors instead of obscure failures: when ``start_milestone`` or ``end_milestone`` is not a milestone of the tree, when ``end_milestone`` is not downstream of ``start_milestone`` (previously ``'NoneType' object has no attribute 't'``, :issue:`37`), and when the chosen ``percentiles`` leave the progenitor, bridge or progeny group without cells (previously ``zero-size array to reduction operation maximum``, :issue:`35`).
+- The test workflow now also runs on changes to ``pyproject.toml``.
+
+.. rubric:: Bug Fixes
+
+- Pinned ``umap-learn<0.6``: umap-learn 0.6.0 requires C-contiguous kNN arrays that scanpy 1.12.5 does not provide, which made :func:`scFates.tl.cluster` fail with a numba ``TypingError``. The pin will be lifted once a scanpy release includes the upstream fix (`scverse/scanpy#4480 <https://github.com/scverse/scanpy/pull/4480>`_).
+
 Version 1.2.5 :small:`July 9, 2026`
 ------------------------------------
 

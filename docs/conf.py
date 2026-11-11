@@ -68,6 +68,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.githubpages",
+    "sphinx.ext.extlinks",
     "sphinxext.opengraph",
     "sphinx_autodoc_typehints",
     "readthedocs_ext.readthedocs",
@@ -76,6 +77,10 @@ extensions = [
     "scanpydoc",
     "docutils",
 ]
+
+extlinks = {
+    "issue": ("https://github.com/LouisFaure/scFates/issues/%s", "#%s"),
+}
 
 ogp_site_url = "https://scfates.readthedocs.io/"
 ogp_image = "https://scfates.readthedocs.io/en/latest/_images/scFates_logo_dark.png"
