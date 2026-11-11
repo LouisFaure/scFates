@@ -189,6 +189,9 @@ def test_pipeline():
     scf.tl.test_covariate(adata, "covariate")
     scf.tl.test_covariate(adata, "covariate", trend_test=True)
     scf.tl.test_covariate(adata, "covariate", nested=True)
+    # restricted to one segment of the tree
+    scf.tl.test_covariate(adata, "covariate", seg=str(adata.obs.seg.iloc[0]))
+    assert adata.var["cov_pval"].notna().all()
     scf.pl.trend_covariate(
         adata, adata.var_names[0], group_key="covariate", show_null=True
     ,show=False)
