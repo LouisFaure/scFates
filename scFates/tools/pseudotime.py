@@ -271,12 +271,7 @@ def pseudotime(
         if recolor:
             adata.uns["milestones_colors"] = tmp_mil_col
         reassign = False
-    adata.uns["seg_colors"] = [
-        np.array(adata.uns["milestones_colors"])[
-            pd.Series(adata.uns["graph"]["milestones"]) == t
-        ][0]
-        for t in adata.uns["graph"]["pp_seg"].to
-    ]
+    adata.uns["seg_colors"] = palette_tools._get_seg_colors(adata)
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(

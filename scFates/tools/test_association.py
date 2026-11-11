@@ -146,6 +146,19 @@ def test_association(
             df = adata.obs.loc[:, ["t", "seg"]]
         else:
             df = adata.uns["pseudotime_list"][str(m)]
+        small = df.groupby("seg", observed=True).t.nunique() < spline_df
+        if small.all():
+            raise ValueError(
+                f"All segments have fewer than spline_df={spline_df} distinct pseudotime "
+                "values, consider lowering spline_df."
+            )
+        if small.any() and m == 0:
+            logg.warn(
+                "segment(s) "
+                + ", ".join(map(str, small.index[small]))
+                + f" have fewer than spline_df={spline_df} distinct pseudotime values"
+                " and are excluded from the test."
+            )
         data = list(zip([df] * len(Xgenes), Xgenes))
 
         stat = ProgressParallel(
@@ -341,8 +354,11 @@ def test_association_monocle3(
 
 
 def test_assoc(data, spline_df):
-    sdf = data[0]
+    sdf = data[0].copy()
     sdf["exp"] = data[1]
+    # segments with fewer distinct t values than spline_df cannot be fitted
+    nt = sdf.groupby("seg", observed=True).t.nunique()
+    sdf = sdf.loc[sdf.seg.isin(nt.index[nt >= spline_df])]
 
     global rmgcv
     global rstats
