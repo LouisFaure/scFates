@@ -79,7 +79,7 @@ def matmul(A, B, C):
         C[i, j] = tmp
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def process_R_cpu(R, sigma):
     Rshape = R.shape
     R = R.ravel()
@@ -88,7 +88,7 @@ def process_R_cpu(R, sigma):
     R.reshape(Rshape)
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def norm_R_cpu(R, Rsum):
     for x in prange(len(Rsum)):
         for y in range(R.shape[1]):
@@ -196,7 +196,7 @@ def palantir_on_seg(adata, seg, ms_data):
     return pr.pseudotime
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def get_SE(MSE, x, se):
     N = len(x)
     xmean = x.mean()
