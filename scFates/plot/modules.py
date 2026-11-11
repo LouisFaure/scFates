@@ -12,6 +12,7 @@ from scanpy.plotting._utils import savefig_or_show
 from ..tools.utils import getpath
 from .trajectory import trajectory as plot_trajectory
 from .utils import setup_axes
+from .palette_tools import _get_seg_colors
 from ..tools.graph_operations import subset_tree
 from .milestones import milestones as milestones_plot
 from ..get import modules as get_modules
@@ -86,12 +87,7 @@ def modules(
         adata_c = subset_tree(adata, root_milestone, milestones, copy=True)
         adata_c.obsm["X_early"] = X_early.loc[adata_c.obs_names].values
         adata_c.obsm["X_late"] = X_late.loc[adata_c.obs_names].values
-        adata_c.uns["seg_colors"] = [
-            np.array(adata_c.uns["milestones_colors"])[
-                pd.Series(adata_c.uns["graph"]["milestones"]) == t
-            ][0]
-            for t in adata_c.uns["graph"]["pp_seg"].to
-        ]
+        adata_c.uns["seg_colors"] = _get_seg_colors(adata_c)
     else:
         adata_c = AnnData(
             X_early.values,

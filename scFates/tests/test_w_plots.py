@@ -147,6 +147,34 @@ def test_pipeline():
 
     scf.pl.linearity_deviation(adata, start_milestone="43", end_milestone="88",show=False)
 
+    # empty and tiny segments (#47)
+    pp_seg = adata.uns["graph"]["pp_seg"]
+    tip_seg = str(pp_seg.index[pp_seg.to.isin(adata.uns["graph"]["tips"])][-1])
+    in_seg = (adata.obs.seg == tip_seg).values
+    others = list(adata.obs_names[~in_seg])
+    # segment without cells: grey segment color instead of IndexError
+    adata_e = adata[others].copy()
+    scf.tl.pseudotime(adata_e)
+    assert "#808080" in adata_e.uns["seg_colors"]
+    # single-cell segment: NaN milestone handled by milestone gradients
+    adata_1 = adata[others + list(adata.obs_names[in_seg][:1])].copy()
+    scf.tl.pseudotime(adata_1)
+    scf.pl.milestones(adata_1, show=False)
+    plt.close()
+    # segment smaller than spline_df: excluded from test_association
+    adata_3 = adata[others + list(adata.obs_names[in_seg][:3]), :10].copy()
+    scf.tl.pseudotime(adata_3)
+    scf.tl.test_association(adata_3)
+    assert adata_3.var.p_val.notna().all()
+    # cleanup: cell only assigned to a removed tip gets reassigned, no NaN rows
+    adata_c = adata.copy()
+    leaf = [t for t in adata_c.uns["graph"]["tips"] if t != adata_c.uns["graph"]["root"]][0]
+    adata_c.obsm["X_R"] = adata_c.obsm["X_R"].copy()
+    adata_c.obsm["X_R"][0, :] = 0
+    adata_c.obsm["X_R"][0, leaf] = 1
+    scf.tl.cleanup(adata_c, leaves=[leaf])
+    assert not np.isnan(adata_c.obsm["X_R"]).any()
+
     scf.tl.fit(adata_2, layer="scaled")
     scf.tl.fit(adata)
     fitted = adata.layers["fitted"][0, :5]

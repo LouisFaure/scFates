@@ -29,6 +29,7 @@ check = [type(imp) == str for imp in [Rpy2, R, rstats, rmgcv, Formula]]
 from ..get import modules as get_modules
 from .trajectory import remove_info
 from .utils import gen_milestones_gradients, get_basis, is_categorical, subset_cells
+from .palette_tools import _get_seg_colors
 from .. import logging as logg
 from .. import settings
 
@@ -663,12 +664,7 @@ def single_trend(
                 reset = True
             if len(adata.uns["graph"]["tips"]) > 3:
                 adata = subset_tree(adata, root_milestone, milestones, copy=True)
-                adata.uns["seg_colors"] = [
-                    np.array(adata.uns["milestones_colors"])[
-                        pd.Series(adata.uns["graph"]["milestones"]) == t
-                    ][0]
-                    for t in adata.uns["graph"]["pp_seg"].to
-                ]
+                adata.uns["seg_colors"] = _get_seg_colors(adata)
             fit(adata, [feature])
             if reset:
                 settings.verbosity = temp_verb

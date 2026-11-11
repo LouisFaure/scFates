@@ -9,6 +9,32 @@ from matplotlib.colors import is_color_like
 from .. import logging as logg
 
 
+def _get_seg_colors(adata):
+    """\
+    Color each segment of the tree with the color of the milestone it ends on.
+    Segments ending on a milestone without any assigned cell are colored in grey.
+    """
+    import pandas as pd
+
+    milestones = pd.Series(adata.uns["graph"]["milestones"])
+    colors = np.array(adata.uns["milestones_colors"])
+    seg_colors, missing = [], []
+    for seg, to in adata.uns["graph"]["pp_seg"].to.items():
+        match = colors[(milestones == to).values]
+        if len(match) == 0:
+            seg_colors.append("#808080")
+            missing.append(str(seg))
+        else:
+            seg_colors.append(match[0])
+    if len(missing) > 0:
+        logg.warn(
+            "segment(s) "
+            + ", ".join(missing)
+            + " end on a milestone without assigned cells, colored in grey."
+        )
+    return seg_colors
+
+
 def _validate_palette(adata, key):
     """
     checks if the list of colors in adata.uns[f'{key}_colors'] is valid
@@ -27,7 +53,7 @@ def _validate_palette(adata, key):
             if color in additional_colors:
                 color = additional_colors[color]
             else:
-                logg.warning(
+                logg.warn(
                     f"The following color value found in adata.uns['{key}_colors'] "
                     f"is not valid: '{color}'. Default colors will be used instead."
                 )
@@ -74,7 +100,7 @@ def _set_colors_for_categorical_obs(
         # it doesnt matter if the list is shorter than the categories length:
         if isinstance(palette, cabc.Sequence):
             if len(palette) < len(categories):
-                logg.warning(
+                logg.warn(
                     "Length of palette colors is smaller than the number of "
                     f"categories (palette length: {len(palette)}, "
                     f"categories length: {len(categories)}. "

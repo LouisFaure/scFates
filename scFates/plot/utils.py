@@ -182,25 +182,24 @@ def gen_milestones_gradients(adata, seg_order=None):
 
         palette_tools._set_default_colors_for_categorical_obs(adata, "milestones")
 
+    categories = adata.obs.milestones.cat.categories
+
+    def milestone_color(m):
+        # cells uniquely composing a segment have no milestone assigned (NaN)
+        if pd.isna(m) or m not in categories:
+            return None
+        return adata.uns["milestones_colors"][categories.get_loc(m)]
+
     def milestones_prog(s):
-        cfrom = adata.obs.t[adata.obs.seg == s].idxmin()
-        cto = adata.obs.t[adata.obs.seg == s].idxmax()
-        mfrom = adata.obs.milestones[cfrom]
-        mto = adata.obs.milestones[cto]
-        mfrom_c = adata.uns["milestones_colors"][
-            np.argwhere(adata.obs.milestones.cat.categories == mfrom)[0][0]
-        ]
-        mto_c = adata.uns["milestones_colors"][
-            np.argwhere(adata.obs.milestones.cat.categories == mto)[0][0]
-        ]
+        t = adata.obs.t[adata.obs.seg == s]
+        mfrom_c = milestone_color(adata.obs.milestones[t.idxmin()])
+        mto_c = milestone_color(adata.obs.milestones[t.idxmax()])
+        mfrom_c = mfrom_c or mto_c or "#808080"
+        mto_c = mto_c or mfrom_c
 
         cm = LinearSegmentedColormap.from_list("test", [mfrom_c, mto_c], N=1000)
-        pst = (
-            adata.obs.t[adata.obs.seg == s] - adata.obs.t[adata.obs.seg == s].min()
-        ) / (
-            adata.obs.t[adata.obs.seg == s].max()
-            - adata.obs.t[adata.obs.seg == s].min()
-        )
+        span = t.max() - t.min()
+        pst = (t - t.min()) / span if span > 0 else t * 0
         return pd.Series(list(map(to_hex, cm(pst))), index=pst.index)
 
     return pd.concat(list(map(milestones_prog, seg_order)))

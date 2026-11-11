@@ -119,6 +119,19 @@ def cleanup(
         B = np.delete(B, tip_torem, axis=1)
         R = np.delete(R, tip_torem, axis=1)
         F = np.delete(F, tip_torem, axis=1)
+
+    # cells only assigned to removed principal points: assign them to the closest one left
+    orphans = R.sum(axis=1) == 0
+    if orphans.any():
+        from .graph_fitting import get_data
+
+        X, _ = get_data(adata, graph.get("use_rep"), graph.get("ndims_rep"))
+        nearest = pairwise_distances(X.values[orphans], F.T).argmin(axis=1)
+        R[np.flatnonzero(orphans), nearest] = 1
+        logg.warn(
+            f"{orphans.sum()} cell(s) were only assigned to removed principal points,"
+            " they are now assigned to their closest remaining principal point."
+        )
     R = (R.T / R.sum(axis=1)).T
     adata.obsm["X_R"] = R
     graph["B"] = B
