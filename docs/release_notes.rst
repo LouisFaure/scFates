@@ -4,6 +4,24 @@
 Release Notes
 =============
 
+Version 1.2.7 :small:`November 11, 2026`
+----------------------------------------
+
+.. rubric:: Improvements
+
+- Numba-compiled helpers are now cached on disk (``cache=True``), avoiding recompilation in every new Python session.
+- Faster CI: updated ``codecov/codecov-action`` (v1 to v7) and ``actions/checkout`` (v2 to v7).
+
+.. rubric:: Bug Fixes
+
+Fixes for trees containing empty or very small segments (:issue:`47`):
+
+- :func:`scFates.tl.pseudotime` no longer fails with ``IndexError`` when a segment ends on a milestone without assigned cells; such segments are colored in grey with a warning. The same fix applies to segment coloring in :func:`scFates.pl.modules` and :func:`scFates.pl.single_trend`.
+- :func:`scFates.pl.milestones` handles cells without an assigned milestone (segments composed of a single cell) instead of raising ``IndexError``.
+- :func:`scFates.tl.test_association` excludes, with a warning, segments having fewer distinct pseudotime values than ``spline_df``, instead of failing in mgcv.
+- :func:`scFates.tl.cleanup` reassigns cells that were only assigned to removed principal points to their closest remaining one, instead of leaving NaN rows in ``.obsm['X_R']``.
+- Fixed calls to a non-existent ``logging.warning`` function in palette handling, which would have raised ``AttributeError``.
+
 Version 1.2.6 :small:`November 11, 2026`
 ----------------------------------------
 
