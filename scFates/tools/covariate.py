@@ -128,10 +128,17 @@ def test_covariate(
         logbase = np.log(adata.uns["log1p"]["base"])
     else:
         logbase = 1
-    dfs = [
-        pd.DataFrame(
-            dict(t=adata.obs.t, exp=X, groups=adata.obs[group_key], logbase=logbase)
+    # pseudotime and groups restricted to the same cells as the expression values
+    obs = adata.obs.loc[segcells]
+    groups = obs[group_key].cat.remove_unused_categories()
+    if len(groups.cat.categories) < 2:
+        raise ValueError(
+            f"At least two groups of '{group_key}' are needed"
+            + (f" in segment {seg}" if seg is not None else "")
+            + f", found: {list(groups.cat.categories)}."
         )
+    dfs = [
+        pd.DataFrame(dict(t=obs.t, exp=X, groups=groups, logbase=logbase))
         for X in Xgenes
     ]
 
