@@ -84,15 +84,12 @@ def root(
         )
         avgs.loc[nodes] = avgs_temp
         if tips_only:
+            # exclude non-tip nodes; NaN is skipped by idxmin/idxmax, unlike a
+            # placeholder value which could win when values are negative
             mask = np.ones(avgs.shape, bool)
             mask[adata.uns["graph"]["tips"]] = False
-            avgs[mask] = 0
-        if min_val:
-            if tips_only:
-                avgs[mask] = avgs.max()
-            root = np.argmin(avgs)
-        else:
-            root = np.argmax(avgs)
+            avgs[mask] = np.nan
+        root = int(avgs.idxmin() if min_val else avgs.idxmax())
 
     if circle:
         d = 1e-6 + pairwise_distances(

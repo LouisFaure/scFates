@@ -86,6 +86,11 @@ def test_pipeline():
 
     scf.tl.pseudotime(adata_2)
     scf.tl.pseudotime(adata)
+    # automatic root on tips with all-negative values must still pick a tip
+    adata.obs["neg_t"] = -adata.obs.t - 1
+    adata_r = scf.tl.root(adata, "neg_t", tips_only=True, copy=True)
+    assert adata_r.uns["graph"]["root"] == adata.uns["graph"]["root"]
+    del adata.obs["neg_t"]
     scf.tl.dendrogram(adata)
     ax=scf.pl.dendrogram(adata, color_milestones=True,show=False)
 

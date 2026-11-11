@@ -54,16 +54,15 @@ In that case it is recommended to install it separately:
 GPU dependencies (optional)
 ---------------------------
 
-If you have a nvidia GPU, scFates can leverage CUDA computations for speedups for the following functions:
+With an NVIDIA GPU, the following functions can run on the GPU by passing ``device="gpu"``:
 
-:func:`scFates.pp.filter_cells`, :func:`scFates.pp.batch_correct`, :func:`scFates.pp.diffusion`, :func:`scFates.tl.tree`, :func:`scFates.tl.cluster`
+:func:`scFates.pp.filter_cells`, :func:`scFates.pp.batch_correct`, :func:`scFates.pp.diffusion`, :func:`scFates.tl.tree`, :func:`scFates.tl.curve`, :func:`scFates.tl.circle`, :func:`scFates.tl.cluster`
 
-The latest version of rapids framework is required (at least 0.17) it is recommanded to create a new conda environment::
+This requires CuPy and the RAPIDS libraries cuDF, cuML and cuGraph, built for your CUDA version. For example, with CUDA 12::
 
-    conda create -n scFates-gpu -c rapidsai -c nvidia -c conda-forge -c defaults cuml=21.12 cugraph=21.12 python=3.8 cudatoolkit=11.0 -y
-    conda activate scFates-gpu
-    pip install git+https://github.com/j-bac/elpigraph-python.git
-    pip install scFates
+    pip install --extra-index-url=https://pypi.nvidia.com scFates cupy-cuda12x cudf-cu12 cuml-cu12 cugraph-cu12
+
+See the `RAPIDS installation guide <https://docs.rapids.ai/install>`_ for conda environments and other CUDA versions.
 
 
 .. _Miniconda: http://conda.pydata.org/miniconda.html
