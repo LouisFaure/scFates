@@ -58,11 +58,11 @@ With an NVIDIA GPU, the following functions can run on the GPU by passing ``devi
 
 :func:`scFates.pp.filter_cells`, :func:`scFates.pp.batch_correct`, :func:`scFates.pp.diffusion`, :func:`scFates.tl.tree`, :func:`scFates.tl.curve`, :func:`scFates.tl.circle`, :func:`scFates.tl.cluster`
 
-This requires CuPy and the RAPIDS libraries cuDF, cuML and cuGraph, built for your CUDA version. For example, with CUDA 12::
+This requires `rapids-singlecell <https://rapids-singlecell.readthedocs.io>`_ together with CuPy and the RAPIDS libraries (cuDF, cuML, cuGraph), built for your CUDA version. With CUDA 12, its ``rapids`` extra installs all of them::
 
-    pip install --extra-index-url=https://pypi.nvidia.com scFates cupy-cuda12x cudf-cu12 cuml-cu12 cugraph-cu12
+    pip install --extra-index-url=https://pypi.nvidia.com scFates "rapids-singlecell-cu12[rapids]"
 
-See the `RAPIDS installation guide <https://docs.rapids.ai/install>`_ for conda environments and other CUDA versions.
+See the `rapids-singlecell installation guide <https://rapids-singlecell.readthedocs.io/en/latest/installation.html>`_ for conda environments and other CUDA versions.
 
 
 .. _Miniconda: http://conda.pydata.org/miniconda.html
