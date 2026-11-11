@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'scFates/**'
+      - 'pyproject.toml'
       - '.github/workflows/load_test_upload.yml'
 
 jobs:
