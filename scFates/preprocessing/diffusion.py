@@ -62,6 +62,8 @@ def diffusion(
             dict containing results from Palantir.
     """
 
+    adata = adata.copy() if copy else adata
+
     logg.info("Running Diffusion maps ", reset=True)
 
     data_df = pd.DataFrame(adata.obsm["X_pca"], index=adata.obs_names)
@@ -174,3 +176,5 @@ def diffusion(
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint("added \n" + logstr + uns_str)
+
+    return adata if copy else None
